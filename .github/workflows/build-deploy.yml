@@ -44,33 +44,22 @@ jobs:
           sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version.outputs.version_code }}/" mastodon/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" mastodon/build.gradle
 
-      - name: Decode and verify Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-          echo "Keystore size: $(stat -c%s keystore.jks) bytes"
-          keytool -list -keystore keystore.jks -storepass kronkrelease2024 || echo "Keystore verification failed"
-
       - name: Build Release APK
         run: ./gradlew assembleGithubRelease
 
       - name: Sign APK
         run: |
-          # Find the unsigned APK
           UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
-          echo "Found APK: $UNSIGNED_APK"
-          
-          # Sign with jarsigner
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore keystore.jks \
-            -storepass kronkrelease2024 \
-            -keypass kronkrelease2024 \
-            "$UNSIGNED_APK" kronk
-          
-          # Find build-tools and zipalign
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
           
-          # Zipalign the signed APK
-          ${BUILD_TOOLS_DIR}zipalign -v 4 "$UNSIGNED_APK" kronk-${{ steps.version.outputs.version }}.apk
+          ${BUILD_TOOLS_DIR}zipalign -v -p 4 "$UNSIGNED_APK" aligned.apk
+          ${BUILD_TOOLS_DIR}apksigner sign \
+            --ks signing/release.jks \
+            --ks-pass pass:kronkrelease2024 \
+            --key-pass pass:kronkrelease2024 \
+            --ks-key-alias kronk \
+            --out kronk-${{ steps.version.outputs.version }}.apk \
+            aligned.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
