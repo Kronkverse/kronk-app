@@ -47,17 +47,33 @@ jobs:
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
 
-      - name: Build Signed Release APK
-        run: |
-          export KEYSTORE_FILE="${GITHUB_WORKSPACE}/keystore.jks"
-          export KEYSTORE_PASSWORD="kronkrelease2024"
-          export KEY_ALIAS="kronk"
-          export KEY_PASSWORD="kronkrelease2024"
-          ./gradlew assembleGithubRelease
+      - name: Build Release APK
+        run: ./gradlew assembleGithubRelease
 
-      - name: Rename APK
+      - name: Sign APK with apksigner
         run: |
-          find mastodon/build/outputs/apk/githubRelease -name "*.apk" -exec cp {} kronk-${{ steps.version.outputs.version }}.apk \;
+          # Find the unsigned APK
+          UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
+          echo "Found APK: $UNSIGNED_APK"
+          
+          # Find latest build-tools
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
+          echo "Using build-tools: $BUILD_TOOLS_DIR"
+          
+          # Zipalign
+          ${BUILD_TOOLS_DIR}zipalign -v -p 4 "$UNSIGNED_APK" aligned.apk
+          
+          # Sign with apksigner
+          ${BUILD_TOOLS_DIR}apksigner sign \
+            --ks keystore.jks \
+            --ks-pass pass:kronkrelease2024 \
+            --key-pass pass:kronkrelease2024 \
+            --ks-key-alias kronk \
+            --out kronk-${{ steps.version.outputs.version }}.apk \
+            aligned.apk
+          
+          # Verify
+          ${BUILD_TOOLS_DIR}apksigner verify kronk-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
