@@ -45,16 +45,15 @@ jobs:
           sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" mastodon/build.gradle
 
       - name: Decode Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-          echo "KEYSTORE_FILE=$(pwd)/keystore.jks" >> $GITHUB_ENV
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
 
       - name: Build Signed Release APK
-        env:
-          KEYSTORE_PASSWORD: kronkrelease2024
-          KEY_ALIAS: kronk
-          KEY_PASSWORD: kronkrelease2024
-        run: ./gradlew assembleGithubRelease
+        run: |
+          export KEYSTORE_FILE="${GITHUB_WORKSPACE}/keystore.jks"
+          export KEYSTORE_PASSWORD="kronkrelease2024"
+          export KEY_ALIAS="kronk"
+          export KEY_PASSWORD="kronkrelease2024"
+          ./gradlew assembleGithubRelease
 
       - name: Rename APK
         run: |
