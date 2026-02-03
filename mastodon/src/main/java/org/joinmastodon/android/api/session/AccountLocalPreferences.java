@@ -9,7 +9,7 @@ public class AccountLocalPreferences{
 
 	public AccountLocalPreferences(SharedPreferences prefs){
 		this.prefs=prefs;
-		serverSideFiltersSupported=prefs.getBoolean("serverSideFilters", false);
+		serverSideFiltersSupported=prefs.getBoolean("serverSideFilters", true);
 	}
 
 	public long getNotificationsPauseEndTime(){
