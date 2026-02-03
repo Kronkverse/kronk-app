@@ -48,16 +48,16 @@ jobs:
         run: ./gradlew assembleGithubRelease
 
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d nr  | base64 -d > /tmp/release.jks
+          echo "Keystore size: $(wc -c < /tmp/release.jks) bytes"
 
       - name: Sign APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
-          echo "Signing: $UNSIGNED_APK"
           
-          # Sign with jarsigner  
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore /tmp/release.jks \
             -storepass "${KEYSTORE_PASSWORD}" \
@@ -66,9 +66,7 @@ jobs:
           
           jarsigner -verify "$UNSIGNED_APK"
           
-          # Find zipalign dynamically
           ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)
-          echo "Using zipalign: $ZIPALIGN"
           $ZIPALIGN -v -p 4 "$UNSIGNED_APK" kronk-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
