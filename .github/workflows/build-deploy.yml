@@ -44,11 +44,16 @@ jobs:
           sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version.outputs.version_code }}/" mastodon/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" mastodon/build.gradle
 
-      - name: Build Debug APK
-        run: ./gradlew assembleGithubDebug
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
 
-      - name: Rename APK
-        run: mv mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk kronk-${{ steps.version.outputs.version }}.apk
+      - name: Build Release APK
+        run: ./gradlew assembleGithubRelease
+
+      - name: Sign APK
+        run: |
+          $ANDROID_HOME/build-tools/35.0.0/zipalign -v -p 4 mastodon/build/outputs/apk/githubRelease/mastodon-githubRelease-unsigned.apk kronk-aligned.apk
+          $ANDROID_HOME/build-tools/35.0.0/apksigner sign --ks keystore.jks --ks-pass pass:kronkrelease2024 --key-pass pass:kronkrelease2024 --ks-key-alias kronk --out kronk-${{ steps.version.outputs.version }}.apk kronk-aligned.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
