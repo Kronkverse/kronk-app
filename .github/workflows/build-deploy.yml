@@ -49,8 +49,9 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d nr  | base64 -d > /tmp/release.jks
+          printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
           echo "Keystore size: $(wc -c < /tmp/release.jks) bytes"
+          keytool -list -keystore /tmp/release.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" || echo "Keystore verification failed"
 
       - name: Sign APK
         env:
