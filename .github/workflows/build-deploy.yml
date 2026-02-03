@@ -1,12 +1,15 @@
-name: Build and Deploy
+name: Build and Release
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-deploy:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -44,35 +47,15 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleGithubDebug
 
-      - name: Deploy to server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 170.64.182.29 >> ~/.ssh/known_hosts
+      - name: Rename APK
+        run: mv mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk kronk-${{ steps.version.outputs.version }}.apk
 
-          APK_PATH="mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk"
-          APK_SIZE=$(stat -c%s "$APK_PATH")
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ steps.version.outputs.version_code }}"
-
-          scp -i ~/.ssh/deploy_key "$APK_PATH" root@170.64.182.29:/var/www/kronk.info/kronk.apk
-
-          ssh -i ~/.ssh/deploy_key root@170.64.182.29 "cat > /var/www/kronk.info/version.json << EOF
-          {
-            \"version\": \"$VERSION\",
-            \"versionCode\": $VERSION_CODE,
-            \"apkSize\": $APK_SIZE,
-            \"apkUrl\": \"https://kronk.info/kronk.apk\"
-          }
-          EOF"
-
-          echo "Deployed version $VERSION (code $VERSION_CODE)"
-
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: kronk-${{ steps.version.outputs.version }}
-          path: mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk
+          files: kronk-${{ steps.version.outputs.version }}.apk
+          name: Kronk ${{ steps.version.outputs.version }}
+          body: |
+            Version ${{ steps.version.outputs.version }} (code ${{ steps.version.outputs.version_code }})
+          draft: false
+          prerelease: false
