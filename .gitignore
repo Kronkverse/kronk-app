@@ -10,3 +10,6 @@
 local.properties
 *.jks
 /fastlane/report.xml
+*.apk
+*.idsig
+kronk-release-key.jks

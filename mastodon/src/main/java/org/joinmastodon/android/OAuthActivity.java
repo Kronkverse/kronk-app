@@ -27,7 +27,7 @@ public class OAuthActivity extends Activity{
 		UiUtils.setUserPreferredTheme(this);
 		super.onCreate(savedInstanceState);
 		Uri uri=getIntent().getData();
-		if(uri==null || isTaskRoot()){
+		if(uri==null){
 			finish();
 			return;
 		}
@@ -42,7 +42,15 @@ public class OAuthActivity extends Activity{
 		}
 		String code=uri.getQueryParameter("code");
 		if(TextUtils.isEmpty(code)){
+			// No code - this might be a confirmation callback, restart main activity
 			finish();
+			Intent intent=new Intent(this, MainActivity.class);
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+			// Check if this is an email confirmation callback
+			if("true".equals(uri.getQueryParameter("confirmed"))){
+				intent.putExtra("emailConfirmed", true);
+			}
+			startActivity(intent);
 			return;
 		}
 		Instance instance=AccountSessionManager.getInstance().getAuthenticatingInstance();

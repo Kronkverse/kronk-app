@@ -10,10 +10,10 @@ android {
 
 	compileSdk 35
 	defaultConfig {
-		applicationId "org.joinmastodon.android"
+		applicationId "info.kronk.app"
 		minSdk 23
 		targetSdk 35
-		versionCode 158
+		versionCode 159
 		versionName "2.11.9"
 		testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 	}
