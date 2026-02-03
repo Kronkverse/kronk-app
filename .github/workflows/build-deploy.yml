@@ -52,7 +52,13 @@ jobs:
 
       - name: Sign APK
         run: |
+          echo "=== Available build-tools ==="
+          ls -la $ANDROID_HOME/build-tools/
           BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -1)
+          echo "Using build-tools: $BUILD_TOOLS"
+          echo "=== APK files ==="
+          find mastodon/build/outputs -name "*.apk" -ls
+          echo "=== Signing ==="
           $ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign -v -p 4 mastodon/build/outputs/apk/githubRelease/mastodon-githubRelease-unsigned.apk kronk-aligned.apk
           $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner sign --ks keystore.jks --ks-pass pass:kronkrelease2024 --key-pass pass:kronkrelease2024 --ks-key-alias kronk --out kronk-${{ steps.version.outputs.version }}.apk kronk-aligned.apk
 
