@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<org.joinmastodon.android.ui.views.SizeListenerFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#1a1a2e">
+
+    <!-- Hidden views to prevent crashes (keep IDs for code compatibility) -->
+    <View android:id="@+id/blue_fill" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+    <View android:id="@+id/green_fill" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+    <FrameLayout android:id="@+id/art_container" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone">
+        <View android:id="@+id/art_clouds" android:layout_width="0dp" android:layout_height="0dp"/>
+        <View android:id="@+id/art_plane_elephant" android:layout_width="0dp" android:layout_height="0dp"/>
+        <View android:id="@+id/art_right_hill" android:layout_width="0dp" android:layout_height="0dp"/>
+        <View android:id="@+id/art_left_hill" android:layout_width="0dp" android:layout_height="0dp"/>
+        <View android:id="@+id/art_center_hill" android:layout_width="0dp" android:layout_height="0dp"/>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <!-- Kronk Logo -->
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@mipmap/ic_launcher"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="@string/app_name"/>
+
+        <!-- App Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="32sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Tagline -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose your day"
+            android:textSize="16sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="48dp"/>
+
+        <!-- Sign Up Button -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <org.joinmastodon.android.ui.views.ProgressBarButton
+                android:id="@+id/btn_join_default_server"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Join"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                android:background="@drawable/bg_button_kronk_primary"/>
+
+            <ProgressBar
+                android:id="@+id/action_progress"
+                style="?android:progressBarStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="#FFF"
+                android:visibility="gone"/>
+
+        </FrameLayout>
+
+        <!-- Log In Button -->
+        <Button
+            android:id="@+id/btn_log_in"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/log_in"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_button_kronk_secondary"/>
+
+        <!-- Hidden buttons (keep IDs for code compatibility) -->
+        <Button
+            android:id="@+id/btn_get_started"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"/>
+        <Button
+            android:id="@+id/btn_learn_more"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+</org.joinmastodon.android.ui.views.SizeListenerFrameLayout>
