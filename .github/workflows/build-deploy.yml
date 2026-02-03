@@ -51,13 +51,20 @@ jobs:
         run: ./gradlew assembleGithubRelease
 
       - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: mastodon/build/outputs/apk/githubRelease
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: kronk
+          keyStorePassword: kronkrelease2024
+          keyPassword: kronkrelease2024
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      - name: Rename signed APK
         run: |
-          BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -1)
-          APK_FILE=$(find mastodon/build/outputs/apk -name "*.apk" | head -1)
-          echo "Found APK: $APK_FILE"
-          echo "Using build-tools: $BUILD_TOOLS"
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign -v -p 4 "$APK_FILE" kronk-aligned.apk
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner sign --ks keystore.jks --ks-pass pass:kronkrelease2024 --key-pass pass:kronkrelease2024 --ks-key-alias kronk --out kronk-${{ steps.version.outputs.version }}.apk kronk-aligned.apk
+          mv mastodon/build/outputs/apk/githubRelease/*-signed.apk kronk-${{ steps.version.outputs.version }}.apk || \
+          mv mastodon/build/outputs/apk/githubRelease/*.apk kronk-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
