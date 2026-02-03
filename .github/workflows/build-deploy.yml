@@ -46,11 +46,11 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/keystore.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          echo "KEYSTORE_FILE=$(pwd)/keystore.jks" >> $GITHUB_ENV
 
       - name: Build Signed Release APK
         env:
-          KEYSTORE_FILE: ${{ github.workspace }}/keystore.jks
           KEYSTORE_PASSWORD: kronkrelease2024
           KEY_ALIAS: kronk
           KEY_PASSWORD: kronkrelease2024
