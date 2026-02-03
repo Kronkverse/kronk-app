@@ -45,26 +45,20 @@ jobs:
           sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" mastodon/build.gradle
 
       - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/keystore.jks
 
-      - name: Build Release APK
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: kronkrelease2024
+          KEY_ALIAS: kronk
+          KEY_PASSWORD: kronkrelease2024
         run: ./gradlew assembleGithubRelease
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: mastodon/build/outputs/apk/githubRelease
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: kronk
-          keyStorePassword: kronkrelease2024
-          keyPassword: kronkrelease2024
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Rename signed APK
+      - name: Rename APK
         run: |
-          mv mastodon/build/outputs/apk/githubRelease/*-signed.apk kronk-${{ steps.version.outputs.version }}.apk || \
-          mv mastodon/build/outputs/apk/githubRelease/*.apk kronk-${{ steps.version.outputs.version }}.apk
+          find mastodon/build/outputs/apk/githubRelease -name "*.apk" -exec cp {} kronk-${{ steps.version.outputs.version }}.apk \;
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
