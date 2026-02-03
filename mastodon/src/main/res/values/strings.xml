@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-	<string name="app_name" translatable="false">Mastodon</string>
+	<string name="app_name" translatable="false">Kronk</string>
 
-	<string name="log_in">Log in</string>
+	<string name="log_in">Enter</string>
 	<string name="next">Next</string>
 	<string name="loading_instance">Retrieving server info…</string>
 	<string name="error">Error</string>
@@ -16,7 +16,7 @@
 
 	<string name="user_followed_you">%s followed you</string>
 	<string name="user_sent_follow_request">%s sent you a follow request</string>
-	<string name="user_favorited">%s favorited:</string>
+	<string name="user_favorited">%s frothed:</string>
 	<string name="notification_boosted">%s boosted:</string>
 
 	<string name="share_toot_title">Share</string>
@@ -144,7 +144,7 @@
 	<string name="mute_user_explain">You will not see their posts. They can still follow you and see your posts and will not know that they are muted.</string>
 	<string name="block_user_explain">You will not see their posts. They will not be able to see your posts or follow you. They will be able to tell that they are blocked.</string>
 	<string name="report_personal_title">Don’t want to see this?</string>
-	<string name="report_personal_subtitle">Here are your options for controlling what you see on Mastodon:</string>
+	<string name="report_personal_subtitle">Here are your options for controlling what you see on Kronk:</string>
 	<string name="back">Back</string>
 	<string name="search_communities">Server name or URL</string>
 	<string name="instance_rules_title">Server rules</string>
@@ -159,6 +159,10 @@
 	<string name="confirm_email_title">Check your inbox</string>
 	<!-- %s is the email address -->
 	<string name="confirm_email_subtitle">Tap the link we sent you to verify %s. We’ll wait right here.</string>
+	<string name="approval_pending_title">Awaiting Approval</string>
+	<string name="approval_pending_subtitle">Your email has been confirmed. Your account is awaiting approval by the server administrators. Once approved, the app will automatically let you in.</string>
+	<string name="account_approved_title">Account Approved!</string>
+	<string name="account_approved_body">Your account has been approved. Welcome to Kronk!</string>
 	<string name="confirm_email_didnt_get">Didn’t get a link?</string>
 	<string name="resend">Resend</string>
 	<string name="open_email_app">Open email app</string>
@@ -172,12 +176,12 @@
 	<string name="visibility_private">Private mention</string>
 	<string name="recent_searches">Recents</string>
 	<string name="notification_type_follow">New followers</string>
-	<string name="notification_type_favorite">Favorites</string>
+	<string name="notification_type_favorite">Froths</string>
 	<string name="notification_type_reblog">Boosts</string>
 	<string name="notification_type_mention">Mentions</string>
 	<string name="notification_type_poll">Polls</string>
 	<string name="choose_account">Choose account</string>
-	<string name="err_not_logged_in">Please log into Mastodon first</string>
+	<string name="err_not_logged_in">Please log into Kronk first</string>
 	<plurals name="cant_add_more_than_x_attachments">
 		<item quantity="one">You can’t add more than %d media attachment</item>
 		<item quantity="other">You can’t add more than %d media attachments</item>
@@ -192,11 +196,11 @@
 	<string name="settings_gif">Play animated avatars and emoji</string>
 	<string name="settings_custom_tabs">Open links in</string>
 	<string name="settings_notifications">Notifications</string>
-	<string name="settings_contribute">Contribute to Mastodon</string>
+	<string name="settings_contribute">Contribute to Kronk</string>
 	<string name="settings_tos">Terms of service</string>
 	<string name="settings_privacy_policy">Privacy policy</string>
 	<string name="settings_clear_cache">Clear media cache</string>
-	<string name="settings_app_version">Mastodon for Android v%1$s (%2$d)</string>
+	<string name="settings_app_version">Kronk for Android v%1$s (%2$d)</string>
 	<string name="media_cache_cleared">Media cache cleared</string>
 	<string name="confirm_log_out">Log out of %s?</string>
 	<string name="sensitive_content_explain">The author marked this media as sensitive.</string>
@@ -205,7 +209,7 @@
 	<string name="new_post">New post</string>
 	<string name="button_reply">Reply</string>
 	<string name="button_reblog">Boost</string>
-	<string name="button_favorite">Favorite</string>
+	<string name="button_favorite">Froth</string>
 	<string name="button_share">Share</string>
 	<string name="media_no_description">Media without description</string>
 	<string name="add_media">Add media</string>
@@ -235,8 +239,8 @@
 	<string name="downloading">Downloading…</string>
 	<string name="no_app_to_handle_action">There’s no app to handle this action</string>
 	<string name="local_timeline">Live feed</string>
-	<string name="trending_posts_info_banner">These are the posts gaining traction across Mastodon.</string>
-	<string name="trending_links_info_banner">These are the news stories getting talked about on Mastodon.</string>
+	<string name="trending_posts_info_banner">These are the posts gaining traction in the community.</string>
+	<string name="trending_links_info_banner">These are the news stories getting talked about on Kronk.</string>
 	<!-- %s is the server domain -->
 	<string name="local_timeline_info_banner">These are all the posts from all users in your server (%s).</string>
 	<string name="recommended_accounts_info_banner">You might like these accounts based on others you follow.</string>
@@ -256,8 +260,8 @@
 		<item quantity="other">%,d following</item>
 	</plurals>
 	<plurals name="x_favorites">
-		<item quantity="one">%,d favorite</item>
-		<item quantity="other">%,d favorites</item>
+		<item quantity="one">%,d froth</item>
+		<item quantity="other">%,d froths</item>
 	</plurals>
 	<plurals name="x_reblogs">
 		<item quantity="one">%,d boost</item>
@@ -310,7 +314,7 @@
 	<string name="add_bookmark">Bookmark</string>
 	<string name="remove_bookmark">Remove bookmark</string>
 	<string name="bookmarks">Bookmarks</string>
-	<string name="your_favorites">Favorites</string>
+	<string name="your_favorites">Froths</string>
 	<string name="login_title">Welcome back</string>
 	<string name="login_subtitle">Log in with the server where you created your account.</string>
 	<string name="server_url">Server URL</string>
@@ -351,14 +355,14 @@
 	<string name="verified_link">Verified link</string>
 	<string name="show">Show</string>
 	<string name="hide">Hide</string>
-	<string name="join_default_server">Join %s</string>
+	<string name="join_default_server">Join</string>
 	<string name="pick_server">Pick another server</string>
 	<string name="signup_or_login">or</string>
 	<string name="learn_more">Learn more</string>
-	<string name="welcome_to_mastodon">Welcome to Mastodon</string>
-	<string name="welcome_paragraph1">Mastodon is a decentralized social network, meaning no single company controls it. It’s made up of many independently-run servers, all connected together.</string>
+	<string name="welcome_to_mastodon">Welcome to Kronk</string>
+	<string name="welcome_paragraph1">Kronk is a private community, meaning no single company controls it. It’s made up of many independently-run servers, all connected together.</string>
 	<string name="what_are_servers">What are servers?</string>
-	<string name="welcome_paragraph2">Every Mastodon account is hosted on a server — each with its own values, rules, &amp; admins. No matter which one you pick, you can follow and interact with people on any server.</string>
+	<string name="welcome_paragraph2">Every account is hosted on a server — each with its own values, rules, &amp; admins. No matter which one you pick, you can follow and interact with people on any server.</string>
 	<string name="opening_link">Opening link…</string>
 	<string name="link_not_supported">This link is not supported in the app</string>
 	<string name="log_out_all_accounts">Log out of all accounts</string>
@@ -409,7 +413,7 @@
 	<string name="report_unfollow_explanation">To not see their posts in your home feed anymore, unfollow them.</string>
 	<string name="muted_user">Muted %s</string>
 	<string name="report_sent_already_blocked">You’ve already blocked this user, so there’s nothing else you need to do while we review your report.</string>
-	<string name="report_personal_already_blocked">You’ve already blocked this user, so there’s nothing else you need to do.\n\nThanks for helping keep Mastodon a safe place for everyone!</string>
+	<string name="report_personal_already_blocked">You’ve already blocked this user, so there’s nothing else you need to do.\n\nThanks for helping keep Kronk a safe place for everyone!</string>
 	<string name="blocked_user">Blocked %s</string>
 	<string name="mark_all_notifications_read">Mark all as read</string>
 	<string name="settings_display">Display</string>
@@ -541,9 +545,9 @@
 	<string name="downloading_update">Downloading (%d%%)</string>
 	<!-- Shown like a content warning, %s is the name of the filter -->
 	<string name="post_matches_filter_x">Matches filter “%s”</string>
-	<string name="search_mastodon">Search Mastodon</string>
+	<string name="search_mastodon">Search Kronk</string>
 	<string name="clear_all">Clear all</string>
-	<string name="search_open_url">Open URL in Mastodon</string>
+	<string name="search_open_url">Open URL in Kronk</string>
 	<string name="posts_matching_hashtag">Posts with “%s”</string>
 	<string name="search_go_to_account">Go to %s</string>
 	<string name="posts_matching_string">Posts with “%s”</string>
@@ -641,13 +645,13 @@
 	<string name="non_mutual_text3">Everyone’s conversation style is unique. Be ready to adapt.</string>
 	<string name="make_profile_discoverable">Make my profile discoverable</string>
 	<string name="discoverability">Discoverability</string>
-	<string name="discoverability_help">When you opt into discoverability on Mastodon, your posts may appear in search results and trending.\n\nYour profile may be suggested to people with similar interests to you.\n\nOpting out does not hide your profile if someone searches for you by name.</string>
+	<string name="discoverability_help">When you opt into discoverability on Kronk, your posts may appear in search results and trending.\n\nYour profile may be suggested to people with similar interests to you.\n\nOpting out does not hide your profile if someone searches for you by name.</string>
 	<string name="app_version_copied">Version number copied to clipboard</string>
 	<string name="onboarding_recommendations_intro">You curate your own home feed. The more people you follow, the more active and interesting it will be.</string>
 	<string name="onboarding_recommendations_title">Personalize your home feed</string>
 	<string name="article_by_author">By %s</string>
 	<string name="button_reblogged">Boosted</string>
-	<string name="button_favorited">Favorited</string>
+	<string name="button_favorited">Frothed</string>
 	<string name="join_server_x_with_invite">Join %s with invite</string>
 	<string name="expired_invite_link">Expired invite link</string>
 	<string name="expired_clipboard_invite_link_alert">The invite link for %1$s in your clipboard has expired and cannot be used to sign up.\n\nYou can request a new link from an existing user, sign up through %2$s, or pick another server to sign up through.</string>
@@ -689,7 +693,7 @@
 	<string name="handle_server_explanation_own">Your digital home, where all of your posts live. Don’t like this one? Transfer servers at any time and bring your followers, too.</string>
 	<string name="handle_explanation_own">Because your handle says who you are and where you are, people can interact with you across the social web of &lt;a>ActivityPub-powered platforms&lt;/a>.</string>
 	<string name="what_is_activitypub_title">What’s ActivityPub?</string>
-	<string name="what_is_activitypub">ActivityPub is like the language Mastodon speaks with other social networks.\n\nIt lets you connect and interact with people not just on Mastodon, but across different social apps too.</string>
+	<string name="what_is_activitypub">ActivityPub is like the language Mastodon speaks with other social networks.\n\nIt lets you connect and interact with people not just on Kronk, but across different social apps too.</string>
 	<string name="handle_copied">Handle copied to clipboard.</string>
 	<string name="qr_code">QR code</string>
 	<string name="scan_qr_code">Scan QR code</string>
@@ -698,8 +702,8 @@
 	<string name="image_saved">Image saved.</string>
 	<string name="video_saved">Video saved.</string>
 	<string name="view_file">View</string>
-	<string name="share_sheet_preview_profile">%s on Mastodon</string>
-	<string name="share_sheet_preview_post">%1$s on Mastodon: “%2$s”</string>
+	<string name="share_sheet_preview_profile">%s on Kronk</string>
+	<string name="share_sheet_preview_post">%1$s on Kronk: “%2$s”</string>
 	<string name="copy_profile_link">Copy link to profile</string>
 	<string name="in_app_browser">In-app browser</string>
 	<string name="system_browser">System browser</string>
@@ -738,14 +742,14 @@
 	<string name="notifications_from_user">Notifications from %s</string>
 	<string name="notifications_muted">Notifications from %s have been dismissed.</string>
 	<string name="notifications_allowed">%s will now appear in your notification list.</string>
-	<string name="visibility_subtitle_public">Everyone on and off Mastodon</string>
-	<string name="visibility_subtitle_unlisted">Hidden from Mastodon search results, trending, and public timelines</string>
+	<string name="visibility_subtitle_public">Everyone on and off Kronk</string>
+	<string name="visibility_subtitle_unlisted">Hidden from Kronk search results, trending, and public timelines</string>
 	<string name="visibility_subtitle_followers">Only your followers</string>
 	<string name="visibility_subtitle_private">Everyone mentioned in the post</string>
 	<string name="view_boosts">View boosts</string>
-	<string name="view_favorites">View favorites</string>
+	<string name="view_favorites">View froths</string>
 	<string name="undo_reblog">Undo boost</string>
-	<string name="undo_favorite">Undo favorite</string>
+	<string name="undo_favorite">Undo froth</string>
 	<string name="could_not_reach_server">Couldn’t reach the server. Check your connection and try again?</string>
 	<string name="connection_timed_out">The request timed out. Check your connection and try again?</string>
 	<string name="server_error">Something went wrong talking with your server. It’s probably not your fault. Try again?</string>
@@ -767,7 +771,7 @@
 	<string name="donation_success_title">Thank you for your contribution!</string>
 	<string name="donation_success_subtitle">You should receive an email confirming your donation soon.</string>
 	<string name="donation_server_error">We are sorry, an error occurred and we have not been able to process your donation.\n\nPlease retry in a few minutes.</string>
-	<string name="settings_donate">Donate to Mastodon</string>
+	<string name="settings_donate">Support Kronk</string>
 	<string name="settings_manage_donations">Manage donations</string>
 	<string name="cant_load_image">Couldn’t load image</string>
 	<string name="poll_see_results">See results</string>
@@ -777,8 +781,8 @@
 		<item quantity="other">%d attachments</item>
 	</plurals>
 	<plurals name="user_and_x_more_favorited">
-		<item quantity="one">%1$s and %2$,d other favorited:</item>
-		<item quantity="other">%1$s and %2$,d others favorited:</item>
+		<item quantity="one">%1$s and %2$,d other frothed:</item>
+		<item quantity="other">%1$s and %2$,d others frothed:</item>
 	</plurals>
 	<plurals name="user_and_x_more_boosted">
 		<item quantity="one">%1$s and %2$,d other boosted:</item>
@@ -867,7 +871,7 @@
 	<string name="report_reason_legal_subtitle">You believe it violates the law of your or the server\'s country</string>
 	<string name="date_of_birth">Date of birth</string>
 	<!-- %s is `at_least_x_years_old`. Some languages, unlike English, may require the word "years" here. -->
-	<string name="date_of_birth_explanation">We have to make sure you’re at least %s to use Mastodon. This won’t get stored after signup.</string>
+	<string name="date_of_birth_explanation">We have to make sure you’re at least %s to use Kronk. This won’t get stored after signup.</string>
 	<string name="open_link">Open</string>
 	<string name="copy">Copy</string>
 	<!-- Substituted into `date_of_birth_explanation` -->
@@ -877,7 +881,7 @@
 	</plurals>
 	<string name="quote_post_unavailable">Post unavailable</string>
 	<string name="quote_post_pending">Post pending</string>
-	<string name="quote_post_pending_explanation">On Mastodon, you can control whether someone can quote you. This post is pending while we’re getting the original author’s approval.</string>
+	<string name="quote_post_pending_explanation">On Kronk, you can control whether someone can quote you. This post is pending while we’re getting the original author’s approval.</string>
 	<!-- %s is a username, i.e. @Gargron -->
 	<string name="nested_quote">Quoted a post by %s</string>
 	<string name="compose_visibility_public_anyone">Public, anyone can quote</string>
@@ -895,8 +899,8 @@
 	<string name="quote_policy_followers">Followers only</string>
 	<string name="quote_policy_nobody">Just me</string>
 	<string name="quote_policy_for_unlisted_explanation">When people quote you, their post will also be hidden from trending timelines.</string>
-	<string name="quote_policy_for_private_explanation">Follower-only posts authored on Mastodon can\'t be quoted by others.</string>
-	<string name="quote_policy_for_direct_explanation">Private mentions authored on Mastodon can\'t be quoted by others.</string>
+	<string name="quote_policy_for_private_explanation">Follower-only posts authored on Kronk can\'t be quoted by others.</string>
+	<string name="quote_policy_for_direct_explanation">Private mentions authored on Kronk can\'t be quoted by others.</string>
 	<string name="change_quote_policy">Change who can quote</string>
 	<string name="edit_visibility_explanation">Published posts cannot change their visibility.</string>
 	<string name="user_quoted_post">%s quoted your post:</string>

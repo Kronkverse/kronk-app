@@ -47,7 +47,7 @@ import me.grishka.appkit.views.BottomSheet;
 
 public class SplashFragment extends AppKitFragment{
 
-	private static final String DEFAULT_SERVER="mastodon.social";
+	private static final String DEFAULT_SERVER="mastodon.kronk.info";
 
 	private SizeListenerFrameLayout contentView;
 	private View artContainer, blueFill, greenFill;
@@ -73,7 +73,7 @@ public class SplashFragment extends AppKitFragment{
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
 		contentView=(SizeListenerFrameLayout) inflater.inflate(R.layout.fragment_splash, container, false);
 		contentView.findViewById(R.id.btn_get_started).setOnClickListener(this::onButtonClick);
-		contentView.findViewById(R.id.btn_log_in).setOnClickListener(this::onButtonClick);
+		contentView.findViewById(R.id.btn_log_in).setOnClickListener(this::onLoginClick);
 		defaultServerButton=contentView.findViewById(R.id.btn_join_default_server);
 		defaultServerButton.setText(getString(R.string.join_default_server, chosenDefaultServer));
 		defaultServerButton.setOnClickListener(this::onJoinDefaultServerClick);
@@ -216,6 +216,34 @@ public class SplashFragment extends AppKitFragment{
 		sheet.setNavigationBarBackground(new ColorDrawable(UiUtils.alphaBlendColors(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface),
 				UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary), 0.05f)), !UiUtils.isDarkTheme());
 		sheet.show();
+	}
+
+	private void onLoginClick(View v){
+		instanceLoadingProgress=new ProgressDialog(getActivity());
+		instanceLoadingProgress.setCancelable(false);
+		instanceLoadingProgress.setMessage(getString(R.string.loading_instance));
+		instanceLoadingProgress.show();
+		AccountSessionManager.loadInstanceInfo(DEFAULT_SERVER, new Callback<>(){
+			@Override
+			public void onSuccess(Instance result){
+				if(getActivity()==null)
+					return;
+				if(instanceLoadingProgress!=null)
+					instanceLoadingProgress.dismiss();
+				instanceLoadingProgress=null;
+				AccountSessionManager.getInstance().authenticate(getActivity(), result);
+			}
+
+			@Override
+			public void onError(ErrorResponse error){
+				if(getActivity()==null)
+					return;
+				if(instanceLoadingProgress!=null)
+					instanceLoadingProgress.dismiss();
+				instanceLoadingProgress=null;
+				error.showToast(getActivity());
+			}
+		});
 	}
 
 	private void updateArtSize(int w, int h){

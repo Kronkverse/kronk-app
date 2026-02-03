@@ -14,6 +14,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import org.joinmastodon.android.api.ObjectValidationException;
+import org.joinmastodon.android.api.requests.accounts.GetOwnAccount;
 import org.joinmastodon.android.api.requests.search.GetSearchResults;
 import org.joinmastodon.android.api.session.AccountSession;
 import org.joinmastodon.android.api.session.AccountSessionManager;
@@ -24,6 +25,7 @@ import org.joinmastodon.android.fragments.ProfileFragment;
 import org.joinmastodon.android.fragments.SplashFragment;
 import org.joinmastodon.android.fragments.ThreadFragment;
 import org.joinmastodon.android.fragments.onboarding.AccountActivationFragment;
+import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.SearchResults;
 import org.joinmastodon.android.ui.utils.UiUtils;
@@ -100,6 +102,16 @@ public class MainActivity extends FragmentStackActivity{
 			return;
 		if(!"https".equals(uri.getScheme()) && !"http".equals(uri.getScheme()))
 			return;
+
+		// Check if this is an email confirmation link - open in browser so server confirms it
+		String path = uri.getPath();
+		if(path != null && path.startsWith("/auth/confirmation")){
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+			browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			startActivity(browserIntent);
+			return;
+		}
+
 		AccountSession session;
 		if(accountID==null)
 			session=AccountSessionManager.getInstance().getLastActiveAccount();
@@ -202,7 +214,37 @@ public class MainActivity extends FragmentStackActivity{
 				session=AccountSessionManager.getInstance().getLastActiveAccount();
 			}
 			args.putString("account", session.getID());
-			Fragment fragment=session.activated ? new HomeFragment() : new AccountActivationFragment();
+
+			// If account isn't activated, check if it's actually approved now
+			if (!session.activated) {
+				final AccountSession finalSession = session;
+				final Bundle finalArgs = args;
+				new GetOwnAccount()
+					.setCallback(new Callback<>() {
+						@Override
+						public void onSuccess(Account result) {
+							// Account is approved! Activate it and go to home
+							finalSession.activated = true;
+							AccountSessionManager.getInstance().writeAccountActivationInfo(finalSession.getID());
+							Fragment homeFragment = new HomeFragment();
+							homeFragment.setArguments(finalArgs);
+							showFragmentClearingBackStack(homeFragment);
+							maybeRequestNotificationsPermission();
+						}
+
+						@Override
+						public void onError(ErrorResponse error) {
+							// Still not approved, show activation fragment
+							Fragment activationFragment = new AccountActivationFragment();
+							activationFragment.setArguments(finalArgs);
+							showFragmentClearingBackStack(activationFragment);
+						}
+					})
+					.exec(finalSession.getID());
+				return;
+			}
+
+			Fragment fragment = new HomeFragment();
 			fragment.setArguments(args);
 			showFragmentClearingBackStack(fragment);
 			if(intent.getBooleanExtra("fromNotification", false) && intent.hasExtra("notification")){

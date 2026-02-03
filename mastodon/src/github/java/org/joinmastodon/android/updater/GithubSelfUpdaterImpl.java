@@ -14,7 +14,6 @@ import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -26,8 +25,6 @@ import org.joinmastodon.android.api.MastodonAPIController;
 import org.joinmastodon.android.events.SelfUpdateStateChangedEvent;
 
 import java.io.File;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import androidx.annotation.Keep;
 import okhttp3.Call;
@@ -103,55 +100,32 @@ public class GithubSelfUpdaterImpl extends GithubSelfUpdater{
 
 	private void actuallyCheckForUpdates(){
 		Request req=new Request.Builder()
-				.url("https://api.github.com/repos/mastodon/mastodon-android/releases/latest")
+				.url("https://kronk.info/version.json")
 				.build();
 		Call call=MastodonAPIController.getHttpClient().newCall(req);
 		try(Response resp=call.execute()){
 			JsonObject obj=JsonParser.parseReader(resp.body().charStream()).getAsJsonObject();
-			String tag=obj.get("tag_name").getAsString();
-			Pattern pattern=Pattern.compile("v?(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
-			Matcher matcher=pattern.matcher(tag);
-			if(!matcher.find()){
-				Log.w(TAG, "actuallyCheckForUpdates: release tag has wrong format: "+tag);
-				return;
-			}
-			int newMajor=Integer.parseInt(matcher.group(1)), newMinor=Integer.parseInt(matcher.group(2)), newRevision=matcher.group(3)!=null ? Integer.parseInt(matcher.group(3)) : 0;
-			Matcher curMatcher=pattern.matcher(BuildConfig.VERSION_NAME);
-			if(!curMatcher.find()){
-				Log.w(TAG, "actuallyCheckForUpdates: current version has wrong format: "+BuildConfig.VERSION_NAME);
-				return;
-			}
-			int curMajor=Integer.parseInt(curMatcher.group(1)), curMinor=Integer.parseInt(curMatcher.group(2)), curRevision=matcher.group(3)!=null ? Integer.parseInt(curMatcher.group(3)) : 0;
-			long newVersion=((long)newMajor << 32) | ((long)newMinor << 16) | newRevision;
-			long curVersion=((long)curMajor << 32) | ((long)curMinor << 16) | curRevision;
-			if(newVersion>curVersion || forceUpdate){
+			String version=obj.get("version").getAsString();
+			int versionCode=obj.get("versionCode").getAsInt();
+			long size=obj.get("apkSize").getAsLong();
+			String url=obj.get("apkUrl").getAsString();
+
+			if(versionCode>BuildConfig.VERSION_CODE || forceUpdate){
 				forceUpdate=false;
-				String version=newMajor+"."+newMinor;
-				if(matcher.group(3)!=null)
-					version+="."+newRevision;
-				Log.d(TAG, "actuallyCheckForUpdates: new version: "+version);
-				for(JsonElement el:obj.getAsJsonArray("assets")){
-					JsonObject asset=el.getAsJsonObject();
-					if("application/vnd.android.package-archive".equals(asset.get("content_type").getAsString()) && "uploaded".equals(asset.get("state").getAsString())){
-						long size=asset.get("size").getAsLong();
-						String url=asset.get("browser_download_url").getAsString();
+				Log.d(TAG, "actuallyCheckForUpdates: new version available: "+version+" (code "+versionCode+")");
 
-						UpdateInfo info=new UpdateInfo();
-						info.size=size;
-						info.version=version;
-						this.info=info;
+				UpdateInfo info=new UpdateInfo();
+				info.size=size;
+				info.version=version;
+				this.info=info;
 
-						getPrefs().edit()
-								.putLong("apkSize", size)
-								.putString("version", version)
-								.putString("apkURL", url)
-								.putInt("checkedByBuild", BuildConfig.VERSION_CODE)
-								.remove("downloadID")
-								.apply();
-
-						break;
-					}
-				}
+				getPrefs().edit()
+						.putLong("apkSize", size)
+						.putString("version", version)
+						.putString("apkURL", url)
+						.putInt("checkedByBuild", BuildConfig.VERSION_CODE)
+						.remove("downloadID")
+						.apply();
 			}
 			getPrefs().edit().putLong("lastCheck", System.currentTimeMillis()).apply();
 		}catch(Exception x){
