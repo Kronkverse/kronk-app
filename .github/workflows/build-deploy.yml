@@ -55,16 +55,19 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
           
-          ${BUILD_TOOLS_DIR}zipalign -v -p 4 "$UNSIGNED_APK" aligned.apk
-          ${BUILD_TOOLS_DIR}apksigner sign \
-            --ks /tmp/release.jks \
-            --ks-pass "pass:${KEYSTORE_PASSWORD}" \
-            --key-pass "pass:${KEYSTORE_PASSWORD}" \
-            --ks-key-alias kronk \
-            --out kronk-${{ steps.version.outputs.version }}.apk \
-            aligned.apk
+          # Sign with jarsigner
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore /tmp/release.jks \
+            -storepass "${KEYSTORE_PASSWORD}" \
+            -keypass "${KEYSTORE_PASSWORD}" \
+            "$UNSIGNED_APK" kronk
+          
+          # Verify
+          jarsigner -verify "$UNSIGNED_APK"
+          
+          # Zipalign after signing
+          ${ANDROID_HOME}/build-tools/34.0.0/zipalign -v -p 4 "$UNSIGNED_APK" kronk-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
