@@ -36,7 +36,7 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/v}
           echo "version=$TAG" >> $GITHUB_OUTPUT
-          VERSION_CODE=$(echo $TAG | awk -F. '{ printf "%d%02d%d", $1, $2, $3 }')
+          VERSION_CODE=$(echo $TAG | awk -F. '{ printf "%d%02d%02d", $1, $2, $3 }')
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
       - name: Update version in build.gradle
@@ -47,6 +47,10 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleGithubRelease
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
+
       - name: Sign APK
         run: |
           UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
@@ -54,9 +58,9 @@ jobs:
           
           ${BUILD_TOOLS_DIR}zipalign -v -p 4 "$UNSIGNED_APK" aligned.apk
           ${BUILD_TOOLS_DIR}apksigner sign \
-            --ks signing/release.jks \
-            --ks-pass pass:kronkrelease2024 \
-            --key-pass pass:kronkrelease2024 \
+            --ks /tmp/release.jks \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+            --key-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
             --ks-key-alias kronk \
             --out kronk-${{ steps.version.outputs.version }}.apk \
             aligned.apk
