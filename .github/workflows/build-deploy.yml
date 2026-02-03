@@ -27,7 +27,6 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/v}
           echo "version=$TAG" >> $GITHUB_OUTPUT
-          # Convert version to code (e.g., 2.12.1 -> 2121, 2.13.0 -> 2130)
           VERSION_CODE=$(echo $TAG | awk -F. '{printf "%d%02d%d", $1, $2, $3}')
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
@@ -36,42 +35,26 @@ jobs:
           sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version.outputs.version_code }}/" mastodon/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" mastodon/build.gradle
 
-      - name: Build Release APK
-        run: ./gradlew assembleGithubRelease
-
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: mastodon/build/outputs/apk/githubRelease
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "35.0.0"
+      - name: Build Debug APK
+        run: ./gradlew assembleGithubDebug
 
       - name: Deploy to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
-          # Setup SSH
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
 
-          # Get APK info
-          APK_PATH="${{ steps.sign_app.outputs.signedReleaseFile }}"
+          APK_PATH="mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk"
           APK_SIZE=$(stat -c%s "$APK_PATH")
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_CODE="${{ steps.version.outputs.version_code }}"
 
-          # Upload APK
           scp -i ~/.ssh/deploy_key "$APK_PATH" root@$SERVER_IP:/var/www/kronk.info/kronk.apk
 
-          # Update version.json
           ssh -i ~/.ssh/deploy_key root@$SERVER_IP "cat > /var/www/kronk.info/version.json << EOF
           {
             \"version\": \"$VERSION\",
@@ -87,4 +70,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kronk-${{ steps.version.outputs.version }}
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          path: mastodon/build/outputs/apk/githubDebug/mastodon-githubDebug.apk
