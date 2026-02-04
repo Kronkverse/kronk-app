@@ -222,8 +222,8 @@ public class AccountActivationFragment extends ToolbarFragment{
 					@Override
 					public void onError(ErrorResponse error){
 						currentRequest=null;
-						// Check if this is a 403 error - means email confirmed but awaiting approval
-						if(error instanceof MastodonErrorResponse && ((MastodonErrorResponse)error).httpStatus==403){
+						// Check if this is a "pending approval" error (not just any 403)
+						if(error instanceof MastodonErrorResponse && ((MastodonErrorResponse)error).httpStatus==403 && ((MastodonErrorResponse)error).error != null && ((MastodonErrorResponse)error).error.toLowerCase().contains("pending approval")){
 							if(!approvalPending){
 								approvalPending=true;
 								updateUIForApprovalPending();
