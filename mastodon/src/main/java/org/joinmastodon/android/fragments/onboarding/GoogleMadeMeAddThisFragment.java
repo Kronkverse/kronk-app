@@ -68,7 +68,7 @@ public class GoogleMadeMeAddThisFragment extends ToolbarFragment{
 		setNavigationBarColor(UiUtils.getThemeColor(activity, R.attr.colorM3Surface));
 		instance=Parcels.unwrap(getArguments().getParcelable("instance"));
 
-		items.add(new Item("Mastodon for Android Privacy Policy", getString(R.string.privacy_policy_explanation), "joinmastodon.org", "https://joinmastodon.org/android/privacy", "https://joinmastodon.org/favicon-32x32.png"));
+		items.add(new Item("Kronk Privacy Policy", getString(R.string.privacy_policy_explanation), "kronk.info", "https://kronk.info/privacy.html", "https://kronk.info/favicon.ico"));
 		loadServerDocument(instance.configuration.urls!=null && instance.configuration.urls.privacyPolicy!=null ? instance.configuration.urls.privacyPolicy : ("https://"+instance.getDomain()+"/terms"), 1);
 		if(instance.configuration.urls!=null && instance.configuration.urls.termsOfService!=null){
 			loadServerDocument(instance.configuration.urls.termsOfService, 2);

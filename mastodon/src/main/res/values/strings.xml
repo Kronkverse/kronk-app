@@ -336,7 +336,7 @@
 	<string name="profile_setup_subtitle">You can always complete this later in the Profile tab.</string>
 	<string name="follow_all">Follow all</string>
 	<string name="server_rules_disagree">Disagree</string>
-	<string name="privacy_policy_explanation">TL;DR: We don’t collect or process anything.</string>
+	<string name="privacy_policy_explanation">ӁЯѺƝ₭ doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.</string>
 	<!-- %s is server domain -->
 	<string name="server_policy_disagree">Disagree with %s</string>
 	<string name="profile_bio">Bio</string>
