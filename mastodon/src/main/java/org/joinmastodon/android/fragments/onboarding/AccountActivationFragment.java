@@ -191,14 +191,20 @@ public class AccountActivationFragment extends ToolbarFragment{
 						mgr.addAccount(instance, session.token, result, session.app, null);
 						String newID=mgr.getLastActiveAccountID();
 						accountID=newID;
+
+						// Only show notification if user was waiting for approval
+						boolean wasWaitingForApproval=approvalPending;
+						cancelApprovalCheckWorker();
+						if(wasWaitingForApproval){
+							showApprovalNotification();
+						}
+
 						if((session.self.avatar!=null || session.self.displayName!=null) && !getArguments().getBoolean("debug")){
 							new UpdateAccountCredentials(session.self.displayName, "", (File)null, null, Collections.emptyList())
 									.setCallback(new Callback<>(){
 										@Override
 										public void onSuccess(Account result){
 											mgr.updateAccountInfo(newID, result);
-											cancelApprovalCheckWorker();
-												showApprovalNotification();
 											proceed();
 										}
 
@@ -209,8 +215,6 @@ public class AccountActivationFragment extends ToolbarFragment{
 									})
 									.exec(newID);
 						}else{
-							cancelApprovalCheckWorker();
-												showApprovalNotification();
 							proceed();
 						}
 					}
@@ -265,11 +269,11 @@ public class AccountActivationFragment extends ToolbarFragment{
 			// Hide the open email button - not needed for approval pending
 			openEmailBtn.setVisibility(android.view.View.GONE);
 		});
-		
+
 		// Schedule background worker to check for approval
 		scheduleApprovalCheckWorker();
 	}
-	
+
 	private void scheduleApprovalCheckWorker(){
 		if(getActivity() != null){
 			AccountApprovalCheckReceiver.scheduleApprovalCheck(getActivity(), accountID);

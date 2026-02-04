@@ -215,32 +215,12 @@ public class MainActivity extends FragmentStackActivity{
 			}
 			args.putString("account", session.getID());
 
-			// If account isn't activated, check if it's actually approved now
+			// If account isn't activated, show activation fragment immediately
+			// The fragment will handle checking if the account is actually approved
 			if (!session.activated) {
-				final AccountSession finalSession = session;
-				final Bundle finalArgs = args;
-				new GetOwnAccount()
-					.setCallback(new Callback<>() {
-						@Override
-						public void onSuccess(Account result) {
-							// Account is approved! Activate it and go to home
-							finalSession.activated = true;
-							AccountSessionManager.getInstance().writeAccountActivationInfo(finalSession.getID());
-							Fragment homeFragment = new HomeFragment();
-							homeFragment.setArguments(finalArgs);
-							showFragmentClearingBackStack(homeFragment);
-							maybeRequestNotificationsPermission();
-						}
-
-						@Override
-						public void onError(ErrorResponse error) {
-							// Still not approved, show activation fragment
-							Fragment activationFragment = new AccountActivationFragment();
-							activationFragment.setArguments(finalArgs);
-							showFragmentClearingBackStack(activationFragment);
-						}
-					})
-					.exec(finalSession.getID());
+				Fragment activationFragment = new AccountActivationFragment();
+				activationFragment.setArguments(args);
+				showFragmentClearingBackStack(activationFragment);
 				return;
 			}
 
