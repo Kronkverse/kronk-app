@@ -101,7 +101,7 @@ public class GoogleMadeMeAddThisFragment extends ToolbarFragment{
 		buttonBar=view.findViewById(R.id.button_bar);
 
 		Button backBtn=view.findViewById(R.id.btn_back);
-		backBtn.setText(getString(R.string.server_policy_disagree, instance.getDomain()));
+		backBtn.setText(getString(R.string.server_policy_disagree));
 		backBtn.setOnClickListener(v->{
 			setResult(false, null);
 			Nav.finish(this);
