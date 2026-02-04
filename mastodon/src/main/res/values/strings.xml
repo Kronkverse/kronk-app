@@ -306,7 +306,7 @@
 	<string name="download_update">Download (%s)</string>
 	<string name="install_update">Install</string>
 	<string name="privacy_policy_title">Your privacy</string>
-	<string name="privacy_policy_subtitle">Although the Mastodon app does not collect any data, the server you sign up through may have a different policy.\n\nIf you disagree with the policy for %s, you can go back and pick a different server.</string>
+	<string name="privacy_policy_subtitle">ӁЯѺƝ₭ doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.\n\nReview the policies below before joining %s.</string>
 	<string name="i_agree">I agree</string>
 	<string name="empty_list">This list is empty</string>
 	<string name="instance_signup_closed">This server does not accept new registrations.</string>
@@ -336,7 +336,7 @@
 	<string name="profile_setup_subtitle">You can always complete this later in the Profile tab.</string>
 	<string name="follow_all">Follow all</string>
 	<string name="server_rules_disagree">Disagree</string>
-	<string name="privacy_policy_explanation">ӁЯѺƝ₭ doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.</string>
+	<string name="privacy_policy_explanation">Tap to read our full privacy policy</string>
 	<!-- %s is server domain -->
 	<string name="server_policy_disagree">Disagree with %s</string>
 	<string name="profile_bio">Bio</string>
