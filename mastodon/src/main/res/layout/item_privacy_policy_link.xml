@@ -7,7 +7,7 @@
 	android:paddingBottom="16dp"
 	android:paddingStart="16dp"
 	android:paddingEnd="24dp"
-	android:background="?selectableItemBackground">
+	android:background="?android:attr/selectableItemBackground">
 
 	<FrameLayout
 		android:id="@+id/icon_container"
