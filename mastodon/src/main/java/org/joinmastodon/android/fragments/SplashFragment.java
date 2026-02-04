@@ -1,10 +1,7 @@
 package org.joinmastodon.android.fragments;
 
 import android.app.ProgressDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.graphics.drawable.ColorDrawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -16,26 +13,15 @@ import android.widget.ProgressBar;
 
 import org.joinmastodon.android.MastodonApp;
 import org.joinmastodon.android.R;
-import org.joinmastodon.android.api.MastodonErrorResponse;
-import org.joinmastodon.android.api.requests.accounts.CheckInviteLink;
-import org.joinmastodon.android.api.requests.catalog.GetCatalogDefaultInstances;
 import org.joinmastodon.android.api.session.AccountSessionManager;
-import org.joinmastodon.android.fragments.onboarding.InstanceCatalogSignupFragment;
-import org.joinmastodon.android.fragments.onboarding.InstanceChooserLoginFragment;
 import org.joinmastodon.android.fragments.onboarding.InstanceRulesFragment;
 import org.joinmastodon.android.model.Instance;
-import org.joinmastodon.android.model.catalog.CatalogDefaultInstance;
 import org.joinmastodon.android.ui.InterpolatingMotionEffect;
 import org.joinmastodon.android.ui.M3AlertDialogBuilder;
-import org.joinmastodon.android.ui.text.HtmlParser;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.ui.views.ProgressBarButton;
 import org.joinmastodon.android.ui.views.SizeListenerFrameLayout;
 import org.parceler.Parcels;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 
 import androidx.annotation.Nullable;
 import me.grishka.appkit.Nav;
@@ -47,6 +33,7 @@ import me.grishka.appkit.views.BottomSheet;
 
 public class SplashFragment extends AppKitFragment{
 
+	// Hardcoded to Kronk instance - no other servers allowed
 	private static final String DEFAULT_SERVER="mastodon.kronk.info";
 
 	private SizeListenerFrameLayout contentView;
@@ -55,11 +42,7 @@ public class SplashFragment extends AppKitFragment{
 	private View artClouds, artPlaneElephant, artRightHill, artLeftHill, artCenterHill;
 	private ProgressBarButton defaultServerButton;
 	private ProgressBar defaultServerProgress;
-	private String chosenDefaultServer=DEFAULT_SERVER;
-	private boolean loadingDefaultServer, loadedDefaultServer;
-	private Uri currentInviteLink;
 	private ProgressDialog instanceLoadingProgress;
-	private String inviteCode;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -72,16 +55,12 @@ public class SplashFragment extends AppKitFragment{
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
 		contentView=(SizeListenerFrameLayout) inflater.inflate(R.layout.fragment_splash, container, false);
-		contentView.findViewById(R.id.btn_get_started).setOnClickListener(this::onButtonClick);
+		contentView.findViewById(R.id.btn_get_started).setOnClickListener(this::onSignupClick);
 		contentView.findViewById(R.id.btn_log_in).setOnClickListener(this::onLoginClick);
 		defaultServerButton=contentView.findViewById(R.id.btn_join_default_server);
-		defaultServerButton.setText(getString(R.string.join_default_server, chosenDefaultServer));
+		defaultServerButton.setText(getString(R.string.join_default_server, DEFAULT_SERVER));
 		defaultServerButton.setOnClickListener(this::onJoinDefaultServerClick);
 		defaultServerProgress=contentView.findViewById(R.id.action_progress);
-		if(loadingDefaultServer){
-			defaultServerButton.setTextVisible(false);
-			defaultServerProgress.setVisibility(View.VISIBLE);
-		}
 		contentView.findViewById(R.id.btn_learn_more).setOnClickListener(this::onLearnMoreClick);
 
 		artClouds=contentView.findViewById(R.id.art_clouds);
@@ -113,100 +92,56 @@ public class SplashFragment extends AppKitFragment{
 				});
 			}
 		});
-		if(!loadedDefaultServer && !loadingDefaultServer)
-			loadAndChooseDefaultServer();
 
 		return contentView;
 	}
 
-	private void onButtonClick(View v){
-		Bundle extras=new Bundle();
-		boolean isSignup=v.getId()==R.id.btn_get_started;
-		extras.putBoolean("signup", isSignup);
-		extras.putString("defaultServer", chosenDefaultServer);
-		Nav.go(getActivity(), isSignup ? InstanceCatalogSignupFragment.class : InstanceChooserLoginFragment.class, extras);
+	private void onSignupClick(View v){
+		// Go directly to Kronk signup
+		loadInstanceAndSignup();
 	}
 
 	private void onJoinDefaultServerClick(View v){
-		if(loadingDefaultServer)
-			return;
+		loadInstanceAndSignup();
+	}
+
+	private void loadInstanceAndSignup(){
 		instanceLoadingProgress=new ProgressDialog(getActivity());
 		instanceLoadingProgress.setCancelable(false);
 		instanceLoadingProgress.setMessage(getString(R.string.loading_instance));
 		instanceLoadingProgress.show();
-		if(currentInviteLink!=null){
-			new CheckInviteLink(currentInviteLink.getPath())
-					.setCallback(new Callback<>(){
-						@Override
-						public void onSuccess(CheckInviteLink.Response result){
-							inviteCode=result.inviteCode;
-							proceedWithServerDomain(currentInviteLink.getHost());
-						}
+		
+		AccountSessionManager.loadInstanceInfo(DEFAULT_SERVER, new Callback<>(){
+			@Override
+			public void onSuccess(Instance result){
+				if(getActivity()==null)
+					return;
+				if(instanceLoadingProgress!=null)
+					instanceLoadingProgress.dismiss();
+				instanceLoadingProgress=null;
+				if(!result.areRegistrationsOpen()){
+					new M3AlertDialogBuilder(getActivity())
+							.setTitle(R.string.error)
+							.setMessage(R.string.instance_signup_closed)
+							.setPositiveButton(R.string.ok, null)
+							.show();
+					return;
+				}
+				Bundle args=new Bundle();
+				args.putParcelable("instance", Parcels.wrap(result));
+				Nav.go(getActivity(), InstanceRulesFragment.class, args);
+			}
 
-						@Override
-						public void onError(ErrorResponse error){
-							if(getActivity()==null)
-								return;
-							if(instanceLoadingProgress!=null)
-								instanceLoadingProgress.dismiss();
-							instanceLoadingProgress=null;
-							if(error instanceof MastodonErrorResponse mer){
-								switch(mer.httpStatus){
-									case 401 -> new M3AlertDialogBuilder(getActivity())
-											.setTitle(R.string.expired_invite_link)
-											.setMessage(getString(R.string.expired_clipboard_invite_link_alert, currentInviteLink.getHost(), chosenDefaultServer))
-											.setPositiveButton(R.string.ok, null)
-											.show();
-									case 404 -> new M3AlertDialogBuilder(getActivity())
-											.setTitle(R.string.invalid_invite_link)
-											.setMessage(getString(R.string.invalid_clipboard_invite_link_alert, currentInviteLink.getHost(), chosenDefaultServer))
-											.setPositiveButton(R.string.ok, null)
-											.show();
-									default -> error.showToast(getActivity());
-								}
-							}
-						}
-					})
-					.execNoAuth(currentInviteLink.getHost());
-			return;
-		}
-		proceedWithServerDomain(chosenDefaultServer);
-	}
-
-	private void proceedWithServerDomain(String domain){
-		AccountSessionManager.loadInstanceInfo(domain, new Callback<>(){
-					@Override
-					public void onSuccess(Instance result){
-						if(getActivity()==null)
-							return;
-						if(instanceLoadingProgress!=null)
-							instanceLoadingProgress.dismiss();
-						instanceLoadingProgress=null;
-						if(!result.areRegistrationsOpen() && TextUtils.isEmpty(inviteCode)){
-							new M3AlertDialogBuilder(getActivity())
-									.setTitle(R.string.error)
-									.setMessage(R.string.instance_signup_closed)
-									.setPositiveButton(R.string.ok, null)
-									.show();
-							return;
-						}
-						Bundle args=new Bundle();
-						args.putParcelable("instance", Parcels.wrap(result));
-						if(inviteCode!=null)
-							args.putString("inviteCode", inviteCode);
-						Nav.go(getActivity(), InstanceRulesFragment.class, args);
-					}
-
-					@Override
-					public void onError(ErrorResponse error){
-						if(getActivity()==null)
-							return;
-						if(instanceLoadingProgress!=null)
-							instanceLoadingProgress.dismiss();
-						instanceLoadingProgress=null;
-						error.showToast(getActivity());
-					}
-				});
+			@Override
+			public void onError(ErrorResponse error){
+				if(getActivity()==null)
+					return;
+				if(instanceLoadingProgress!=null)
+					instanceLoadingProgress.dismiss();
+				instanceLoadingProgress=null;
+				error.showToast(getActivity());
+			}
+		});
 	}
 
 	private void onLearnMoreClick(View v){
@@ -254,7 +189,6 @@ public class SplashFragment extends AppKitFragment{
 		greenFill.setScaleY(h-artContainer.getBottom()+V.dp(90));
 	}
 
-
 	@Override
 	public void onApplyWindowInsets(WindowInsets insets){
 		super.onApplyWindowInsets(insets);
@@ -286,67 +220,5 @@ public class SplashFragment extends AppKitFragment{
 	protected void onHidden(){
 		super.onHidden();
 		motionEffect.deactivate();
-	}
-
-	private void loadAndChooseDefaultServer(){
-		ClipData clipData=getActivity().getSystemService(ClipboardManager.class).getPrimaryClip();
-		if(clipData!=null && clipData.getItemCount()>0){
-			String clipText=clipData.getItemAt(0).coerceToText(getActivity()).toString();
-			if(HtmlParser.isValidInviteUrl(clipText)){
-				currentInviteLink=Uri.parse(clipText);
-				defaultServerButton.setText(getString(R.string.join_server_x_with_invite, HtmlParser.normalizeDomain(Objects.requireNonNull(currentInviteLink.getHost()))));
-			}
-		}else{
-			loadingDefaultServer=true;
-			defaultServerButton.setTextVisible(false);
-			defaultServerProgress.setVisibility(View.VISIBLE);
-		}
-		new GetCatalogDefaultInstances()
-				.setCallback(new Callback<>(){
-					@Override
-					public void onSuccess(List<CatalogDefaultInstance> result){
-						if(result.isEmpty()){
-							setChosenDefaultServer(DEFAULT_SERVER);
-							return;
-						}
-						float sum=0f;
-						for(CatalogDefaultInstance inst:result){
-							sum+=inst.weight;
-						}
-						if(sum<=0)
-							sum=1f;
-						for(CatalogDefaultInstance inst:result){
-							inst.weight/=sum;
-						}
-						float rand=ThreadLocalRandom.current().nextFloat();
-						float prev=0f;
-						for(CatalogDefaultInstance inst:result){
-							if(rand>=prev && rand<prev+inst.weight){
-								setChosenDefaultServer(inst.domain);
-								return;
-							}
-							prev+=inst.weight;
-						}
-						// Just in case something didn't add up
-						setChosenDefaultServer(result.get(result.size()-1).domain);
-					}
-
-					@Override
-					public void onError(ErrorResponse error){
-						setChosenDefaultServer(DEFAULT_SERVER);
-					}
-				})
-				.execNoAuth("");
-	}
-
-	private void setChosenDefaultServer(String domain){
-		chosenDefaultServer=domain;
-		loadingDefaultServer=false;
-		loadedDefaultServer=true;
-		if(defaultServerButton!=null && getActivity()!=null && currentInviteLink==null){
-			defaultServerButton.setTextVisible(true);
-			defaultServerProgress.setVisibility(View.GONE);
-			defaultServerButton.setText(getString(R.string.join_default_server, HtmlParser.normalizeDomain(chosenDefaultServer)));
-		}
 	}
 }
