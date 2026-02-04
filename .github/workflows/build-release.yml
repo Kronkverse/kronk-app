@@ -58,21 +58,18 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
-          
+
           ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
-          
-          # Zipalign first
+
           $ZIPALIGN -v -p 4 "$UNSIGNED_APK" kronk-aligned.apk
-          
-          # Sign with apksigner (adds v1 + v2 + v3 signatures)
+
           $APKSIGNER sign --ks /tmp/release.jks \
             --ks-pass pass:"${KEYSTORE_PASSWORD}" \
             --ks-key-alias kronk \
             --out kronk-${{ steps.version.outputs.version }}.apk \
             kronk-aligned.apk
-          
-          # Verify signature
+
           $APKSIGNER verify --print-certs kronk-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
@@ -84,3 +81,22 @@ jobs:
             Version ${{ steps.version.outputs.version }} (code ${{ steps.version.outputs.version_code }})
           draft: false
           prerelease: false
+
+      - name: Deploy to website
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
+
+          APK_SIZE=$(stat -c%s "kronk-${VERSION}.apk")
+
+          scp -i ~/.ssh/deploy_key "kronk-${VERSION}.apk" root@kronk.info:/var/www/kronk.info/kronk.apk
+
+          ssh -i ~/.ssh/deploy_key root@kronk.info "echo '{\"version\": \"'${VERSION}'\", \"versionCode\": '${VERSION_CODE}', \"apkSize\": '${APK_SIZE}', \"apkUrl\": \"https://kronk.info/kronk.apk\"}' > /var/www/kronk.info/version.json"
+
+          echo "Deployed version ${VERSION} to kronk.info"

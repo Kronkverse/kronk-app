@@ -1,0 +1,88 @@
+name: Build Development
+
+on:
+  push:
+    branches:
+      - development
+
+permissions:
+  contents: write
+
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Get version info
+        id: version
+        run: |
+          VERSION=$(grep 'versionName' mastodon/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          VERSION_CODE=$(grep 'versionCode' mastodon/build.gradle | head -1 | sed 's/[^0-9]*//g')
+          COMMIT_SHA=${GITHUB_SHA::7}
+          echo "version=${VERSION}-dev.${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Build Release APK
+        run: ./gradlew assembleGithubRelease
+
+      - name: Decode keystore
+        run: |
+          printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
+
+      - name: Sign APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          UNSIGNED_APK=$(find mastodon/build/outputs/apk/githubRelease -name "*.apk" | head -1)
+
+          ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
+
+          $ZIPALIGN -v -p 4 "$UNSIGNED_APK" kronk-aligned.apk
+
+          $APKSIGNER sign --ks /tmp/release.jks \
+            --ks-pass pass:"${KEYSTORE_PASSWORD}" \
+            --ks-key-alias kronk \
+            --out kronk-dev.apk \
+            kronk-aligned.apk
+
+          $APKSIGNER verify --print-certs kronk-dev.apk
+
+      - name: Deploy to dev website
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          COMMIT: ${{ steps.version.outputs.commit }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
+
+          APK_SIZE=$(stat -c%s "kronk-dev.apk")
+
+          scp -i ~/.ssh/deploy_key kronk-dev.apk root@kronk.info:/var/www/kronk.info/dev/kronk.apk
+
+          ssh -i ~/.ssh/deploy_key root@kronk.info "echo '{\"version\": \"'${VERSION}'\", \"versionCode\": '${VERSION_CODE}', \"commit\": \"'${COMMIT}'\", \"apkSize\": '${APK_SIZE}', \"apkUrl\": \"https://kronk.info/dev/kronk.apk\", \"buildTime\": \"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'\"}' > /var/www/kronk.info/dev/version.json"
+
+          echo "Deployed dev build ${VERSION} to kronk.info/dev/"
