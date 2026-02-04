@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<color name="primary_700">#431cbb</color>
+	<color name="primary_700">#5F4FE0</color>
 
 	<color name="navigation_bar_bg_light">#282C37</color>
 	<color name="highlight_over_dark">#30FFFFFF</color>

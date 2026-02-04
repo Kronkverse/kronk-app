@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<!-- light -->
-	<color name="masterialLight_primary">#4000DD</color>
+	<color name="masterialLight_primary">#6B5CE7</color>
 	<color name="masterialLight_onPrimary">#FFFFFF</color>
 	<color name="masterialLight_primaryContainer">#EBDDFF</color>
 	<color name="masterialLight_onPrimaryContainer">#230F46</color>
@@ -28,14 +28,14 @@
 	<color name="masterialLight_scrim">#000000</color>
 	<color name="masterialLight_inverseSurface">#312F3B</color>
 	<color name="masterialLight_inverseOnSurface">#F3EEFE</color>
-	<color name="masterialLight_inversePrimary">#C7BFFF</color>
-	<color name="masterialLight_primaryFixed">#E5DEFF</color>
+	<color name="masterialLight_inversePrimary">#B8ADFF</color>
+	<color name="masterialLight_primaryFixed">#EDE8FF</color>
 	<color name="masterialLight_onPrimaryFixed">#180065</color>
-	<color name="masterialLight_primaryFixedDim">#C7BFFF</color>
+	<color name="masterialLight_primaryFixedDim">#B8ADFF</color>
 	<color name="masterialLight_onPrimaryFixedVariant">#4000DC</color>
-	<color name="masterialLight_secondaryFixed">#E5DEFF</color>
+	<color name="masterialLight_secondaryFixed">#EDE8FF</color>
 	<color name="masterialLight_onSecondaryFixed">#180065</color>
-	<color name="masterialLight_secondaryFixedDim">#C7BFFF</color>
+	<color name="masterialLight_secondaryFixedDim">#B8ADFF</color>
 	<color name="masterialLight_onSecondaryFixedVariant">#453895</color>
 	<color name="masterialLight_tertiaryFixed">#FFD7F6</color>
 	<color name="masterialLight_onTertiaryFixed">#380039</color>
@@ -48,9 +48,9 @@
 	<color name="masterialLight_surfaceContainer">#F1EBFB</color>
 	<color name="masterialLight_surfaceContainerHigh">#EBE6F6</color>
 	<color name="masterialLight_surfaceContainerHighest">#E5E0F0</color>
-	<color name="masterialLight_primary_mediumContrast">#3C00D1</color>
+	<color name="masterialLight_primary_mediumContrast">#5F4FE0</color>
 	<color name="masterialLight_onPrimary_mediumContrast">#FFFFFF</color>
-	<color name="masterialLight_primaryContainer_mediumContrast">#6648FF</color>
+	<color name="masterialLight_primaryContainer_mediumContrast">#7C6BED</color>
 	<color name="masterialLight_onPrimaryContainer_mediumContrast">#FFFFFF</color>
 	<color name="masterialLight_secondary_mediumContrast">#413391</color>
 	<color name="masterialLight_onSecondary_mediumContrast">#FFFFFF</color>
@@ -75,7 +75,7 @@
 	<color name="masterialLight_scrim_mediumContrast">#000000</color>
 	<color name="masterialLight_inverseSurface_mediumContrast">#312F3B</color>
 	<color name="masterialLight_inverseOnSurface_mediumContrast">#F3EEFE</color>
-	<color name="masterialLight_inversePrimary_mediumContrast">#C7BFFF</color>
+	<color name="masterialLight_inversePrimary_mediumContrast">#B8ADFF</color>
 	<color name="masterialLight_primaryFixed_mediumContrast">#7058FF</color>
 	<color name="masterialLight_onPrimaryFixed_mediumContrast">#FFFFFF</color>
 	<color name="masterialLight_primaryFixedDim_mediumContrast">#552BFB</color>
@@ -97,7 +97,7 @@
 	<color name="masterialLight_surfaceContainerHighest_mediumContrast">#E5E0F0</color>
 	<color name="masterialLight_primary_highContrast">#1E0077</color>
 	<color name="masterialLight_onPrimary_highContrast">#FFFFFF</color>
-	<color name="masterialLight_primaryContainer_highContrast">#3C00D1</color>
+	<color name="masterialLight_primaryContainer_highContrast">#5F4FE0</color>
 	<color name="masterialLight_onPrimaryContainer_highContrast">#FFFFFF</color>
 	<color name="masterialLight_secondary_highContrast">#1F0671</color>
 	<color name="masterialLight_onSecondary_highContrast">#FFFFFF</color>
@@ -123,7 +123,7 @@
 	<color name="masterialLight_inverseSurface_highContrast">#312F3B</color>
 	<color name="masterialLight_inverseOnSurface_highContrast">#FFFFFF</color>
 	<color name="masterialLight_inversePrimary_highContrast">#EFE9FF</color>
-	<color name="masterialLight_primaryFixed_highContrast">#3C00D1</color>
+	<color name="masterialLight_primaryFixed_highContrast">#5F4FE0</color>
 	<color name="masterialLight_onPrimaryFixed_highContrast">#FFFFFF</color>
 	<color name="masterialLight_primaryFixedDim_highContrast">#280094</color>
 	<color name="masterialLight_onPrimaryFixedVariant_highContrast">#FFFFFF</color>
@@ -168,11 +168,11 @@
 	<color name="masterialLight_colorOnLimeContainer_highContrast">#FFFFFF</color>
 
 	<!-- dark -->
-	<color name="masterialDark_primary">#C7BFFF</color>
+	<color name="masterialDark_primary">#B8ADFF</color>
 	<color name="masterialDark_onPrimary">#2B009E</color>
 	<color name="masterialDark_primaryContainer">#4D1AF4</color>
 	<color name="masterialDark_onPrimaryContainer">#FAF5FF</color>
-	<color name="masterialDark_secondary">#C7BFFF</color>
+	<color name="masterialDark_secondary">#B8ADFF</color>
 	<color name="masterialDark_onSecondary">#2E1E7E</color>
 	<color name="masterialDark_secondaryContainer">#3D308E</color>
 	<color name="masterialDark_onSecondaryContainer">#D6CFFF</color>
@@ -196,13 +196,13 @@
 	<color name="masterialDark_inverseSurface">#E5E0F0</color>
 	<color name="masterialDark_inverseOnSurface">#312F3B</color>
 	<color name="masterialDark_inversePrimary">#582FFE</color>
-	<color name="masterialDark_primaryFixed">#E5DEFF</color>
+	<color name="masterialDark_primaryFixed">#EDE8FF</color>
 	<color name="masterialDark_onPrimaryFixed">#180065</color>
-	<color name="masterialDark_primaryFixedDim">#C7BFFF</color>
+	<color name="masterialDark_primaryFixedDim">#B8ADFF</color>
 	<color name="masterialDark_onPrimaryFixedVariant">#4000DC</color>
-	<color name="masterialDark_secondaryFixed">#E5DEFF</color>
+	<color name="masterialDark_secondaryFixed">#EDE8FF</color>
 	<color name="masterialDark_onSecondaryFixed">#180065</color>
-	<color name="masterialDark_secondaryFixedDim">#C7BFFF</color>
+	<color name="masterialDark_secondaryFixedDim">#B8ADFF</color>
 	<color name="masterialDark_onSecondaryFixedVariant">#453895</color>
 	<color name="masterialDark_tertiaryFixed">#FFD7F6</color>
 	<color name="masterialDark_onTertiaryFixed">#380039</color>
@@ -243,13 +243,13 @@
 	<color name="masterialDark_inverseSurface_mediumContrast">#E5E0F0</color>
 	<color name="masterialDark_inverseOnSurface_mediumContrast">#2A2934</color>
 	<color name="masterialDark_inversePrimary_mediumContrast">#4100DF</color>
-	<color name="masterialDark_primaryFixed_mediumContrast">#E5DEFF</color>
+	<color name="masterialDark_primaryFixed_mediumContrast">#EDE8FF</color>
 	<color name="masterialDark_onPrimaryFixed_mediumContrast">#0F0048</color>
-	<color name="masterialDark_primaryFixedDim_mediumContrast">#C7BFFF</color>
+	<color name="masterialDark_primaryFixedDim_mediumContrast">#B8ADFF</color>
 	<color name="masterialDark_onPrimaryFixedVariant_mediumContrast">#3000AE</color>
-	<color name="masterialDark_secondaryFixed_mediumContrast">#E5DEFF</color>
+	<color name="masterialDark_secondaryFixed_mediumContrast">#EDE8FF</color>
 	<color name="masterialDark_onSecondaryFixed_mediumContrast">#0F0048</color>
-	<color name="masterialDark_secondaryFixedDim_mediumContrast">#C7BFFF</color>
+	<color name="masterialDark_secondaryFixedDim_mediumContrast">#B8ADFF</color>
 	<color name="masterialDark_onSecondaryFixedVariant_mediumContrast">#342584</color>
 	<color name="masterialDark_tertiaryFixed_mediumContrast">#FFD7F6</color>
 	<color name="masterialDark_onTertiaryFixed_mediumContrast">#260027</color>
