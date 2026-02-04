@@ -13,3 +13,4 @@ local.properties
 *.apk
 *.idsig
 kronk-release-key.jks
+keystore-base64.txt
