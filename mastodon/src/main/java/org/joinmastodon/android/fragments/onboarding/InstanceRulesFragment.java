@@ -55,9 +55,9 @@ public class InstanceRulesFragment extends ToolbarFragment{
 
 		list=view.findViewById(R.id.list);
 		list.setLayoutManager(new LinearLayoutManager(getActivity()));
-		View headerView=inflater.inflate(R.layout.item_list_header_simple, list, false);
+		View headerView=inflater.inflate(R.layout.item_kronk_header, list, false);
 		TextView text=headerView.findViewById(R.id.text);
-		text.setText(Html.fromHtml(getString(R.string.instance_rules_subtitle, "<b>"+Html.escapeHtml(instance.getDomain())+"</b>")));
+		text.setText(getString(R.string.instance_rules_subtitle));
 
 		adapter=new MergeRecyclerAdapter();
 		adapter.addAdapter(new SingleViewRecyclerAdapter(headerView));

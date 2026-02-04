@@ -69,10 +69,6 @@ public class GoogleMadeMeAddThisFragment extends ToolbarFragment{
 		instance=Parcels.unwrap(getArguments().getParcelable("instance"));
 
 		items.add(new Item("Kronk Privacy Policy", getString(R.string.privacy_policy_explanation), "kronk.info", "https://kronk.info/privacy.html", "https://kronk.info/favicon.ico"));
-		loadServerDocument(instance.configuration.urls!=null && instance.configuration.urls.privacyPolicy!=null ? instance.configuration.urls.privacyPolicy : ("https://"+instance.getDomain()+"/terms"), 1);
-		if(instance.configuration.urls!=null && instance.configuration.urls.termsOfService!=null){
-			loadServerDocument(instance.configuration.urls.termsOfService, 2);
-		}
 	}
 
 	@Override
@@ -91,9 +87,9 @@ public class GoogleMadeMeAddThisFragment extends ToolbarFragment{
 
 		list=view.findViewById(R.id.list);
 		list.setLayoutManager(new LinearLayoutManager(getActivity()));
-		View headerView=inflater.inflate(R.layout.item_list_header_simple, list, false);
+		View headerView=inflater.inflate(R.layout.item_kronk_header, list, false);
 		TextView text=headerView.findViewById(R.id.text);
-		text.setText(getString(R.string.privacy_policy_subtitle, instance.getDomain()));
+		text.setText(getString(R.string.privacy_policy_subtitle));
 
 		adapter=new MergeRecyclerAdapter();
 		adapter.addAdapter(new SingleViewRecyclerAdapter(headerView));

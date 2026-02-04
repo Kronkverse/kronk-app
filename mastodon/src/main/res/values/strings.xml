@@ -148,7 +148,7 @@
 	<string name="back">Back</string>
 	<string name="search_communities">Server name or URL</string>
 	<string name="instance_rules_title">Server rules</string>
-	<string name="instance_rules_subtitle">By continuing, you agree to follow by the following rules set and enforced by the %s moderators.</string>
+	<string name="instance_rules_subtitle">Kronk is a place to gather and share who we are. Enter this space intentionally and be welcome.</string>
 	<string name="signup_title">Create account</string>
 	<string name="display_name">Name</string>
 	<string name="username">Username</string>
@@ -306,7 +306,7 @@
 	<string name="download_update">Download (%s)</string>
 	<string name="install_update">Install</string>
 	<string name="privacy_policy_title">Your privacy</string>
-	<string name="privacy_policy_subtitle">ӁЯѺƝ₭ doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.\n\nReview the policies below before joining %s.</string>
+	<string name="privacy_policy_subtitle">ӁЯѺƝ₭ doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.</string>
 	<string name="i_agree">I agree</string>
 	<string name="empty_list">This list is empty</string>
 	<string name="instance_signup_closed">This server does not accept new registrations.</string>
