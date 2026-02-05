@@ -49,8 +49,9 @@ public class PushNotificationReceiver extends BroadcastReceiver{
 
 	@Override
 	public void onReceive(Context context, Intent intent){
-		if(BuildConfig.DEBUG){
-			Log.e(TAG, "received: "+intent);
+		// Always log for debugging
+		{
+			Log.i(TAG, "=== PUSH RECEIVED === "+intent.getAction());
 			Bundle extras=intent.getExtras();
 			for(String key : extras.keySet()){
 				Log.i(TAG, key+" -> "+extras.get(key));
@@ -61,6 +62,7 @@ public class PushNotificationReceiver extends BroadcastReceiver{
 			String p=intent.getStringExtra("p");
 			String s=intent.getStringExtra("s");
 			String pushAccountID=intent.getStringExtra("x");
+			Log.i(TAG, "Push params - k:"+(k!=null?"YES":"null")+" p:"+(p!=null?"YES":"null")+" s:"+(s!=null?"YES":"null")+" x:"+pushAccountID);
 			if(!TextUtils.isEmpty(pushAccountID) && !TextUtils.isEmpty(k) && !TextUtils.isEmpty(p) && !TextUtils.isEmpty(s)){
 				MastodonAPIController.runInBackground(()->{
 					try{
@@ -73,7 +75,8 @@ public class PushNotificationReceiver extends BroadcastReceiver{
 							}
 						}
 						if(account==null){
-							Log.w(TAG, "onReceive: account for id '"+pushAccountID+"' not found");
+							Log.w(TAG, "onReceive: account '"+pushAccountID+"' not found in "+accounts.size()+" accounts");
+							for(AccountSession a:accounts) Log.w(TAG, "  have: "+a.pushAccountID);
 							return;
 						}
 						if(account.getLocalPreferences().getNotificationsPauseEndTime()>System.currentTimeMillis()){
@@ -81,7 +84,9 @@ public class PushNotificationReceiver extends BroadcastReceiver{
 							return;
 						}
 						String accountID=account.getID();
+						Log.i(TAG, "Matched account: "+accountID+" pushID: "+account.pushAccountID);
 						PushNotification pn=AccountSessionManager.getInstance().getAccount(accountID).getPushSubscriptionManager().decryptNotification(k, p, s);
+						Log.i(TAG, "Decrypted OK: type="+pn.notificationType+" title="+pn.title);
 						new GetNotificationByID(pn.notificationId)
 								.setCallback(new Callback<>(){
 									@Override
@@ -96,11 +101,11 @@ public class PushNotificationReceiver extends BroadcastReceiver{
 								})
 								.exec(accountID);
 					}catch(Exception x){
-						Log.w(TAG, x);
+						Log.e(TAG, "Push exception: "+x.getClass().getSimpleName()+": "+x.getMessage(), x);
 					}
 				});
 			}else{
-				Log.w(TAG, "onReceive: invalid push notification format");
+				Log.w(TAG, "onReceive: invalid format - k/p/s/x missing or empty");
 			}
 		}
 	}
