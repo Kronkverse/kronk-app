@@ -112,6 +112,32 @@ public class MainActivity extends FragmentStackActivity{
 			return;
 		}
 
+		// Check if this is an invite link - start signup flow
+		if(path != null && path.startsWith("/invite/")){
+			String inviteCode = path.substring("/invite/".length());
+			if(!inviteCode.isEmpty()){
+				AccountSession session;
+				if(accountID==null)
+					session=AccountSessionManager.getInstance().getLastActiveAccount();
+				else
+					session=AccountSessionManager.get(accountID);
+				if(session!=null && session.activated){
+					// Already logged in - open invite in browser
+					Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+					browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+					startActivity(browserIntent);
+				}else{
+					// Not logged in - start signup flow with invite code
+					SplashFragment splash=new SplashFragment();
+					Bundle args=new Bundle();
+					args.putString("inviteCode", inviteCode);
+					splash.setArguments(args);
+					showFragmentClearingBackStack(splash);
+				}
+				return;
+			}
+		}
+
 		AccountSession session;
 		if(accountID==null)
 			session=AccountSessionManager.getInstance().getLastActiveAccount();
@@ -195,6 +221,21 @@ public class MainActivity extends FragmentStackActivity{
 
 	public void restartHomeFragment(){
 		if(AccountSessionManager.getInstance().getLoggedInAccounts().isEmpty()){
+			Intent intent=getIntent();
+			if(Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData()!=null){
+				String path=intent.getData().getPath();
+				if(path!=null && path.startsWith("/invite/")){
+					String inviteCode=path.substring("/invite/".length());
+					if(!inviteCode.isEmpty()){
+						SplashFragment splash=new SplashFragment();
+						Bundle args=new Bundle();
+						args.putString("inviteCode", inviteCode);
+						splash.setArguments(args);
+						showFragmentClearingBackStack(splash);
+						return;
+					}
+				}
+			}
 			showFragmentClearingBackStack(new SplashFragment());
 		}else{
 			AccountSessionManager.getInstance().maybeUpdateLocalInfo();

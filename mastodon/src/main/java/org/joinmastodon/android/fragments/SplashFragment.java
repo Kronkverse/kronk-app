@@ -43,12 +43,16 @@ public class SplashFragment extends AppKitFragment{
 	private ProgressBarButton defaultServerButton;
 	private ProgressBar defaultServerProgress;
 	private ProgressDialog instanceLoadingProgress;
+	private String inviteCode;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 		setRetainInstance(true);
 		motionEffect=new InterpolatingMotionEffect(MastodonApp.context);
+		if(getArguments()!=null){
+			inviteCode=getArguments().getString("inviteCode");
+		}
 	}
 
 	@Nullable
@@ -93,6 +97,12 @@ public class SplashFragment extends AppKitFragment{
 			}
 		});
 
+		if(!TextUtils.isEmpty(inviteCode)){
+			defaultServerButton.setText(R.string.accept_invite);
+			// Auto-start signup flow when opened via invite link
+			defaultServerButton.post(this::loadInstanceAndSignup);
+		}
+
 		return contentView;
 	}
 
@@ -110,7 +120,7 @@ public class SplashFragment extends AppKitFragment{
 		instanceLoadingProgress.setCancelable(false);
 		instanceLoadingProgress.setMessage(getString(R.string.loading_instance));
 		instanceLoadingProgress.show();
-		
+
 		AccountSessionManager.loadInstanceInfo(DEFAULT_SERVER, new Callback<>(){
 			@Override
 			public void onSuccess(Instance result){
@@ -119,16 +129,19 @@ public class SplashFragment extends AppKitFragment{
 				if(instanceLoadingProgress!=null)
 					instanceLoadingProgress.dismiss();
 				instanceLoadingProgress=null;
-				if(!result.areRegistrationsOpen()){
+				if(!result.areRegistrationsOpen() && TextUtils.isEmpty(inviteCode)){
 					new M3AlertDialogBuilder(getActivity())
 							.setTitle(R.string.error)
-							.setMessage(R.string.instance_signup_closed)
+							.setMessage(R.string.instance_invite_only)
 							.setPositiveButton(R.string.ok, null)
 							.show();
 					return;
 				}
 				Bundle args=new Bundle();
 				args.putParcelable("instance", Parcels.wrap(result));
+				if(!TextUtils.isEmpty(inviteCode)){
+					args.putString("inviteCode", inviteCode);
+				}
 				Nav.go(getActivity(), InstanceRulesFragment.class, args);
 			}
 
