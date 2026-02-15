@@ -21,6 +21,8 @@
 
 	<string name="share_toot_title">Share</string>
 	<string name="settings">Settings</string>
+	<string name="invite">Invite</string>
+	<string name="invite_share_text">Join me on Kronk: %s</string>
 	<string name="publish">Publish</string>
 	<string name="discard_draft">Discard draft?</string>
 	<string name="discard">Discard</string>

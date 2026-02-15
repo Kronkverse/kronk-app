@@ -44,6 +44,7 @@ import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.MastodonAPIRequest;
 import org.joinmastodon.android.api.requests.catalog.GetDonationCampaigns;
 import org.joinmastodon.android.api.requests.markers.SaveMarkers;
+import org.joinmastodon.android.api.requests.invites.GetPersonalInvite;
 import org.joinmastodon.android.api.requests.timelines.GetHomeTimeline;
 import org.joinmastodon.android.api.requests.timelines.GetListTimeline;
 import org.joinmastodon.android.api.requests.timelines.GetPublicTimeline;
@@ -52,6 +53,7 @@ import org.joinmastodon.android.events.DismissDonationCampaignBannerEvent;
 import org.joinmastodon.android.events.SelfUpdateStateChangedEvent;
 import org.joinmastodon.android.fragments.settings.SettingsMainFragment;
 import org.joinmastodon.android.model.CacheablePaginatedResponse;
+import org.joinmastodon.android.model.PersonalInvite;
 import org.joinmastodon.android.model.FilterContext;
 import org.joinmastodon.android.model.FollowList;
 import org.joinmastodon.android.model.Status;
@@ -364,7 +366,9 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		Bundle args=new Bundle();
 		args.putString("account", accountID);
 		int id=item.getItemId();
-		if(id==R.id.settings){
+		if(id==R.id.invite){
+			onInviteClick();
+		}else if(id==R.id.settings){
 			Nav.go(getActivity(), SettingsMainFragment.class, args);
 		}else if(id==R.id.edit_list){
 			args.putParcelable("list", Parcels.wrap(currentList));
@@ -433,6 +437,29 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		Bundle args=new Bundle();
 		args.putString("account", accountID);
 		Nav.go(getActivity(), ComposeFragment.class, args);
+	}
+
+	private void onInviteClick(){
+		new GetPersonalInvite()
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(PersonalInvite result){
+						if(getActivity()==null)
+							return;
+						String shareText=getString(R.string.invite_share_text, result.url);
+						Intent shareIntent=new Intent(Intent.ACTION_SEND);
+						shareIntent.setType("text/plain");
+						shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+						startActivity(Intent.createChooser(shareIntent, getString(R.string.invite)));
+					}
+
+					@Override
+					public void onError(ErrorResponse error){
+						if(getActivity()!=null)
+							error.showToast(getActivity());
+					}
+				})
+				.exec(accountID);
 	}
 
 	private void loadNewPosts(){
