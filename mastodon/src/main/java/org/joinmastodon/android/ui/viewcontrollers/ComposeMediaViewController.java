@@ -70,7 +70,7 @@ import me.grishka.appkit.utils.CubicBezierInterpolator;
 import me.grishka.appkit.utils.V;
 
 public class ComposeMediaViewController{
-	private static final int MAX_ATTACHMENTS=4;
+	private static final int DEFAULT_MAX_ATTACHMENTS=4;
 	private static final String TAG="ComposeMediaViewControl";
 	
 	private final ComposeFragment fragment;
@@ -83,6 +83,14 @@ public class ComposeMediaViewController{
 
 	public ComposeMediaViewController(ComposeFragment fragment){
 		this.fragment=fragment;
+	}
+
+	private int getMaxAttachmentsCount(){
+		Instance instance=fragment.instance;
+		if(instance!=null && instance.configuration!=null && instance.configuration.statuses!=null && instance.configuration.statuses.maxMediaAttachments>0){
+			return instance.configuration.statuses.maxMediaAttachments;
+		}
+		return DEFAULT_MAX_ATTACHMENTS;
 	}
 
 	public void setView(View view, Bundle savedInstanceState){
@@ -127,8 +135,9 @@ public class ComposeMediaViewController{
 	}
 
 	public boolean addMediaAttachment(Uri uri, String description){
-		if(getMediaAttachmentsCount()==MAX_ATTACHMENTS){
-			showMediaAttachmentError(fragment.getResources().getQuantityString(R.plurals.cant_add_more_than_x_attachments, MAX_ATTACHMENTS, MAX_ATTACHMENTS));
+		int maxAttachments=getMaxAttachmentsCount();
+		if(getMediaAttachmentsCount()==maxAttachments){
+			showMediaAttachmentError(fragment.getResources().getQuantityString(R.plurals.cant_add_more_than_x_attachments, maxAttachments, maxAttachments));
 			return false;
 		}
 		String type=fragment.getActivity().getContentResolver().getType(uri);
@@ -566,7 +575,7 @@ public class ComposeMediaViewController{
 	}
 
 	public boolean canAddMoreAttachments(){
-		return attachments.size()<MAX_ATTACHMENTS;
+		return attachments.size()<getMaxAttachmentsCount();
 	}
 
 	public int getMissingAltTextAttachmentCount(){
@@ -587,7 +596,7 @@ public class ComposeMediaViewController{
 	}
 
 	public int getMaxAttachments(){
-		return MAX_ATTACHMENTS;
+		return getMaxAttachmentsCount();
 	}
 
 	public int getNonDoneAttachmentCount(){
