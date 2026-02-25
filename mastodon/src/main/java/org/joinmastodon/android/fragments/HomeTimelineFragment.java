@@ -52,7 +52,10 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.DismissDonationCampaignBannerEvent;
 import org.joinmastodon.android.events.SelfUpdateStateChangedEvent;
 import org.joinmastodon.android.fragments.settings.SettingsMainFragment;
-import org.joinmastodon.android.fragments.OrbitFragment;
+import org.joinmastodon.android.api.requests.timelines.GetFriendsActivity;
+import org.joinmastodon.android.model.Account;
+import org.joinmastodon.android.model.FriendsActivityItem;
+import org.joinmastodon.android.ui.displayitems.ReblogOrReplyLineStatusDisplayItem;
 import org.joinmastodon.android.model.CacheablePaginatedResponse;
 import org.joinmastodon.android.model.PersonalInvite;
 import org.joinmastodon.android.model.FilterContext;
@@ -76,9 +79,11 @@ import org.parceler.Parcels;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -112,6 +117,8 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 	private FollowList currentList;
 	private MergeRecyclerAdapter mergeAdapter;
 	private DiscoverInfoBannerHelper localTimelineBannerHelper;
+	private DiscoverInfoBannerHelper orbitBannerHelper;
+	private Map<String, List<FriendsActivityItem.Interaction>> interactionsByStatusID=new HashMap<>();
 	private View donationBanner;
 	private boolean donationBannerDismissing;
 	private NestedRecyclerScrollView scrollWrapper;
@@ -134,6 +141,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 		localTimelineBannerHelper=new DiscoverInfoBannerHelper(DiscoverInfoBannerHelper.BannerType.LOCAL_TIMELINE, accountID);
+		orbitBannerHelper=new DiscoverInfoBannerHelper(DiscoverInfoBannerHelper.BannerType.ORBIT, accountID);
 
 		if(AccountSessionManager.get(accountID).isEligibleForDonations()){
 			GetDonationCampaigns req=new GetDonationCampaigns(Locale.getDefault().toLanguageTag().replace('-', '_'), String.valueOf(AccountSessionManager.get(accountID).getDonationSeed()), null);
@@ -199,9 +207,10 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 
 			@Override
 			public void onOrbitSelected(){
-				Bundle args=new Bundle();
-				args.putString("account", accountID);
-				Nav.go(getActivity(), OrbitFragment.class, args);
+				if(listMode==ListMode.ORBIT)
+					return;
+				listMode=ListMode.ORBIT;
+				reload();
 			}
 		}, AccountSessionManager.get(accountID).canAccessLocalTimeline());
 		setHasOptionsMenu(true);
@@ -268,6 +277,31 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 								maxID=result.isEmpty() ? null : result.get(result.size()-1).id;
 								AccountSessionManager.get(accountID).filterStatuses(result, FilterContext.HOME);
 								onDataLoaded(result, !result.isEmpty());
+							}
+						})
+						.exec(accountID);
+			}
+			case ORBIT -> {
+				currentRequest=new GetFriendsActivity(offset>0 ? maxID : null, count)
+						.setCallback(new SimpleCallback<>(this){
+							@Override
+							public void onSuccess(List<FriendsActivityItem> result){
+								if(getActivity()==null || listMode!=ListMode.ORBIT)
+									return;
+								if(refreshing)
+									list.scrollToPosition(0);
+								List<Status> statuses=new ArrayList<>();
+								for(FriendsActivityItem item : result){
+									if(item.status!=null){
+										statuses.add(item.status);
+										if(item.interactions!=null && !item.interactions.isEmpty()){
+											interactionsByStatusID.put(item.status.id, item.interactions);
+										}
+									}
+								}
+								if(!result.isEmpty())
+									maxID=result.get(result.size()-1).id;
+								onDataLoaded(statuses, !result.isEmpty());
 							}
 						})
 						.exec(accountID);
@@ -408,7 +442,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		if(!getArguments().getBoolean("noAutoLoad")){
 			if(!loaded && !dataLoading){
 				loadData();
-			}else if(!dataLoading){
+			}else if(!dataLoading && listMode!=ListMode.ORBIT){
 				loadNewPosts();
 			}
 		}
@@ -688,6 +722,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			case FOLLOWING -> new GetHomeTimeline(maxID, minID, limit, sinceID);
 			case LOCAL -> new GetPublicTimeline(true, false, maxID, minID, limit, sinceID);
 			case LIST -> new GetListTimeline(currentList.id, maxID, minID, limit, sinceID);
+			case ORBIT -> throw new IllegalStateException("loadAdditionalPosts not supported for ORBIT");
 		};
 		currentRequest=req;
 		req.setCallback(callback).exec(accountID);
@@ -868,11 +903,46 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			currentRequest.cancel();
 			currentRequest=null;
 		}
+		if(listMode!=ListMode.ORBIT)
+			interactionsByStatusID.clear();
 		refreshing=true;
 		showProgress();
 		loadData();
 		listsDropdownText.setText(getCurrentListTitle());
 		invalidateOptionsMenu();
+	}
+
+	@Override
+	protected List<StatusDisplayItem> buildDisplayItems(Status s){
+		List<StatusDisplayItem> items=super.buildDisplayItems(s);
+		if(listMode==ListMode.ORBIT){
+			List<FriendsActivityItem.Interaction> interactions=interactionsByStatusID.get(s.id);
+			if(interactions!=null && !interactions.isEmpty()){
+				FriendsActivityItem.Interaction first=interactions.get(0);
+				String text;
+				int icon;
+				Account account=first.account;
+				switch(first.type){
+					case "favourite" -> {
+						text=getString(R.string.user_favourited);
+						icon=R.drawable.ic_star_wght700grad200fill1_20px;
+					}
+					case "reply" -> {
+						text=getString(R.string.user_replied);
+						icon=R.drawable.ic_reply_wght700_20px;
+					}
+					default -> {
+						text=getString(R.string.user_boosted);
+						icon=R.drawable.ic_repeat_wght700_20px;
+					}
+				}
+				if(interactions.size()>1){
+					text=text.replace("%s", "%s and "+(interactions.size()-1)+" others");
+				}
+				items.add(0, new ReblogOrReplyLineStatusDisplayItem(s.id, this, getActivity(), text, account, icon, accountID));
+			}
+		}
+		return items;
 	}
 
 	@Override
@@ -888,8 +958,14 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			if(listMode==ListMode.LOCAL){
 				localTimelineBannerHelper.maybeAddBanner(list, mergeAdapter);
 				localTimelineBannerHelper.onBannerBecameVisible();
+				orbitBannerHelper.removeBanner(mergeAdapter);
+			}else if(listMode==ListMode.ORBIT){
+				orbitBannerHelper.maybeAddBanner(list, mergeAdapter);
+				orbitBannerHelper.onBannerBecameVisible();
+				localTimelineBannerHelper.removeBanner(mergeAdapter);
 			}else{
 				localTimelineBannerHelper.removeBanner(mergeAdapter);
+				orbitBannerHelper.removeBanner(mergeAdapter);
 			}
 		}
 		super.onDataLoaded(d, more);
@@ -973,6 +1049,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			case FOLLOWING -> getString(R.string.timeline_following);
 			case LOCAL -> getString(R.string.local_timeline);
 			case LIST -> currentList.title;
+			case ORBIT -> getString(R.string.orbit);
 		};
 	}
 
@@ -1051,6 +1128,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 	private enum ListMode{
 		FOLLOWING,
 		LOCAL,
-		LIST
+		LIST,
+		ORBIT
 	}
 }

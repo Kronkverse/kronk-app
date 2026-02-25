@@ -244,7 +244,7 @@
 	<string name="trending_posts_info_banner">These are the posts gaining traction in the community.</string>
 	<string name="trending_links_info_banner">These are the news stories getting talked about on Kronk.</string>
 	<!-- %s is the server domain -->
-	<string name="local_timeline_info_banner">These are all the posts from all users in your server (%s).</string>
+	<string name="local_timeline_info_banner">You\'re seeing all the posts from Kronkers</string>
 	<string name="recommended_accounts_info_banner">You might like these accounts based on others you follow.</string>
 	<string name="see_new_posts">New posts</string>
 	<string name="follow_back">Follow back</string>
@@ -940,6 +940,7 @@
 	<string name="more_replies_found">More replies found</string>
 	<string name="orbit">Orbit</string>
 	<string name="orbit_empty">Nothing in your orbit yet. When people you follow interact with posts, they\'ll show up here.</string>
+	<string name="orbit_info_banner">You\'re seeing your Orbit, what your friends are interacting with</string>
 	<string name="user_favourited">%s favourited</string>
 	<string name="user_replied">%s replied</string>
 </resources>

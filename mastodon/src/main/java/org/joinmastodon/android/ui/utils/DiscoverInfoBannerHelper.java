@@ -50,8 +50,9 @@ public class DiscoverInfoBannerHelper{
 			text.setText(switch(type){
 				case TRENDING_POSTS -> list.getResources().getString(R.string.trending_posts_info_banner);
 				case TRENDING_LINKS -> list.getResources().getString(R.string.trending_links_info_banner);
-				case LOCAL_TIMELINE -> list.getResources().getString(R.string.local_timeline_info_banner, AccountSessionManager.get(accountID).domain);
+				case LOCAL_TIMELINE -> list.getResources().getString(R.string.local_timeline_info_banner);
 				case ACCOUNTS -> list.getResources().getString(R.string.recommended_accounts_info_banner);
+				case ORBIT -> list.getResources().getString(R.string.orbit_info_banner);
 			});
 			ImageView icon=banner.findViewById(R.id.icon);
 			icon.setImageResource(switch(type){
@@ -59,6 +60,7 @@ public class DiscoverInfoBannerHelper{
 				case TRENDING_LINKS -> R.drawable.ic_feed_24px;
 				case LOCAL_TIMELINE -> R.drawable.ic_stream_24px;
 				case ACCOUNTS -> R.drawable.ic_group_add_24px;
+				case ORBIT -> R.drawable.ic_stream_24px;
 			});
 			adapter.addAdapter(0, bannerAdapter=new SingleViewRecyclerAdapter(banner));
 			added=true;
@@ -93,6 +95,7 @@ public class DiscoverInfoBannerHelper{
 		TRENDING_POSTS,
 		TRENDING_LINKS,
 		LOCAL_TIMELINE,
-		ACCOUNTS
+		ACCOUNTS,
+		ORBIT
 	}
 }
