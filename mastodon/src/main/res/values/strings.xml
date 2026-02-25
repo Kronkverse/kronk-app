@@ -240,7 +240,7 @@
 	<string name="error_saving_file">Error saving file</string>
 	<string name="downloading">Downloading…</string>
 	<string name="no_app_to_handle_action">There’s no app to handle this action</string>
-	<string name="local_timeline">Live feed</string>
+	<string name="local_timeline">₭ronk</string>
 	<string name="trending_posts_info_banner">These are the posts gaining traction in the community.</string>
 	<string name="trending_links_info_banner">These are the news stories getting talked about on Kronk.</string>
 	<!-- %s is the server domain -->
@@ -938,4 +938,8 @@
 	<string name="quote_followers_only_cancel">Back to editing</string>
 	<string name="quote_followers_only_dont_show_again">Don\'t show this message again</string>
 	<string name="more_replies_found">More replies found</string>
+	<string name="orbit">Orbit</string>
+	<string name="orbit_empty">Nothing in your orbit yet. When people you follow interact with posts, they\'ll show up here.</string>
+	<string name="user_favourited">%s favourited</string>
+	<string name="user_replied">%s replied</string>
 </resources>

@@ -23,8 +23,10 @@ public class HomeTimelineMenuController extends DropdownSubmenuController{
 				dropdownController.dismiss();
 			}));
 		}
-		items.add(new Item<Void>(R.string.lists, true, true, i->dropdownController.pushSubmenuController(new HomeTimelineListsMenuController(dropdownController, callback))));
-		items.add(new Item<Void>(R.string.followed_hashtags, true, false, i->dropdownController.pushSubmenuController(new HomeTimelineHashtagsMenuController(dropdownController))));
+		items.add(new Item<Void>(R.string.orbit, false, false, i->{
+			callback.onOrbitSelected();
+			dropdownController.dismiss();
+		}));
 	}
 
 	@Override
@@ -37,5 +39,6 @@ public class HomeTimelineMenuController extends DropdownSubmenuController{
 		void onLocalSelected();
 		List<FollowList> getLists();
 		void onListSelected(FollowList list);
+		void onOrbitSelected();
 	}
 }

@@ -52,6 +52,7 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.DismissDonationCampaignBannerEvent;
 import org.joinmastodon.android.events.SelfUpdateStateChangedEvent;
 import org.joinmastodon.android.fragments.settings.SettingsMainFragment;
+import org.joinmastodon.android.fragments.OrbitFragment;
 import org.joinmastodon.android.model.CacheablePaginatedResponse;
 import org.joinmastodon.android.model.PersonalInvite;
 import org.joinmastodon.android.model.FilterContext;
@@ -194,6 +195,13 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 				listMode=ListMode.LIST;
 				currentList=list;
 				reload();
+			}
+
+			@Override
+			public void onOrbitSelected(){
+				Bundle args=new Bundle();
+				args.putString("account", accountID);
+				Nav.go(getActivity(), OrbitFragment.class, args);
 			}
 		}, AccountSessionManager.get(accountID).canAccessLocalTimeline());
 		setHasOptionsMenu(true);
