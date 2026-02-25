@@ -50,13 +50,13 @@
 		</FrameLayout>
 
 		<FrameLayout
-			android:id="@+id/tab_search"
+			android:id="@+id/tab_live"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/search_hint">
+			android:contentDescription="@string/tab_live">
 
 			<ImageView
 				android:layout_width="32dp"
@@ -66,7 +66,7 @@
 				android:scaleType="center"
 				android:importantForAccessibility="no"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_search"/>
+				android:src="@drawable/ic_tab_live"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -79,7 +79,7 @@
 				android:textColor="?colorM3OnSurfaceVariant"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_search"/>
+				android:text="@string/tab_live"/>
 
 		</FrameLayout>
 
