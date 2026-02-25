@@ -18,6 +18,7 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.TypefaceSpan;
 import android.text.style.UnderlineSpan;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -122,6 +123,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 	private View donationBanner;
 	private boolean donationBannerDismissing;
 	private NestedRecyclerScrollView scrollWrapper;
+	private TextView notificationsBadge;
 
 	private String scrollBackItemID;
 	private int scrollBackItemOffset, scrollBackItemIndex;
@@ -387,6 +389,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			showDonationBanner(currentDonationCampaign);
 	}
 
+	@SuppressLint("DefaultLocale")
 	@Override
 	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater){
 		inflater.inflate(R.menu.home, menu);
@@ -398,8 +401,32 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		if(state!=GithubSelfUpdater.UpdateState.NO_UPDATE && state!=GithubSelfUpdater.UpdateState.CHECKING)
 			getToolbar().getMenu().findItem(R.id.settings).setIcon(R.drawable.ic_settings_updateready_24px);
 
+		MenuItem notificationsItem=menu.findItem(R.id.notifications);
+		View bellView=LayoutInflater.from(getActivity()).inflate(R.layout.badge_notification_icon, null);
+		notificationsBadge=bellView.findViewById(R.id.badge);
+		bellView.setOnClickListener(v->{
+			HomeFragment home=(HomeFragment)getParentFragment();
+			if(home.isShowingNotifications())
+				home.hideNotifications();
+			else
+				home.showNotifications();
+		});
+		notificationsItem.setActionView(bellView);
+
 		if("debug".equals(BuildConfig.BUILD_TYPE)){
 			menu.add(0, 1, 0, "Make a gap");
+		}
+	}
+
+	@SuppressLint("DefaultLocale")
+	public void updateNotificationsBadge(int count, boolean more){
+		if(notificationsBadge==null)
+			return;
+		if(count==0){
+			notificationsBadge.setVisibility(View.GONE);
+		}else{
+			notificationsBadge.setVisibility(View.VISIBLE);
+			notificationsBadge.setText(String.format(more ? "%d+" : "%d", count));
 		}
 	}
 

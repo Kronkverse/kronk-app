@@ -6,6 +6,10 @@
 		android:showAsAction="always"
 		android:title="@string/edit_list"/>
 	<item
+		android:id="@+id/notifications"
+		android:showAsAction="always"
+		android:title="@string/notifications" />
+	<item
 		android:id="@+id/invite"
 		android:icon="@drawable/ic_share_24px"
 		android:showAsAction="always"

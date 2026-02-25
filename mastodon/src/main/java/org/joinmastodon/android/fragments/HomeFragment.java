@@ -14,7 +14,6 @@ import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import com.squareup.otto.Subscribe;
 
@@ -69,7 +68,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private ImageView tabBarAvatar;
 	@IdRes
 	private int currentTab=R.id.tab_home;
-	private TextView notificationsBadge;
+	private int previousTab=R.id.tab_home;
+	private boolean showingNotifications;
 
 	private String accountID;
 
@@ -130,9 +130,6 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
 		ViewImageLoader.loadWithoutAnimation(tabBarAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(24), V.dp(24)));
 
-		notificationsBadge=tabBar.findViewById(R.id.notifications_badge);
-		notificationsBadge.setVisibility(View.GONE);
-
 		if(savedInstanceState==null){
 			getChildFragmentManager().beginTransaction()
 					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
@@ -143,12 +140,11 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 			String defaultTab=getArguments().getString("tab");
 			if("notifications".equals(defaultTab)){
-				tabBar.selectTab(R.id.tab_notifications);
 				fragmentContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
 					@Override
 					public boolean onPreDraw(){
 						fragmentContainer.getViewTreeObserver().removeOnPreDrawListener(this);
-						onTabSelected(R.id.tab_notifications);
+						showNotifications();
 						return true;
 					}
 				});
@@ -169,6 +165,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		notificationsFragment=(NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
 		profileFragment=(ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
 		currentTab=savedInstanceState.getInt("selectedTab");
+		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
 		tabBar.selectTab(currentTab);
 		Fragment current=fragmentForTab(currentTab);
 		getChildFragmentManager().beginTransaction()
@@ -176,15 +173,21 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				.hide(searchFragment)
 				.hide(notificationsFragment)
 				.hide(profileFragment)
-				.show(current)
+				.show(showingNotifications ? notificationsFragment : current)
 				.commit();
-		maybeTriggerLoading(current);
+		if(showingNotifications)
+			maybeTriggerLoading(notificationsFragment);
+		else
+			maybeTriggerLoading(current);
 	}
 
 	@Override
 	public void onHiddenChanged(boolean hidden){
 		super.onHiddenChanged(hidden);
-		fragmentForTab(currentTab).onHiddenChanged(hidden);
+		if(showingNotifications)
+			notificationsFragment.onHiddenChanged(hidden);
+		else
+			fragmentForTab(currentTab).onHiddenChanged(hidden);
 	}
 
 	@Override
@@ -214,16 +217,12 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private Fragment fragmentForTab(@IdRes int tab){
-		if(tab==R.id.tab_home){
-			return homeTimelineFragment;
-		}else if(tab==R.id.tab_search){
+		if(tab==R.id.tab_search){
 			return searchFragment;
-		}else if(tab==R.id.tab_notifications){
-			return notificationsFragment;
 		}else if(tab==R.id.tab_profile){
 			return profileFragment;
 		}
-		throw new IllegalArgumentException();
+		return homeTimelineFragment;
 	}
 
 	public void setCurrentTab(@IdRes int tab){
@@ -233,8 +232,42 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		onTabSelected(tab);
 	}
 
+	public void showNotifications(){
+		if(showingNotifications)
+			return;
+		previousTab=currentTab;
+		showingNotifications=true;
+		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(notificationsFragment).commit();
+		maybeTriggerLoading(notificationsFragment);
+		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+	}
+
+	public void hideNotifications(){
+		if(!showingNotifications)
+			return;
+		showingNotifications=false;
+		Fragment target=fragmentForTab(previousTab);
+		getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(target).commit();
+		currentTab=previousTab;
+		tabBar.selectTab(currentTab);
+		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+	}
+
+	public boolean isShowingNotifications(){
+		return showingNotifications;
+	}
+
 	private void onTabSelected(@IdRes int tab){
 		Fragment newFragment=fragmentForTab(tab);
+		if(showingNotifications){
+			// Leaving notifications overlay — hide notifications, show the new tab
+			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
+			showingNotifications=false;
+			maybeTriggerLoading(newFragment);
+			currentTab=tab;
+			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+			return;
+		}
 		if(tab==currentTab){
 			if(newFragment instanceof ScrollableToTop scrollable)
 				scrollable.scrollToTop();
@@ -280,6 +313,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	public void onSaveInstanceState(Bundle outState){
 		super.onSaveInstanceState(outState);
 		outState.putInt("selectedTab", currentTab);
+		outState.putBoolean("showingNotifications", showingNotifications);
 		getChildFragmentManager().putFragment(outState, "homeTimelineFragment", homeTimelineFragment);
 		getChildFragmentManager().putFragment(outState, "searchFragment", searchFragment);
 		getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
@@ -355,11 +389,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void updateUnreadNotificationsBadge(int count, boolean more){
-		if(count==0){
-			notificationsBadge.setVisibility(View.GONE);
-		}else{
-			notificationsBadge.setVisibility(View.VISIBLE);
-			notificationsBadge.setText(String.format(more ? "%d+" : "%d", count));
+		if(homeTimelineFragment!=null){
+			homeTimelineFragment.updateNotificationsBadge(count, more);
 		}
 	}
 
@@ -368,7 +399,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(!ev.accountID.equals(accountID))
 			return;
 		if(ev.clearUnread)
-			notificationsBadge.setVisibility(View.GONE);
+			updateUnreadNotificationsBadge(0, false);
 	}
 
 	@Subscribe
