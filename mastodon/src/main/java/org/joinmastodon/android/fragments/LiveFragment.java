@@ -47,6 +47,13 @@ public class LiveFragment extends Fragment{
 				}
 				return false;
 			}
+
+			@Override
+			public void onPageFinished(WebView view, String url){
+				view.evaluateJavascript(
+					"(function(){var s=document.createElement('style');s.textContent='.sign-in-banner{display:none!important}';document.head.appendChild(s);})()",
+					null);
+			}
 		});
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
