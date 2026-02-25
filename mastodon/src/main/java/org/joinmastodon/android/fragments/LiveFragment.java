@@ -12,6 +12,7 @@ import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebViewClient;
 
 import androidx.annotation.Nullable;
@@ -32,10 +33,21 @@ public class LiveFragment extends Fragment{
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setMediaPlaybackRequiresUserGesture(false);
+		String defaultUA=settings.getUserAgentString();
+		settings.setUserAgentString(defaultUA.replaceAll("\\bMobile\\b", "").replaceAll("\\bAndroid[^;)]*", ""));
 
 		CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
-		webView.setWebViewClient(new WebViewClient());
+		webView.setWebViewClient(new WebViewClient(){
+			@Override
+			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request){
+				String scheme=request.getUrl().getScheme();
+				if("intent".equals(scheme) || "market".equals(scheme)){
+					return true;
+				}
+				return false;
+			}
+		});
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
