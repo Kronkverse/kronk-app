@@ -545,7 +545,7 @@ public class AccountSessionManager{
 					.build();
 			ShortcutInfo explore=new ShortcutInfo.Builder(MastodonApp.context, "explore")
 					.setActivity(ComponentName.createRelative(MastodonApp.context, MainActivity.class.getName()))
-					.setShortLabel(MastodonApp.context.getString(R.string.tab_search))
+					.setShortLabel(MastodonApp.context.getString(R.string.tab_live))
 					.setIcon(Icon.createWithResource(MastodonApp.context, R.mipmap.ic_shortcut_explore))
 					.setIntent(new Intent(MastodonApp.context, MainActivity.class)
 							.setAction(Intent.ACTION_MAIN)

@@ -280,7 +280,7 @@ public class MainActivity extends FragmentStackActivity{
 			}else if(intent.getBooleanExtra("compose", false)){
 				showCompose();
 			}else if(intent.getBooleanExtra("explore", false) && fragment instanceof HomeFragment hf){
-				getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_search));
+				getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_live));
 			}else if(Intent.ACTION_VIEW.equals(intent.getAction())){
 				handleURL(intent.getData(), null);
 			}else{
