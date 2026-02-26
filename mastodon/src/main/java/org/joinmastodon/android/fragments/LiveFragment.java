@@ -3,6 +3,7 @@ package org.joinmastodon.android.fragments;
 import android.Manifest;
 import android.app.Fragment;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,13 +18,42 @@ import android.webkit.WebViewClient;
 
 import androidx.annotation.Nullable;
 
+import org.joinmastodon.android.api.session.AccountSessionManager;
+
 public class LiveFragment extends Fragment{
-	private static final String LIVE_URL="https://mastodon.kronk.info/live";
+	private static final String JITSI_DOMAIN="meet.talitamoss.info";
+	private static final String ROOM_NAME="kronk";
 	private static final int PERMISSION_REQUEST_CODE=1001;
 
 	private WebView webView;
 	private boolean loaded;
 	private PermissionRequest pendingPermissionRequest;
+
+	private String buildJitsiUrl(){
+		String username="Kronker";
+		String accountID=getArguments()!=null ? getArguments().getString("account") : null;
+		if(accountID!=null){
+			try{
+				username="@"+AccountSessionManager.getInstance().getAccount(accountID).self.username;
+			}catch(Exception ignored){}
+		}
+
+		return "https://"+JITSI_DOMAIN+"/"+ROOM_NAME
+			+"#config.prejoinPageEnabled=false"
+			+"&config.disableDeepLinking=true"
+			+"&config.startWithAudioMuted=true"
+			+"&config.startWithVideoMuted=false"
+			+"&config.hideConferenceTimer=true"
+			+"&config.disableInviteFunctions=true"
+			+"&config.enableClosePage=false"
+			+"&config.subject=%22Kronk%20Huddle%22"
+			+"&interfaceConfig.SHOW_JITSI_WATERMARK=false"
+			+"&interfaceConfig.SHOW_BRAND_WATERMARK=false"
+			+"&interfaceConfig.SHOW_POWERED_BY=false"
+			+"&interfaceConfig.HIDE_INVITE_MORE_HEADER=true"
+			+"&interfaceConfig.DEFAULT_REMOTE_DISPLAY_NAME=Kronker"
+			+"&userInfo.displayName="+Uri.encode(username);
+	}
 
 	@Nullable
 	@Override
@@ -46,13 +76,6 @@ public class LiveFragment extends Fragment{
 					return true;
 				}
 				return false;
-			}
-
-			@Override
-			public void onPageFinished(WebView view, String url){
-				view.evaluateJavascript(
-					"(function(){var s=document.createElement('style');s.textContent='.sign-in-banner{display:none!important}';document.head.appendChild(s);})()",
-					null);
 			}
 		});
 		webView.setWebChromeClient(new WebChromeClient(){
@@ -124,7 +147,7 @@ public class LiveFragment extends Fragment{
 
 	private void loadPage(){
 		if(webView!=null){
-			webView.loadUrl(LIVE_URL);
+			webView.loadUrl(buildJitsiUrl());
 			loaded=true;
 		}
 	}
