@@ -715,6 +715,13 @@
 	<string name="tab_home">Home</string>
 	<string name="tab_search">Explore</string>
 	<string name="tab_live">Huddle</string>
+	<string name="huddle_title">Kronk Huddle</string>
+	<string name="huddle_description">Hang out with the Kronk community. Drop in, say hi, or just vibe.</string>
+	<string name="huddle_join">Huddle Up</string>
+	<string name="huddle_leave">Leave</string>
+	<string name="huddle_powered_by">Powered by Jitsi Meet</string>
+	<string name="huddle_people_in_room">%d person in room</string>
+	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>
 	<string name="pin_post">Pin on profile</string>
 	<string name="unpin_post">Unpin from profile</string>
