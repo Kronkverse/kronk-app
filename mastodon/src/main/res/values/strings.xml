@@ -715,11 +715,12 @@
 	<string name="tab_home">Home</string>
 	<string name="tab_search">Explore</string>
 	<string name="tab_live">Huddle</string>
-	<string name="huddle_title">Kronk Huddle</string>
-	<string name="huddle_description">Hang out with the Kronk community. Drop in, say hi, or just vibe.</string>
+	<string name="huddle_title">The Huddle</string>
+	<string name="huddle_description">Huddle is a live video space for the Kronk community to hang out, co-create, share wisdom, stories, art and more. Authentic presence is welcomed in the Huddle.</string>
 	<string name="huddle_join">Huddle Up</string>
-	<string name="huddle_leave">Leave</string>
-	<string name="huddle_powered_by">Powered by Jitsi Meet</string>
+	<string name="huddle_leave">Unhuddle</string>
+	<string name="huddle_powered_by">Powered by Jitsi Meet
+End-to-end encrypted</string>
 	<string name="huddle_people_in_room">%d person in room</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>

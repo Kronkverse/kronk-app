@@ -236,7 +236,7 @@ public class LiveFragment extends Fragment{
 			+"disableDeepLinking:true,"
 			+"startWithAudioMuted:true,"
 			+"startWithVideoMuted:false,"
-			+"subject:'Kronk Huddle',"
+			+"subject:'The Huddle',"
 			+"hideConferenceTimer:true,"
 			+"disableInviteFunctions:true,"
 			+"enableClosePage:false"
