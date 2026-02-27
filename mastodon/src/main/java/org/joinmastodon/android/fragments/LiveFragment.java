@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 
 public class LiveFragment extends Fragment{
 	private static final String JITSI_DOMAIN="meet.talitamoss.info";
-	private static final String ROOM_NAME="kronk";
+	private static final String ROOM_NAME="huddle";
 	private static final int PERMISSION_REQUEST_CODE=1001;
 	private static final long POLL_INTERVAL_MS=10000;
 
@@ -249,8 +249,14 @@ public class LiveFragment extends Fragment{
 			+"DEFAULT_REMOTE_DISPLAY_NAME:'Kronker'"
 			+"}"
 			+"});"
+			+"var isGuest=false;"
+			+"api.addListener('passwordRequired',function(){"
+			+"isGuest=true;"
+			+"api.executeCommand('password','kronkfam2026');"
+			+"});"
 			+"api.addListener('videoConferenceJoined',function(){"
 			+"api.executeCommand('displayName','"+escapedUsername+"');"
+			+"if(!isGuest){api.executeCommand('password','kronkfam2026');}"
 			+"});"
 			+"api.addListener('readyToClose',function(){"
 			+"Android.leave();"
