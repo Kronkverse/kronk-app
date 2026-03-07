@@ -15,6 +15,8 @@ import android.widget.Toast;
 
 import org.joinmastodon.android.api.ObjectValidationException;
 import org.joinmastodon.android.api.requests.accounts.GetOwnAccount;
+import org.joinmastodon.android.api.requests.accounts.CheckInviteLink;
+import org.joinmastodon.android.api.requests.accounts.GetAccountByID;
 import org.joinmastodon.android.api.requests.search.GetSearchResults;
 import org.joinmastodon.android.api.session.AccountSession;
 import org.joinmastodon.android.api.session.AccountSessionManager;
@@ -122,10 +124,37 @@ public class MainActivity extends FragmentStackActivity{
 				else
 					session=AccountSessionManager.get(accountID);
 				if(session!=null && session.activated){
-					// Already logged in - open invite in browser
-					Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-					browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-					startActivity(browserIntent);
+					// Already logged in - fetch invite to get inviter, then open their profile
+					new CheckInviteLink("/invite/" + inviteCode)
+						.setCallback(new org.joinmastodon.android.api.Callback<>(){
+							@Override
+							public void onSuccess(CheckInviteLink.Response result){
+								if(result.inviter!=null && result.inviter.id!=null){
+									new GetAccountByID(result.inviter.id)
+										.setCallback(new org.joinmastodon.android.api.Callback<>(){
+											@Override
+											public void onSuccess(Account account){
+												Bundle navArgs=new Bundle();
+												navArgs.putString("account", session.getID());
+												navArgs.putParcelable("profileAccount", Parcels.wrap(account));
+												Nav.go(MainActivity.this, ProfileFragment.class, navArgs);
+											}
+
+											@Override
+											public void onError(org.joinmastodon.android.api.ErrorResponse error){
+												error.showToast(MainActivity.this);
+											}
+										})
+										.exec(session.getID());
+								}
+							}
+
+							@Override
+							public void onError(org.joinmastodon.android.api.ErrorResponse error){
+								error.showToast(MainActivity.this);
+							}
+						})
+						.exec(session.getID());
 				}else{
 					// Not logged in - start signup flow with invite code
 					SplashFragment splash=new SplashFragment();
