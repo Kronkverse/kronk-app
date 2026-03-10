@@ -126,12 +126,12 @@ public class MainActivity extends FragmentStackActivity{
 				if(session!=null && session.activated){
 					// Already logged in - fetch invite to get inviter, then open their profile
 					new CheckInviteLink("/invite/" + inviteCode)
-						.setCallback(new org.joinmastodon.android.api.Callback<>(){
+						.setCallback(new Callback<>(){
 							@Override
 							public void onSuccess(CheckInviteLink.Response result){
 								if(result.inviter!=null && result.inviter.id!=null){
 									new GetAccountByID(result.inviter.id)
-										.setCallback(new org.joinmastodon.android.api.Callback<>(){
+										.setCallback(new Callback<>(){
 											@Override
 											public void onSuccess(Account account){
 												Bundle navArgs=new Bundle();
@@ -141,7 +141,7 @@ public class MainActivity extends FragmentStackActivity{
 											}
 
 											@Override
-											public void onError(org.joinmastodon.android.api.ErrorResponse error){
+											public void onError(ErrorResponse error){
 												error.showToast(MainActivity.this);
 											}
 										})
@@ -150,7 +150,7 @@ public class MainActivity extends FragmentStackActivity{
 							}
 
 							@Override
-							public void onError(org.joinmastodon.android.api.ErrorResponse error){
+							public void onError(ErrorResponse error){
 								error.showToast(MainActivity.this);
 							}
 						})
