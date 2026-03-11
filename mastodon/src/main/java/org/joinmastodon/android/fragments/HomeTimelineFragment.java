@@ -426,29 +426,6 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		});
 		notificationsItem.setActionView(bellView);
 
-		// Add profile avatar to toolbar
-		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
-		profileAvatar=new ImageView(getActivity());
-		profileAvatar.setOutlineProvider(OutlineProviders.OVAL);
-		profileAvatar.setClipToOutline(true);
-		profileAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
-		ViewImageLoader.loadWithoutAnimation(profileAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(32), V.dp(32)));
-		profileAvatar.setOnClickListener(v->{
-			Bundle args2=new Bundle();
-			args2.putString("account", accountID);
-			args2.putParcelable("profileAccount", Parcels.wrap(self));
-			Nav.go(getActivity(), ProfileFragment.class, args2);
-		});
-		profileAvatar.setOnLongClickListener(v->{
-			new AccountSwitcherSheet(getActivity(), (HomeFragment)getParentFragment()).show();
-			return true;
-		});
-		android.widget.Toolbar toolbar=getToolbar();
-		android.widget.Toolbar.LayoutParams avatarLp=new android.widget.Toolbar.LayoutParams(V.dp(32), V.dp(32));
-		avatarLp.gravity=android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL;
-		avatarLp.leftMargin=V.dp(4);
-		toolbar.addView(profileAvatar, 0, avatarLp);
-
 		if("debug".equals(BuildConfig.BUILD_TYPE)){
 			menu.add(0, 1, 0, "Make a gap");
 		}
@@ -880,14 +857,42 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		listsDropdown.setBackgroundTintList(listsDropdownText.getTextColors());
 		listsDropdown.addView(listsDropdownText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-		FrameLayout logoWrap=new FrameLayout(getActivity());
-		FrameLayout.LayoutParams ddlp=new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START);
+		// Profile avatar
+		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
+		profileAvatar=new ImageView(getActivity());
+		profileAvatar.setOutlineProvider(OutlineProviders.OVAL);
+		profileAvatar.setClipToOutline(true);
+		profileAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+		ViewImageLoader.loadWithoutAnimation(profileAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(32), V.dp(32)));
+		profileAvatar.setOnClickListener(v->{
+			Bundle args2=new Bundle();
+			args2.putString("account", accountID);
+			args2.putParcelable("profileAccount", Parcels.wrap(self));
+			Nav.go(getActivity(), ProfileFragment.class, args2);
+		});
+		profileAvatar.setOnLongClickListener(v->{
+			new AccountSwitcherSheet(getActivity(), (HomeFragment)getParentFragment()).show();
+			return true;
+		});
+
+		// Logo wrap with avatar + dropdown
+		LinearLayout logoWrap=new LinearLayout(getActivity());
+		logoWrap.setOrientation(LinearLayout.HORIZONTAL);
+		logoWrap.setGravity(Gravity.CENTER_VERTICAL);
+
+		LinearLayout.LayoutParams avatarLp=new LinearLayout.LayoutParams(V.dp(32), V.dp(32));
+		avatarLp.setMarginStart(V.dp(4));
+		avatarLp.setMarginEnd(V.dp(8));
+		avatarLp.topMargin=avatarLp.bottomMargin=V.dp(8);
+		logoWrap.addView(profileAvatar, avatarLp);
+
+		LinearLayout.LayoutParams ddlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
 		ddlp.topMargin=ddlp.bottomMargin=V.dp(8);
 		logoWrap.addView(listsDropdown, ddlp);
 
 		Toolbar toolbar=getToolbar();
 		toolbar.addView(logoWrap, new Toolbar.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-		toolbar.setContentInsetsRelative(V.dp(16), 0);
+		toolbar.setContentInsetsRelative(V.dp(4), 0);
 	}
 
 	private void showNewPostsButton(){

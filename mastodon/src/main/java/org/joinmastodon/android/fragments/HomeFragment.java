@@ -32,7 +32,6 @@ import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
-import org.joinmastodon.android.ui.SimpleViewHolder;
 import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.ui.views.TabBar;
@@ -43,11 +42,9 @@ import java.util.EnumSet;
 import java.util.List;
 
 import androidx.annotation.IdRes;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager2.widget.ViewPager2;
 import me.grishka.appkit.FragmentStackActivity;
+import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
@@ -63,9 +60,6 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private EventsFragment eventsFragment;
 	private TabBar tabBar;
 	private View tabBarWrap;
-	private ViewPager2 pager;
-	private FrameLayout[] tabViews;
-	private FrameLayout notificationsContainer;
 	@IdRes
 	private int currentTab=R.id.tab_home;
 	private int previousTab=R.id.tab_home;
@@ -112,81 +106,29 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		content=new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		// Main content area: pager + notifications overlay stacked
-		FrameLayout mainContainer=new FrameLayout(getActivity());
-		content.addView(mainContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+		FrameLayout fragmentContainer=new FrameLayout(getActivity());
+		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
+		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-		// Create ViewPager2 for swipeable tabs
-		pager=new ViewPager2(getActivity());
-		pager.setId(R.id.home_pager);
-		mainContainer.addView(pager, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		// Create tab view containers for fragment hosting (DiscoverFragment pattern)
-		tabViews=new FrameLayout[3];
-		for(int i=0;i<3;i++){
-			FrameLayout tabView=new FrameLayout(getActivity());
-			tabView.setId(switch(i){
-				case 0 -> R.id.page_live;
-				case 1 -> R.id.page_home;
-				case 2 -> R.id.page_events;
-				default -> throw new IllegalStateException();
-			});
-			tabView.setVisibility(View.GONE);
-			mainContainer.addView(tabView);
-			tabViews[i]=tabView;
-		}
-
-		// Notifications overlay (on top of pager)
-		notificationsContainer=new FrameLayout(getActivity());
-		notificationsContainer.setId(R.id.notifications_overlay);
-		notificationsContainer.setVisibility(View.GONE);
-		mainContainer.addView(notificationsContainer, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		// Tab bar
 		inflater.inflate(R.layout.tab_bar, content);
 		tabBar=content.findViewById(R.id.tabbar);
 		tabBar.setListeners(this::onTabSelected, this::onTabLongClick);
 		tabBarWrap=content.findViewById(R.id.tabbar_wrap);
 
-		// Setup ViewPager2
-		pager.setOffscreenPageLimit(3);
-		pager.setAdapter(new HomePagerAdapter());
-		pager.setCurrentItem(1, false); // Start on Home (center)
-
-		pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback(){
-			@Override
-			public void onPageSelected(int position){
-				int tabId=switch(position){
-					case 0 -> R.id.tab_live;
-					case 1 -> R.id.tab_home;
-					case 2 -> R.id.tab_events;
-					default -> R.id.tab_home;
-				};
-				if(showingNotifications){
-					notificationsContainer.setVisibility(View.GONE);
-					showingNotifications=false;
-				}
-				tabBar.selectTab(tabId);
-				currentTab=tabId;
-				maybeTriggerLoading(fragmentForPage(position));
-				((FragmentStackActivity)getActivity()).invalidateSystemBarColors(HomeFragment.this);
-			}
-		});
-
 		if(savedInstanceState==null){
 			getChildFragmentManager().beginTransaction()
-					.add(R.id.page_live, liveFragment)
-					.add(R.id.page_home, homeTimelineFragment)
-					.add(R.id.page_events, eventsFragment)
-					.add(R.id.notifications_overlay, notificationsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, liveFragment).hide(liveFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
 					.commit();
 
 			String defaultTab=getArguments().getString("tab");
 			if("notifications".equals(defaultTab)){
-				mainContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
+				fragmentContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
 					@Override
 					public boolean onPreDraw(){
-						mainContainer.getViewTreeObserver().removeOnPreDrawListener(this);
+						fragmentContainer.getViewTreeObserver().removeOnPreDrawListener(this);
 						showNotifications();
 						return true;
 					}
@@ -209,17 +151,19 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		eventsFragment=(EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		currentTab=savedInstanceState.getInt("selectedTab");
 		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
-
 		tabBar.selectTab(currentTab);
-		int page=pageForTab(currentTab);
-		pager.setCurrentItem(page, false);
-
-		if(showingNotifications){
-			notificationsContainer.setVisibility(View.VISIBLE);
+		Fragment current=fragmentForTab(currentTab);
+		getChildFragmentManager().beginTransaction()
+				.hide(homeTimelineFragment)
+				.hide(liveFragment)
+				.hide(notificationsFragment)
+				.hide(eventsFragment)
+				.show(showingNotifications ? notificationsFragment : current)
+				.commit();
+		if(showingNotifications)
 			maybeTriggerLoading(notificationsFragment);
-		}else{
-			maybeTriggerLoading(fragmentForPage(page));
-		}
+		else
+			maybeTriggerLoading(current);
 	}
 
 	@Override
@@ -228,7 +172,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(showingNotifications)
 			notificationsFragment.onHiddenChanged(hidden);
 		else
-			fragmentForPage(pager.getCurrentItem()).onHiddenChanged(hidden);
+			fragmentForTab(currentTab).onHiddenChanged(hidden);
 	}
 
 	@Override
@@ -255,26 +199,20 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
 	}
 
-	private Fragment fragmentForPage(int page){
-		return switch(page){
-			case 0 -> liveFragment;
-			case 1 -> homeTimelineFragment;
-			case 2 -> eventsFragment;
-			default -> homeTimelineFragment;
-		};
-	}
-
-	private int pageForTab(@IdRes int tab){
-		if(tab==R.id.tab_live) return 0;
-		if(tab==R.id.tab_events) return 2;
-		return 1;
+	private Fragment fragmentForTab(@IdRes int tab){
+		if(tab==R.id.tab_live){
+			return liveFragment;
+		}else if(tab==R.id.tab_events){
+			return eventsFragment;
+		}
+		return homeTimelineFragment;
 	}
 
 	public void setCurrentTab(@IdRes int tab){
 		if(tab==currentTab)
 			return;
 		tabBar.selectTab(tab);
-		pager.setCurrentItem(pageForTab(tab), true);
+		onTabSelected(tab);
 	}
 
 	public void showNotifications(){
@@ -282,7 +220,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			return;
 		previousTab=currentTab;
 		showingNotifications=true;
-		notificationsContainer.setVisibility(View.VISIBLE);
+		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(notificationsFragment).commit();
 		maybeTriggerLoading(notificationsFragment);
 		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
@@ -291,7 +229,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(!showingNotifications)
 			return;
 		showingNotifications=false;
-		notificationsContainer.setVisibility(View.GONE);
+		Fragment target=fragmentForTab(previousTab);
+		getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(target).commit();
+		currentTab=previousTab;
+		tabBar.selectTab(currentTab);
 		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
 
@@ -300,17 +241,24 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void onTabSelected(@IdRes int tab){
+		Fragment newFragment=fragmentForTab(tab);
 		if(showingNotifications){
-			hideNotifications();
+			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
+			showingNotifications=false;
+			maybeTriggerLoading(newFragment);
+			currentTab=tab;
+			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+			return;
 		}
-		int page=pageForTab(tab);
 		if(tab==currentTab){
-			Fragment f=fragmentForPage(page);
-			if(f instanceof ScrollableToTop scrollable)
+			if(newFragment instanceof ScrollableToTop scrollable)
 				scrollable.scrollToTop();
 			return;
 		}
-		pager.setCurrentItem(page, true);
+		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(newFragment).commit();
+		maybeTriggerLoading(newFragment);
+		currentTab=tab;
+		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
 
 	private void maybeTriggerLoading(Fragment newFragment){
@@ -333,7 +281,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(tab==R.id.tab_home && BuildConfig.DEBUG){
 			Bundle args=new Bundle();
 			args.putString("account", accountID);
-			me.grishka.appkit.Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
+			Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
 		}
 		return false;
 	}
@@ -443,38 +391,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	@Override
 	public void onProvideAssistContent(AssistContent content){
-		Fragment current=fragmentForPage(pager.getCurrentItem());
-		if(current instanceof AssistContentProviderFragment provider){
+		if(fragmentForTab(currentTab) instanceof AssistContentProviderFragment provider){
 			provider.onProvideAssistContent(content);
-		}
-	}
-
-	private class HomePagerAdapter extends RecyclerView.Adapter<SimpleViewHolder>{
-		@NonNull
-		@Override
-		public SimpleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType){
-			FrameLayout view=new FrameLayout(parent.getContext());
-			view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-			return new SimpleViewHolder(view);
-		}
-
-		@Override
-		public void onBindViewHolder(@NonNull SimpleViewHolder holder, int position){
-			FrameLayout view=tabViews[position];
-			if(view.getParent() instanceof ViewGroup parent)
-				parent.removeView(view);
-			view.setVisibility(View.VISIBLE);
-			((FrameLayout)holder.itemView).addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-		}
-
-		@Override
-		public int getItemCount(){
-			return 3;
-		}
-
-		@Override
-		public int getItemViewType(int position){
-			return position;
 		}
 	}
 }
