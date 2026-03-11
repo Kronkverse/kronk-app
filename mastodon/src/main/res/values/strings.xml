@@ -724,6 +724,7 @@ End-to-end encrypted</string>
 	<string name="huddle_people_in_room">%d person in room</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>
+	<string name="tab_events">Events</string>
 	<string name="pin_post">Pin on profile</string>
 	<string name="unpin_post">Unpin from profile</string>
 	<string name="post_pinned">Post has been pinned</string>

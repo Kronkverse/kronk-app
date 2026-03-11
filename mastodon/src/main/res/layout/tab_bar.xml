@@ -67,7 +67,7 @@
 				android:importantForAccessibility="no"
 				android:tint="@color/tab_bar_icon"
 				android:src="@drawable/ic_tab_home"/>
-			
+
 			<TextView
 				android:id="@+id/label"
 				android:layout_width="match_parent"
@@ -84,33 +84,23 @@
 		</FrameLayout>
 
 		<FrameLayout
-			android:id="@+id/tab_profile"
+			android:id="@+id/tab_events"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/my_profile">
+			android:contentDescription="@string/tab_events">
+
 			<ImageView
-				android:id="@+id/tab_profile_ava"
-				android:layout_width="24dp"
-				android:layout_height="24dp"
-				android:layout_marginTop="16dp"
-				android:layout_marginEnd="8dp"
-				android:layout_gravity="top|center_horizontal"
-				android:scaleType="centerCrop"
-				android:importantForAccessibility="no"
-				android:src="@null"/>
-			<ImageView
-				android:layout_width="8dp"
+				android:layout_width="32dp"
 				android:layout_height="32dp"
 				android:layout_gravity="top|center_horizontal"
 				android:layout_marginTop="12dp"
-				android:layout_marginStart="16dp"
-				android:importantForAccessibility="no"
 				android:scaleType="center"
+				android:importantForAccessibility="no"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_unfold_more_24px"/>
+				android:src="@drawable/ic_tab_events"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -123,7 +113,8 @@
 				android:textColor="?colorM3OnSurfaceVariant"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_profile"/>
+				android:text="@string/tab_events"/>
+
 		</FrameLayout>
 	</org.joinmastodon.android.ui.views.TabBar>
 

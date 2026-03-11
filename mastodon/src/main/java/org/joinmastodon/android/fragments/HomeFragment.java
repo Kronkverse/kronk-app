@@ -32,27 +32,26 @@ import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
-import org.joinmastodon.android.ui.OutlineProviders;
+import org.joinmastodon.android.ui.SimpleViewHolder;
 import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.ui.views.TabBar;
 import org.joinmastodon.android.utils.ObjectIdComparator;
-import org.parceler.Parcels;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
 import androidx.annotation.IdRes;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 import me.grishka.appkit.FragmentStackActivity;
-import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
 import me.grishka.appkit.fragments.LoaderFragment;
-import me.grishka.appkit.imageloader.ViewImageLoader;
-import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 import me.grishka.appkit.views.FragmentRootLinearLayout;
 
@@ -61,10 +60,12 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private HomeTimelineFragment homeTimelineFragment;
 	private NotificationsListFragment notificationsFragment;
 	private LiveFragment liveFragment;
-	private ProfileFragment profileFragment;
+	private EventsFragment eventsFragment;
 	private TabBar tabBar;
 	private View tabBarWrap;
-	private ImageView tabBarAvatar;
+	private ViewPager2 pager;
+	private FrameLayout[] tabViews;
+	private FrameLayout notificationsContainer;
 	@IdRes
 	private int currentTab=R.id.tab_home;
 	private int previousTab=R.id.tab_home;
@@ -92,11 +93,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			liveFragment.setArguments(args);
 			notificationsFragment=new NotificationsListFragment();
 			notificationsFragment.setArguments(args);
-			args=new Bundle(args);
-			args.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.getInstance().getAccount(accountID).self));
-			args.putBoolean("noAutoLoad", true);
-			profileFragment=new ProfileFragment();
-			profileFragment.setArguments(args);
+			eventsFragment=new EventsFragment();
+			eventsFragment.setArguments(new Bundle(args));
 		}
 
 		E.register(this);
@@ -114,35 +112,81 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		content=new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		FrameLayout fragmentContainer=new FrameLayout(getActivity());
-		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
-		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+		// Main content area: pager + notifications overlay stacked
+		FrameLayout mainContainer=new FrameLayout(getActivity());
+		content.addView(mainContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
+		// Create ViewPager2 for swipeable tabs
+		pager=new ViewPager2(getActivity());
+		pager.setId(R.id.home_pager);
+		mainContainer.addView(pager, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+		// Create tab view containers for fragment hosting (DiscoverFragment pattern)
+		tabViews=new FrameLayout[3];
+		for(int i=0;i<3;i++){
+			FrameLayout tabView=new FrameLayout(getActivity());
+			tabView.setId(switch(i){
+				case 0 -> R.id.page_live;
+				case 1 -> R.id.page_home;
+				case 2 -> R.id.page_events;
+				default -> throw new IllegalStateException();
+			});
+			tabView.setVisibility(View.GONE);
+			mainContainer.addView(tabView);
+			tabViews[i]=tabView;
+		}
+
+		// Notifications overlay (on top of pager)
+		notificationsContainer=new FrameLayout(getActivity());
+		notificationsContainer.setId(R.id.notifications_overlay);
+		notificationsContainer.setVisibility(View.GONE);
+		mainContainer.addView(notificationsContainer, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+		// Tab bar
 		inflater.inflate(R.layout.tab_bar, content);
 		tabBar=content.findViewById(R.id.tabbar);
 		tabBar.setListeners(this::onTabSelected, this::onTabLongClick);
 		tabBarWrap=content.findViewById(R.id.tabbar_wrap);
 
-		tabBarAvatar=tabBar.findViewById(R.id.tab_profile_ava);
-		tabBarAvatar.setOutlineProvider(OutlineProviders.OVAL);
-		tabBarAvatar.setClipToOutline(true);
-		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
-		ViewImageLoader.loadWithoutAnimation(tabBarAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(24), V.dp(24)));
+		// Setup ViewPager2
+		pager.setOffscreenPageLimit(3);
+		pager.setAdapter(new HomePagerAdapter());
+		pager.setCurrentItem(1, false); // Start on Home (center)
+
+		pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback(){
+			@Override
+			public void onPageSelected(int position){
+				int tabId=switch(position){
+					case 0 -> R.id.tab_live;
+					case 1 -> R.id.tab_home;
+					case 2 -> R.id.tab_events;
+					default -> R.id.tab_home;
+				};
+				if(showingNotifications){
+					notificationsContainer.setVisibility(View.GONE);
+					showingNotifications=false;
+				}
+				tabBar.selectTab(tabId);
+				currentTab=tabId;
+				maybeTriggerLoading(fragmentForPage(position));
+				((FragmentStackActivity)getActivity()).invalidateSystemBarColors(HomeFragment.this);
+			}
+		});
 
 		if(savedInstanceState==null){
 			getChildFragmentManager().beginTransaction()
-					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, liveFragment).hide(liveFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
+					.add(R.id.page_live, liveFragment)
+					.add(R.id.page_home, homeTimelineFragment)
+					.add(R.id.page_events, eventsFragment)
+					.add(R.id.notifications_overlay, notificationsFragment)
 					.commit();
 
 			String defaultTab=getArguments().getString("tab");
 			if("notifications".equals(defaultTab)){
-				fragmentContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
+				mainContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
 					@Override
 					public boolean onPreDraw(){
-						fragmentContainer.getViewTreeObserver().removeOnPreDrawListener(this);
+						mainContainer.getViewTreeObserver().removeOnPreDrawListener(this);
 						showNotifications();
 						return true;
 					}
@@ -162,22 +206,20 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		homeTimelineFragment=(HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "homeTimelineFragment");
 		liveFragment=(LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "liveFragment");
 		notificationsFragment=(NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
-		profileFragment=(ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
+		eventsFragment=(EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		currentTab=savedInstanceState.getInt("selectedTab");
 		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
+
 		tabBar.selectTab(currentTab);
-		Fragment current=fragmentForTab(currentTab);
-		getChildFragmentManager().beginTransaction()
-				.hide(homeTimelineFragment)
-				.hide(liveFragment)
-				.hide(notificationsFragment)
-				.hide(profileFragment)
-				.show(showingNotifications ? notificationsFragment : current)
-				.commit();
-		if(showingNotifications)
+		int page=pageForTab(currentTab);
+		pager.setCurrentItem(page, false);
+
+		if(showingNotifications){
+			notificationsContainer.setVisibility(View.VISIBLE);
 			maybeTriggerLoading(notificationsFragment);
-		else
-			maybeTriggerLoading(current);
+		}else{
+			maybeTriggerLoading(fragmentForPage(page));
+		}
 	}
 
 	@Override
@@ -186,7 +228,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(showingNotifications)
 			notificationsFragment.onHiddenChanged(hidden);
 		else
-			fragmentForTab(currentTab).onHiddenChanged(hidden);
+			fragmentForPage(pager.getCurrentItem()).onHiddenChanged(hidden);
 	}
 
 	@Override
@@ -211,23 +253,28 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		WindowInsets topOnlyInsets=insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
 		homeTimelineFragment.onApplyWindowInsets(topOnlyInsets);
 		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
-		profileFragment.onApplyWindowInsets(topOnlyInsets);
 	}
 
-	private Fragment fragmentForTab(@IdRes int tab){
-		if(tab==R.id.tab_live){
-			return liveFragment;
-		}else if(tab==R.id.tab_profile){
-			return profileFragment;
-		}
-		return homeTimelineFragment;
+	private Fragment fragmentForPage(int page){
+		return switch(page){
+			case 0 -> liveFragment;
+			case 1 -> homeTimelineFragment;
+			case 2 -> eventsFragment;
+			default -> homeTimelineFragment;
+		};
+	}
+
+	private int pageForTab(@IdRes int tab){
+		if(tab==R.id.tab_live) return 0;
+		if(tab==R.id.tab_events) return 2;
+		return 1;
 	}
 
 	public void setCurrentTab(@IdRes int tab){
 		if(tab==currentTab)
 			return;
 		tabBar.selectTab(tab);
-		onTabSelected(tab);
+		pager.setCurrentItem(pageForTab(tab), true);
 	}
 
 	public void showNotifications(){
@@ -235,7 +282,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			return;
 		previousTab=currentTab;
 		showingNotifications=true;
-		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(notificationsFragment).commit();
+		notificationsContainer.setVisibility(View.VISIBLE);
 		maybeTriggerLoading(notificationsFragment);
 		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
@@ -244,10 +291,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(!showingNotifications)
 			return;
 		showingNotifications=false;
-		Fragment target=fragmentForTab(previousTab);
-		getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(target).commit();
-		currentTab=previousTab;
-		tabBar.selectTab(currentTab);
+		notificationsContainer.setVisibility(View.GONE);
 		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
 
@@ -256,25 +300,17 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void onTabSelected(@IdRes int tab){
-		Fragment newFragment=fragmentForTab(tab);
 		if(showingNotifications){
-			// Leaving notifications overlay — hide notifications, show the new tab
-			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
-			showingNotifications=false;
-			maybeTriggerLoading(newFragment);
-			currentTab=tab;
-			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-			return;
+			hideNotifications();
 		}
+		int page=pageForTab(tab);
 		if(tab==currentTab){
-			if(newFragment instanceof ScrollableToTop scrollable)
+			Fragment f=fragmentForPage(page);
+			if(f instanceof ScrollableToTop scrollable)
 				scrollable.scrollToTop();
 			return;
 		}
-		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(newFragment).commit();
-		maybeTriggerLoading(newFragment);
-		currentTab=tab;
-		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+		pager.setCurrentItem(page, true);
 	}
 
 	private void maybeTriggerLoading(Fragment newFragment){
@@ -283,6 +319,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				lf.loadData();
 		}else if(newFragment instanceof LiveFragment){
 			((LiveFragment) newFragment).loadData();
+		}else if(newFragment instanceof EventsFragment ef){
+			if(!ef.loaded && !ef.dataLoading)
+				ef.loadData();
 		}
 		if(newFragment instanceof NotificationsListFragment){
 			NotificationManager nm=getActivity().getSystemService(NotificationManager.class);
@@ -291,18 +330,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private boolean onTabLongClick(@IdRes int tab){
-		if(tab==R.id.tab_profile){
-			ArrayList<String> options=new ArrayList<>();
-			for(AccountSession session:AccountSessionManager.getInstance().getLoggedInAccounts()){
-				options.add(session.self.displayName+"\n("+session.self.username+"@"+session.domain+")");
-			}
-			new AccountSwitcherSheet(getActivity(), this).show();
-			return true;
-		}
 		if(tab==R.id.tab_home && BuildConfig.DEBUG){
 			Bundle args=new Bundle();
 			args.putString("account", accountID);
-			Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
+			me.grishka.appkit.Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
 		}
 		return false;
 	}
@@ -315,7 +346,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		getChildFragmentManager().putFragment(outState, "homeTimelineFragment", homeTimelineFragment);
 		getChildFragmentManager().putFragment(outState, "liveFragment", liveFragment);
 		getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
-		getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
+		getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
 	}
 
 	@Override
@@ -412,8 +443,38 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	@Override
 	public void onProvideAssistContent(AssistContent content){
-		if(fragmentForTab(currentTab) instanceof AssistContentProviderFragment provider){
+		Fragment current=fragmentForPage(pager.getCurrentItem());
+		if(current instanceof AssistContentProviderFragment provider){
 			provider.onProvideAssistContent(content);
+		}
+	}
+
+	private class HomePagerAdapter extends RecyclerView.Adapter<SimpleViewHolder>{
+		@NonNull
+		@Override
+		public SimpleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType){
+			FrameLayout view=new FrameLayout(parent.getContext());
+			view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			return new SimpleViewHolder(view);
+		}
+
+		@Override
+		public void onBindViewHolder(@NonNull SimpleViewHolder holder, int position){
+			FrameLayout view=tabViews[position];
+			if(view.getParent() instanceof ViewGroup parent)
+				parent.removeView(view);
+			view.setVisibility(View.VISIBLE);
+			((FrameLayout)holder.itemView).addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+		}
+
+		@Override
+		public int getItemCount(){
+			return 3;
+		}
+
+		@Override
+		public int getItemViewType(int position){
+			return position;
 		}
 	}
 }

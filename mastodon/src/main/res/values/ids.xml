@@ -37,4 +37,10 @@
 	<item name="button_progress_orig_color" type="id"/>
 	<item name="list_item_view_holder" type="id"/>
 	<item name="current_snackbar" type="id"/>
+
+	<item name="home_pager" type="id"/>
+	<item name="page_live" type="id"/>
+	<item name="page_home" type="id"/>
+	<item name="page_events" type="id"/>
+	<item name="notifications_overlay" type="id"/>
 </resources>
