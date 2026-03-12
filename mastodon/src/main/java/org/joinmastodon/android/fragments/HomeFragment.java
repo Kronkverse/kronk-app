@@ -6,9 +6,7 @@ import android.app.NotificationManager;
 import android.app.assist.AssistContent;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.GestureDetector;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -36,6 +34,7 @@ import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
 import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
 import org.joinmastodon.android.ui.utils.UiUtils;
+import org.joinmastodon.android.ui.views.SwipeInterceptFrameLayout;
 import org.joinmastodon.android.ui.views.TabBar;
 import org.joinmastodon.android.utils.ObjectIdComparator;
 
@@ -105,45 +104,25 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		E.unregister(this);
 	}
 
-	@SuppressLint("ClickableViewAccessibility")
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
 		content=new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		FrameLayout fragmentContainer=new FrameLayout(getActivity());
+		SwipeInterceptFrameLayout fragmentContainer=new SwipeInterceptFrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
-		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-
-		// Set up swipe gesture detection on the fragment container
-		GestureDetector gestureDetector=new GestureDetector(getActivity(), new GestureDetector.SimpleOnGestureListener(){
-			private static final int SWIPE_THRESHOLD=100;
-			private static final int SWIPE_VELOCITY_THRESHOLD=100;
-
+		fragmentContainer.setOnSwipeListener(new SwipeInterceptFrameLayout.OnSwipeListener(){
 			@Override
-			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY){
-				if(e1==null || e2==null) return false;
-				float diffX=e2.getX()-e1.getX();
-				float diffY=e2.getY()-e1.getY();
-				if(Math.abs(diffX)>Math.abs(diffY) && Math.abs(diffX)>SWIPE_THRESHOLD && Math.abs(velocityX)>SWIPE_VELOCITY_THRESHOLD){
-					if(diffX>0){
-						// Swipe right -> go to previous tab
-						swipeToPreviousTab();
-					}else{
-						// Swipe left -> go to next tab
-						swipeToNextTab();
-					}
-					return true;
-				}
-				return false;
+			public void onSwipeLeft(){
+				swipeToNextTab();
+			}
+			@Override
+			public void onSwipeRight(){
+				swipeToPreviousTab();
 			}
 		});
-
-		fragmentContainer.setOnTouchListener((v, event)->{
-			gestureDetector.onTouchEvent(event);
-			return false;
-		});
+		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
 		inflater.inflate(R.layout.tab_bar, content);
 		tabBar=content.findViewById(R.id.tabbar);
