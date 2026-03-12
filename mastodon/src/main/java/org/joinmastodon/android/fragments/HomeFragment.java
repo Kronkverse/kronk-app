@@ -6,7 +6,9 @@ import android.app.NotificationManager;
 import android.app.assist.AssistContent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -67,6 +69,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	private String accountID;
 
+	// Tab order for swipe navigation
+	private static final int[] TAB_ORDER={R.id.tab_live, R.id.tab_home, R.id.tab_events};
+
 	@Override
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
@@ -100,6 +105,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		E.unregister(this);
 	}
 
+	@SuppressLint("ClickableViewAccessibility")
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
@@ -109,6 +115,35 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		FrameLayout fragmentContainer=new FrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
 		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+		// Set up swipe gesture detection on the fragment container
+		GestureDetector gestureDetector=new GestureDetector(getActivity(), new GestureDetector.SimpleOnGestureListener(){
+			private static final int SWIPE_THRESHOLD=100;
+			private static final int SWIPE_VELOCITY_THRESHOLD=100;
+
+			@Override
+			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY){
+				if(e1==null || e2==null) return false;
+				float diffX=e2.getX()-e1.getX();
+				float diffY=e2.getY()-e1.getY();
+				if(Math.abs(diffX)>Math.abs(diffY) && Math.abs(diffX)>SWIPE_THRESHOLD && Math.abs(velocityX)>SWIPE_VELOCITY_THRESHOLD){
+					if(diffX>0){
+						// Swipe right -> go to previous tab
+						swipeToPreviousTab();
+					}else{
+						// Swipe left -> go to next tab
+						swipeToNextTab();
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
+		fragmentContainer.setOnTouchListener((v, event)->{
+			gestureDetector.onTouchEvent(event);
+			return false;
+		});
 
 		inflater.inflate(R.layout.tab_bar, content);
 		tabBar=content.findViewById(R.id.tabbar);
@@ -138,6 +173,39 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		tabBar.selectTab(currentTab);
 
 		return content;
+	}
+
+	private int currentTabIndex(){
+		for(int i=0; i<TAB_ORDER.length; i++){
+			if(TAB_ORDER[i]==currentTab) return i;
+		}
+		return 1; // default to home
+	}
+
+	private void swipeToNextTab(){
+		if(showingNotifications){
+			hideNotifications();
+			return;
+		}
+		int idx=currentTabIndex();
+		if(idx<TAB_ORDER.length-1){
+			int nextTab=TAB_ORDER[idx+1];
+			tabBar.selectTab(nextTab);
+			onTabSelected(nextTab);
+		}
+	}
+
+	private void swipeToPreviousTab(){
+		if(showingNotifications){
+			hideNotifications();
+			return;
+		}
+		int idx=currentTabIndex();
+		if(idx>0){
+			int prevTab=TAB_ORDER[idx-1];
+			tabBar.selectTab(prevTab);
+			onTabSelected(prevTab);
+		}
 	}
 
 	@Override
