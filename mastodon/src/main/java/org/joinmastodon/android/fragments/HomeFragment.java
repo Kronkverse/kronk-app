@@ -55,6 +55,7 @@ import me.grishka.appkit.views.FragmentRootLinearLayout;
 
 public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment{
 	private FragmentRootLinearLayout content;
+	private SwipeInterceptFrameLayout fragmentContainer;
 	private HomeTimelineFragment homeTimelineFragment;
 	private NotificationsListFragment notificationsFragment;
 	private LiveFragment liveFragment;
@@ -65,6 +66,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private int currentTab=R.id.tab_home;
 	private int previousTab=R.id.tab_home;
 	private boolean showingNotifications;
+	private boolean animating;
 
 	private String accountID;
 
@@ -110,7 +112,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		content=new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		SwipeInterceptFrameLayout fragmentContainer=new SwipeInterceptFrameLayout(getActivity());
+		fragmentContainer=new SwipeInterceptFrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
 		fragmentContainer.setOnSwipeListener(new SwipeInterceptFrameLayout.OnSwipeListener(){
 			@Override
@@ -158,10 +160,18 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		for(int i=0; i<TAB_ORDER.length; i++){
 			if(TAB_ORDER[i]==currentTab) return i;
 		}
-		return 1; // default to home
+		return 1;
+	}
+
+	private int tabIndex(@IdRes int tab){
+		for(int i=0; i<TAB_ORDER.length; i++){
+			if(TAB_ORDER[i]==tab) return i;
+		}
+		return 1;
 	}
 
 	private void swipeToNextTab(){
+		if(animating) return;
 		if(showingNotifications){
 			hideNotifications();
 			return;
@@ -170,11 +180,12 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(idx<TAB_ORDER.length-1){
 			int nextTab=TAB_ORDER[idx+1];
 			tabBar.selectTab(nextTab);
-			onTabSelected(nextTab);
+			switchTabAnimated(nextTab, true);
 		}
 	}
 
 	private void swipeToPreviousTab(){
+		if(animating) return;
 		if(showingNotifications){
 			hideNotifications();
 			return;
@@ -183,8 +194,36 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if(idx>0){
 			int prevTab=TAB_ORDER[idx-1];
 			tabBar.selectTab(prevTab);
-			onTabSelected(prevTab);
+			switchTabAnimated(prevTab, false);
 		}
+	}
+
+	private void switchTabAnimated(@IdRes int newTab, boolean slideLeft){
+		Fragment oldFrag=fragmentForTab(currentTab);
+		Fragment newFrag=fragmentForTab(newTab);
+		View outgoing=oldFrag.getView();
+		View incoming=newFrag.getView();
+
+		if(outgoing==null || incoming==null){
+			// Fallback to instant switch
+			onTabSelected(newTab);
+			return;
+		}
+
+		animating=true;
+		// Show new fragment without hiding old yet (both visible during animation)
+		getChildFragmentManager().beginTransaction().show(newFrag).commit();
+		getChildFragmentManager().executePendingTransactions();
+
+		maybeTriggerLoading(newFrag);
+
+		fragmentContainer.animateSlide(outgoing, incoming, slideLeft, ()->{
+			// After animation, properly hide old fragment
+			getChildFragmentManager().beginTransaction().hide(oldFrag).commit();
+			currentTab=newTab;
+			animating=false;
+			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+		});
 	}
 
 	@Override
@@ -288,6 +327,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void onTabSelected(@IdRes int tab){
+		if(animating) return;
 		Fragment newFragment=fragmentForTab(tab);
 		if(showingNotifications){
 			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
@@ -302,10 +342,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				scrollable.scrollToTop();
 			return;
 		}
-		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(newFragment).commit();
-		maybeTriggerLoading(newFragment);
-		currentTab=tab;
-		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
+		// Animate tab tap too
+		boolean slideLeft=tabIndex(tab)>tabIndex(currentTab);
+		switchTabAnimated(tab, slideLeft);
 	}
 
 	private void maybeTriggerLoading(Fragment newFragment){

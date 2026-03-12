@@ -11,7 +11,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -26,6 +25,7 @@ import org.joinmastodon.android.api.requests.events.GetEvents;
 import org.joinmastodon.android.api.requests.events.RsvpEvent;
 import org.joinmastodon.android.model.Event;
 import org.joinmastodon.android.ui.utils.UiUtils;
+import org.parceler.Parcels;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -34,7 +34,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.utils.V;
@@ -49,9 +51,16 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	public boolean loaded;
 	public boolean dataLoading;
 
-	private static final DateTimeFormatter DATE_FORMAT=DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter MONTH_FORMAT=DateTimeFormatter.ofPattern("MMM").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter DAY_FORMAT=DateTimeFormatter.ofPattern("d").withZone(ZoneId.systemDefault());
 	private static final DateTimeFormatter TIME_FORMAT=DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter DAY_OF_WEEK_FORMAT=DateTimeFormatter.ofPattern("EEEE").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter WEEKDAY_FORMAT=DateTimeFormatter.ofPattern("EEE").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter FULL_DATE_FORMAT=DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault());
+
+	// Colors matching the web frontend
+	private static final int COLOR_GOING=0xFF6a9f8a;
+	private static final int COLOR_INTERESTED=0xFFb8945f;
+	private static final int COLOR_CANCELLED=0xFFD32F2F;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -66,15 +75,6 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		content.setOrientation(LinearLayout.VERTICAL);
 		content.setBackgroundColor(UiUtils.getThemeColor(getActivity(), android.R.attr.colorBackground));
 
-		// Header
-		TextView header=new TextView(getActivity());
-		header.setText("Events");
-		header.setTextSize(24);
-		header.setTypeface(null, Typeface.BOLD);
-		header.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-		header.setPadding(V.dp(16), V.dp(16), V.dp(16), V.dp(8));
-		content.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
 		refreshLayout=new SwipeRefreshLayout(getActivity());
 		int accentColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
 		refreshLayout.setColorSchemeColors(accentColor);
@@ -85,7 +85,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		adapter=new EventsAdapter();
 		list.setAdapter(adapter);
 		list.setClipToPadding(false);
-		list.setPadding(V.dp(12), 0, V.dp(12), V.dp(12));
+		list.setPadding(V.dp(16), V.dp(8), V.dp(16), V.dp(16));
 
 		refreshLayout.addView(list, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 		refreshLayout.setOnRefreshListener(this::loadData);
@@ -97,11 +97,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		emptyView.setVisibility(View.GONE);
 		emptyView.setPadding(V.dp(32), V.dp(64), V.dp(32), V.dp(64));
 
-		TextView emptyEmoji=new TextView(getActivity());
-		emptyEmoji.setText("\uD83C\uDF89"); // party popper emoji
-		emptyEmoji.setTextSize(48);
-		emptyEmoji.setGravity(Gravity.CENTER);
-		emptyView.addView(emptyEmoji);
+		ImageView emptyIcon=new ImageView(getActivity());
+		emptyIcon.setImageResource(R.drawable.ic_tab_events);
+		emptyIcon.setColorFilter(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		LinearLayout.LayoutParams iconLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(48));
+		emptyView.addView(emptyIcon, iconLp);
 
 		TextView emptyTitle=new TextView(getActivity());
 		emptyTitle.setText("No upcoming events");
@@ -110,11 +110,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		emptyTitle.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 		emptyTitle.setGravity(Gravity.CENTER);
 		LinearLayout.LayoutParams etlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		etlp.topMargin=V.dp(12);
+		etlp.topMargin=V.dp(16);
 		emptyView.addView(emptyTitle, etlp);
 
 		TextView emptySubtext=new TextView(getActivity());
-		emptySubtext.setText("Events created on this instance will appear here");
+		emptySubtext.setText("Events will appear here when they're created");
 		emptySubtext.setTextSize(14);
 		emptySubtext.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
 		emptySubtext.setGravity(Gravity.CENTER);
@@ -167,16 +167,14 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			list.smoothScrollToPosition(0);
 	}
 
-	private String formatEventTime(Event event){
+	private String formatTimeRange(Event event){
 		if(event.startTime==null) return "";
 		StringBuilder sb=new StringBuilder();
-		sb.append(DAY_OF_WEEK_FORMAT.format(event.startTime));
-		sb.append(", ");
-		sb.append(DATE_FORMAT.format(event.startTime));
-		sb.append(" \u00B7 ");
+		sb.append(FULL_DATE_FORMAT.format(event.startTime));
+		sb.append(" · ");
 		sb.append(TIME_FORMAT.format(event.startTime));
 		if(event.endTime!=null){
-			sb.append(" \u2013 ");
+			sb.append(" – ");
 			sb.append(TIME_FORMAT.format(event.endTime));
 		}
 		return sb.toString();
@@ -185,24 +183,26 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	private String formatRelativeTime(Event event){
 		if(event.startTime==null) return "";
 		Instant now=Instant.now();
-		if(event.startTime.isBefore(now)){
-			return "Happening now";
-		}
+		if(event.startTime.isBefore(now)) return "Now";
 		Duration d=Duration.between(now, event.startTime);
 		long days=d.toDays();
 		if(days==0){
 			long hours=d.toHours();
-			if(hours==0){
-				long minutes=d.toMinutes();
-				return "In "+minutes+" min"+(minutes!=1?"s":"");
-			}
-			return "In "+hours+" hour"+(hours!=1?"s":"");
+			if(hours<=1) return "Soon";
+			return "In "+hours+"h";
 		}else if(days==1){
 			return "Tomorrow";
 		}else if(days<7){
-			return "In "+days+" days";
+			return "In "+days+"d";
 		}
 		return "";
+	}
+
+	private void openEventDetail(Event event){
+		Bundle args=new Bundle();
+		args.putString("account", accountID);
+		args.putParcelable("event", Parcels.wrap(event));
+		Nav.go(getActivity(), EventDetailFragment.class, args);
 	}
 
 	private class EventsAdapter extends RecyclerView.Adapter<EventViewHolder>{
@@ -223,312 +223,351 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	}
 
 	private class EventViewHolder extends RecyclerView.ViewHolder{
-		private final TextView title, dateTime, location, attendees, description, relativeTime, eventType;
-		private final Button rsvpButton;
-		private final View cancelledBadge;
+		private final TextView dateBadgeMonth, dateBadgeDay;
+		private final TextView title, timeText, locationText, descriptionText, attendeesText, relativeTimeText;
+		private final View dateBadge, goingChip, interestedChip, cancelledBadge;
+		private final TextView goingText, interestedText;
 
 		EventViewHolder(){
 			super(createEventCardView());
+			dateBadge=itemView.findViewWithTag("dateBadge");
+			dateBadgeMonth=itemView.findViewWithTag("dateBadgeMonth");
+			dateBadgeDay=itemView.findViewWithTag("dateBadgeDay");
 			title=itemView.findViewById(android.R.id.title);
-			dateTime=itemView.findViewById(android.R.id.text1);
-			location=itemView.findViewById(android.R.id.text2);
-			attendees=itemView.findViewById(android.R.id.summary);
-			description=itemView.findViewById(android.R.id.message);
-			relativeTime=itemView.findViewById(android.R.id.hint);
-			eventType=itemView.findViewById(android.R.id.custom);
-			rsvpButton=itemView.findViewById(android.R.id.button1);
-			cancelledBadge=itemView.findViewById(android.R.id.icon);
+			timeText=itemView.findViewById(android.R.id.text1);
+			locationText=itemView.findViewById(android.R.id.text2);
+			descriptionText=itemView.findViewById(android.R.id.message);
+			attendeesText=itemView.findViewById(android.R.id.summary);
+			relativeTimeText=itemView.findViewById(android.R.id.hint);
+			goingChip=itemView.findViewWithTag("goingChip");
+			interestedChip=itemView.findViewWithTag("interestedChip");
+			goingText=(TextView)itemView.findViewWithTag("goingText");
+			interestedText=(TextView)itemView.findViewWithTag("interestedText");
+			cancelledBadge=itemView.findViewWithTag("cancelledBadge");
 		}
 
 		void bind(Event event){
-			title.setText(event.title);
-
-			// Relative time badge
-			String relative=formatRelativeTime(event);
-			if(!TextUtils.isEmpty(relative)){
-				relativeTime.setText(relative);
-				relativeTime.setVisibility(View.VISIBLE);
-				// Color "Happening now" differently
-				if(relative.equals("Happening now")){
-					relativeTime.setTextColor(UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary));
-				}else{
-					relativeTime.setTextColor(UiUtils.getThemeColor(itemView.getContext(), android.R.attr.textColorSecondary));
-				}
+			// Date badge
+			if(event.startTime!=null){
+				dateBadgeMonth.setText(MONTH_FORMAT.format(event.startTime).toUpperCase(Locale.ROOT));
+				dateBadgeDay.setText(DAY_FORMAT.format(event.startTime));
+				dateBadge.setVisibility(View.VISIBLE);
 			}else{
-				relativeTime.setVisibility(View.GONE);
+				dateBadge.setVisibility(View.INVISIBLE);
 			}
 
-			// Date and time
-			if(event.startTime!=null){
-				dateTime.setText("\uD83D\uDCC5  "+formatEventTime(event));
-				dateTime.setVisibility(View.VISIBLE);
+			// Title
+			title.setText(event.title);
+			title.setAlpha(event.cancelled ? 0.5f : 1f);
+
+			// Relative time
+			String relative=formatRelativeTime(event);
+			if(!TextUtils.isEmpty(relative)){
+				relativeTimeText.setText(relative);
+				relativeTimeText.setVisibility(View.VISIBLE);
+				if("Now".equals(relative)){
+					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary));
+				}else{
+					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), android.R.attr.textColorSecondary));
+				}
 			}else{
-				dateTime.setVisibility(View.GONE);
+				relativeTimeText.setVisibility(View.GONE);
+			}
+
+			// Time
+			String time=formatTimeRange(event);
+			if(!TextUtils.isEmpty(time)){
+				timeText.setText(time);
+				timeText.setVisibility(View.VISIBLE);
+			}else{
+				timeText.setVisibility(View.GONE);
 			}
 
 			// Location
 			if(!TextUtils.isEmpty(event.locationName)){
-				location.setText("\uD83D\uDCCD  "+event.locationName);
-				location.setVisibility(View.VISIBLE);
+				locationText.setText(event.locationName);
+				locationText.setVisibility(View.VISIBLE);
 			}else{
-				location.setVisibility(View.GONE);
+				locationText.setVisibility(View.GONE);
 			}
 
-			// Description
+			// Description preview
 			if(!TextUtils.isEmpty(event.description)){
-				String desc=event.description.length()>150 ? event.description.substring(0, 150)+"…" : event.description;
-				description.setText(desc);
-				description.setVisibility(View.VISIBLE);
+				String desc=event.description.length()>140 ? event.description.substring(0, 140)+"…" : event.description;
+				descriptionText.setText(desc);
+				descriptionText.setVisibility(View.VISIBLE);
 			}else{
-				description.setVisibility(View.GONE);
+				descriptionText.setVisibility(View.GONE);
 			}
 
 			// Attendees
-			int going=event.goingCount;
-			int interested=event.interestedCount;
-			if(going>0 || interested>0){
-				StringBuilder atText=new StringBuilder();
-				if(going>0) atText.append(going).append(" going");
-				if(going>0 && interested>0) atText.append(" \u00B7 ");
-				if(interested>0) atText.append(interested).append(" interested");
-				attendees.setText(atText.toString());
-				attendees.setVisibility(View.VISIBLE);
+			int total=event.goingCount+event.interestedCount;
+			if(total>0){
+				attendeesText.setText(total+" attending");
+				attendeesText.setVisibility(View.VISIBLE);
 			}else{
-				attendees.setVisibility(View.GONE);
+				attendeesText.setVisibility(View.GONE);
 			}
 
-			// Event type badge
-			if(!TextUtils.isEmpty(event.eventType)){
-				eventType.setText(event.eventType.substring(0, 1).toUpperCase()+event.eventType.substring(1));
-				eventType.setVisibility(View.VISIBLE);
-			}else{
-				eventType.setVisibility(View.GONE);
-			}
-
-			// Cancelled badge
+			// RSVP chips
 			cancelledBadge.setVisibility(event.cancelled ? View.VISIBLE : View.GONE);
-			if(event.cancelled){
-				title.setAlpha(0.5f);
+
+			if(!event.cancelled){
+				// Going chip
+				boolean isGoing="going".equals(event.rsvp);
+				goingChip.setVisibility(View.VISIBLE);
+				goingText.setText(isGoing ? "Going ✓" : "Going");
+				styleChip(goingChip, goingText, isGoing, COLOR_GOING);
+
+				// Interested chip
+				boolean isInterested="interested".equals(event.rsvp);
+				interestedChip.setVisibility(View.VISIBLE);
+				interestedText.setText(isInterested ? "Interested ✓" : "Interested");
+				styleChip(interestedChip, interestedText, isInterested, COLOR_INTERESTED);
+
+				goingChip.setOnClickListener(v->{
+					String newStatus=isGoing ? "remove" : "going";
+					doRsvp(event, newStatus);
+				});
+				interestedChip.setOnClickListener(v->{
+					String newStatus=isInterested ? "remove" : "interested";
+					doRsvp(event, newStatus);
+				});
 			}else{
-				title.setAlpha(1f);
+				goingChip.setVisibility(View.GONE);
+				interestedChip.setVisibility(View.GONE);
 			}
 
-			// RSVP button styling
-			int primaryColor=UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary);
-			int onPrimaryColor=UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3OnPrimary);
-			int surfaceVariantColor=UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3SurfaceVariant);
-			int onSurfaceVariantColor=UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3OnSurfaceVariant);
-
-			if("going".equals(event.rsvp)){
-				rsvpButton.setText("\u2714  Going");
-				setButtonStyle(rsvpButton, primaryColor, onPrimaryColor);
-			}else if("interested".equals(event.rsvp)){
-				rsvpButton.setText("\u2606  Interested");
-				setButtonStyle(rsvpButton, surfaceVariantColor, onSurfaceVariantColor);
-			}else{
-				rsvpButton.setText("RSVP");
-				setButtonOutlineStyle(rsvpButton, primaryColor);
-			}
-
-			if(event.cancelled){
-				rsvpButton.setVisibility(View.GONE);
-			}else{
-				rsvpButton.setVisibility(View.VISIBLE);
-			}
-
-			rsvpButton.setOnClickListener(v->{
-				String newStatus="going".equals(event.rsvp) ? "remove" : "going";
-				new RsvpEvent(event.id, newStatus)
-						.setCallback(new Callback<>(){
-							@Override
-							public void onSuccess(Event result){
-								if(getActivity()==null) return;
-								int idx=events.indexOf(event);
-								if(idx>=0){
-									events.set(idx, result);
-									adapter.notifyItemChanged(idx);
-								}
-							}
-							@Override
-							public void onError(ErrorResponse error){
-								if(getActivity()!=null) error.showToast(getActivity());
-							}
-						})
-						.exec(accountID);
-			});
+			// Click to open detail
+			itemView.setOnClickListener(v->openEventDetail(event));
 		}
 	}
 
-	private void setButtonStyle(Button button, int bgColor, int textColor){
-		GradientDrawable bg=new GradientDrawable();
-		bg.setShape(GradientDrawable.RECTANGLE);
-		bg.setCornerRadius(V.dp(20));
-		bg.setColor(bgColor);
-		button.setBackground(bg);
-		button.setTextColor(textColor);
-		button.setAlpha(1f);
+	private void doRsvp(Event event, String status){
+		new RsvpEvent(event.id, status)
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(Event result){
+						if(getActivity()==null) return;
+						int idx=events.indexOf(event);
+						if(idx>=0){
+							events.set(idx, result);
+							adapter.notifyItemChanged(idx);
+						}
+					}
+					@Override
+					public void onError(ErrorResponse error){
+						if(getActivity()!=null) error.showToast(getActivity());
+					}
+				})
+				.exec(accountID);
 	}
 
-	private void setButtonOutlineStyle(Button button, int outlineColor){
+	private void styleChip(View chip, TextView text, boolean active, int activeColor){
 		GradientDrawable bg=new GradientDrawable();
 		bg.setShape(GradientDrawable.RECTANGLE);
-		bg.setCornerRadius(V.dp(20));
-		bg.setColor(0x00000000); // transparent
-		bg.setStroke(V.dp(1), outlineColor);
-		button.setBackground(bg);
-		button.setTextColor(outlineColor);
-		button.setAlpha(1f);
+		bg.setCornerRadius(V.dp(8));
+		if(active){
+			bg.setColor(activeColor);
+			text.setTextColor(0xFFFFFFFF);
+		}else{
+			bg.setColor(0x00000000);
+			bg.setStroke(V.dp(1), UiUtils.getThemeColor(chip.getContext(), R.attr.colorM3Outline));
+			text.setTextColor(UiUtils.getThemeColor(chip.getContext(), android.R.attr.textColorPrimary));
+		}
+		chip.setBackground(bg);
 	}
 
 	private View createEventCardView(){
-		// Outer wrapper for card margins
-		LinearLayout wrapper=new LinearLayout(getActivity());
-		wrapper.setOrientation(LinearLayout.VERTICAL);
-		RecyclerView.LayoutParams wrapperLp=new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		wrapperLp.topMargin=V.dp(8);
-		wrapperLp.bottomMargin=V.dp(4);
-		wrapper.setLayoutParams(wrapperLp);
-
-		// Card with rounded corners and elevation
+		// Card container
 		LinearLayout card=new LinearLayout(getActivity());
 		card.setOrientation(LinearLayout.VERTICAL);
+		RecyclerView.LayoutParams cardLp=new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		cardLp.bottomMargin=V.dp(12);
+		card.setLayoutParams(cardLp);
 		card.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
 
 		GradientDrawable cardBg=new GradientDrawable();
 		cardBg.setShape(GradientDrawable.RECTANGLE);
-		cardBg.setCornerRadius(V.dp(16));
+		cardBg.setCornerRadius(V.dp(12));
 		cardBg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface));
+		cardBg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 		card.setBackground(cardBg);
-		card.setElevation(V.dp(2));
+		card.setElevation(V.dp(1));
 		card.setClipToOutline(true);
 		card.setOutlineProvider(new ViewOutlineProvider(){
 			@Override
 			public void getOutline(View view, Outline outline){
-				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(16));
+				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(12));
 			}
 		});
 
-		// Cancelled badge (hidden by default)
+		// Top row: date badge + title/meta
+		LinearLayout topRow=new LinearLayout(getActivity());
+		topRow.setOrientation(LinearLayout.HORIZONTAL);
+
+		// Date badge
+		LinearLayout dateBadge=new LinearLayout(getActivity());
+		dateBadge.setTag("dateBadge");
+		dateBadge.setOrientation(LinearLayout.VERTICAL);
+		dateBadge.setGravity(Gravity.CENTER);
+		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		GradientDrawable dateBg=new GradientDrawable();
+		dateBg.setShape(GradientDrawable.RECTANGLE);
+		dateBg.setCornerRadius(V.dp(10));
+		dateBg.setColor((primaryColor & 0x00FFFFFF) | 0x1A000000); // 10% opacity of primary
+		dateBadge.setBackground(dateBg);
+		dateBadge.setPadding(V.dp(2), V.dp(6), V.dp(2), V.dp(6));
+		LinearLayout.LayoutParams dateLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(48));
+		dateLp.rightMargin=V.dp(14);
+
+		TextView monthText=new TextView(getActivity());
+		monthText.setTag("dateBadgeMonth");
+		monthText.setTextSize(10);
+		monthText.setTypeface(null, Typeface.BOLD);
+		monthText.setTextColor(primaryColor);
+		monthText.setGravity(Gravity.CENTER);
+		monthText.setLetterSpacing(0.06f);
+		dateBadge.addView(monthText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		TextView dayText=new TextView(getActivity());
+		dayText.setTag("dateBadgeDay");
+		dayText.setTextSize(18);
+		dayText.setTypeface(null, Typeface.BOLD);
+		dayText.setTextColor(primaryColor);
+		dayText.setGravity(Gravity.CENTER);
+		dayText.setIncludeFontPadding(false);
+		dateBadge.addView(dayText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		topRow.addView(dateBadge, dateLp);
+
+		// Right side: title + relative time
+		LinearLayout titleCol=new LinearLayout(getActivity());
+		titleCol.setOrientation(LinearLayout.VERTICAL);
+		LinearLayout.LayoutParams titleColLp=new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+		titleCol.setGravity(Gravity.CENTER_VERTICAL);
+
+		// Cancelled badge
 		TextView cancelledBadge=new TextView(getActivity());
-		cancelledBadge.setId(android.R.id.icon);
+		cancelledBadge.setTag("cancelledBadge");
 		cancelledBadge.setText("CANCELLED");
-		cancelledBadge.setTextSize(11);
+		cancelledBadge.setTextSize(10);
 		cancelledBadge.setTypeface(null, Typeface.BOLD);
 		cancelledBadge.setTextColor(0xFFFFFFFF);
-		cancelledBadge.setPadding(V.dp(8), V.dp(3), V.dp(8), V.dp(3));
+		cancelledBadge.setLetterSpacing(0.04f);
+		cancelledBadge.setPadding(V.dp(6), V.dp(2), V.dp(6), V.dp(2));
 		GradientDrawable cancelBg=new GradientDrawable();
 		cancelBg.setShape(GradientDrawable.RECTANGLE);
 		cancelBg.setCornerRadius(V.dp(4));
-		cancelBg.setColor(0xFFD32F2F);
+		cancelBg.setColor(COLOR_CANCELLED);
 		cancelledBadge.setBackground(cancelBg);
 		cancelledBadge.setVisibility(View.GONE);
 		LinearLayout.LayoutParams cbLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		cbLp.bottomMargin=V.dp(8);
-		card.addView(cancelledBadge, cbLp);
+		cbLp.bottomMargin=V.dp(4);
+		titleCol.addView(cancelledBadge, cbLp);
 
-		// Event type badge row + relative time
-		LinearLayout topRow=new LinearLayout(getActivity());
-		topRow.setOrientation(LinearLayout.HORIZONTAL);
-		topRow.setGravity(Gravity.CENTER_VERTICAL);
+		TextView title=new TextView(getActivity());
+		title.setId(android.R.id.title);
+		title.setTextSize(16);
+		title.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+		title.setTypeface(null, Typeface.BOLD);
+		title.setMaxLines(2);
+		title.setEllipsize(TextUtils.TruncateAt.END);
+		titleCol.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		TextView eventType=new TextView(getActivity());
-		eventType.setId(android.R.id.custom);
-		eventType.setTextSize(11);
-		eventType.setTypeface(null, Typeface.BOLD);
-		eventType.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OnSecondaryContainer));
-		eventType.setPadding(V.dp(8), V.dp(3), V.dp(8), V.dp(3));
-		GradientDrawable typeBg=new GradientDrawable();
-		typeBg.setShape(GradientDrawable.RECTANGLE);
-		typeBg.setCornerRadius(V.dp(4));
-		typeBg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3SecondaryContainer));
-		eventType.setBackground(typeBg);
-		eventType.setVisibility(View.GONE);
-		topRow.addView(eventType, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-		// Spacer
-		View spacer=new View(getActivity());
-		topRow.addView(spacer, new LinearLayout.LayoutParams(0, 0, 1f));
-
+		// Relative time label
 		TextView relativeTime=new TextView(getActivity());
 		relativeTime.setId(android.R.id.hint);
 		relativeTime.setTextSize(12);
 		relativeTime.setTypeface(null, Typeface.BOLD);
 		relativeTime.setVisibility(View.GONE);
-		topRow.addView(relativeTime, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		LinearLayout.LayoutParams rtLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		rtLp.topMargin=V.dp(2);
+		titleCol.addView(relativeTime, rtLp);
 
-		LinearLayout.LayoutParams trLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		trLp.bottomMargin=V.dp(8);
-		card.addView(topRow, trLp);
+		topRow.addView(titleCol, titleColLp);
+		card.addView(topRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// Title
-		TextView title=new TextView(getActivity());
-		title.setId(android.R.id.title);
-		title.setTextSize(18);
-		title.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-		title.setTypeface(null, Typeface.BOLD);
-		title.setMaxLines(2);
-		title.setEllipsize(TextUtils.TruncateAt.END);
-		card.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		// Time row
+		TextView timeText=new TextView(getActivity());
+		timeText.setId(android.R.id.text1);
+		timeText.setTextSize(13);
+		timeText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		timeText.setCompoundDrawablePadding(V.dp(6));
+		LinearLayout.LayoutParams timeLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		timeLp.topMargin=V.dp(10);
+		timeLp.leftMargin=V.dp(62); // align with title (48 badge + 14 margin)
+		card.addView(timeText, timeLp);
 
-		// Date/time
-		TextView dateTime=new TextView(getActivity());
-		dateTime.setId(android.R.id.text1);
-		dateTime.setTextSize(14);
-		dateTime.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		LinearLayout.LayoutParams dtlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		dtlp.topMargin=V.dp(8);
-		card.addView(dateTime, dtlp);
-
-		// Location
-		TextView location=new TextView(getActivity());
-		location.setId(android.R.id.text2);
-		location.setTextSize(14);
-		location.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		LinearLayout.LayoutParams loclp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		loclp.topMargin=V.dp(4);
-		card.addView(location, loclp);
+		// Location row
+		TextView locationText=new TextView(getActivity());
+		locationText.setId(android.R.id.text2);
+		locationText.setTextSize(13);
+		locationText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		locationText.setCompoundDrawablePadding(V.dp(6));
+		LinearLayout.LayoutParams locLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		locLp.topMargin=V.dp(4);
+		locLp.leftMargin=V.dp(62);
+		card.addView(locationText, locLp);
 
 		// Description
-		TextView description=new TextView(getActivity());
-		description.setId(android.R.id.message);
-		description.setTextSize(14);
-		description.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		description.setMaxLines(3);
-		description.setEllipsize(TextUtils.TruncateAt.END);
-		description.setLineSpacing(V.dp(2), 1f);
-		description.setVisibility(View.GONE);
-		LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		dlp.topMargin=V.dp(8);
-		card.addView(description, dlp);
+		TextView descriptionText=new TextView(getActivity());
+		descriptionText.setId(android.R.id.message);
+		descriptionText.setTextSize(13);
+		descriptionText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		descriptionText.setMaxLines(2);
+		descriptionText.setEllipsize(TextUtils.TruncateAt.END);
+		descriptionText.setLineSpacing(V.dp(1), 1f);
+		descriptionText.setVisibility(View.GONE);
+		LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		descLp.topMargin=V.dp(8);
+		descLp.leftMargin=V.dp(62);
+		card.addView(descriptionText, descLp);
 
-		// Bottom row: attendees + RSVP button
+		// Bottom row: attendees + RSVP chips
 		LinearLayout bottomRow=new LinearLayout(getActivity());
 		bottomRow.setOrientation(LinearLayout.HORIZONTAL);
 		bottomRow.setGravity(Gravity.CENTER_VERTICAL);
-		LinearLayout.LayoutParams brlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		brlp.topMargin=V.dp(12);
+		LinearLayout.LayoutParams brLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		brLp.topMargin=V.dp(12);
+		brLp.leftMargin=V.dp(62);
 
+		// Attendees text
 		TextView attendees=new TextView(getActivity());
 		attendees.setId(android.R.id.summary);
-		attendees.setTextSize(13);
-		attendees.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
-		attendees.setTypeface(null, Typeface.BOLD);
+		attendees.setTextSize(12);
+		attendees.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		attendees.setVisibility(View.GONE);
 		bottomRow.addView(attendees, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-		Button rsvpButton=new Button(getActivity());
-		rsvpButton.setId(android.R.id.button1);
-		rsvpButton.setAllCaps(false);
-		rsvpButton.setTextSize(14);
-		rsvpButton.setTypeface(null, Typeface.BOLD);
-		rsvpButton.setMinimumWidth(V.dp(80));
-		rsvpButton.setMinHeight(V.dp(36));
-		rsvpButton.setPadding(V.dp(16), V.dp(6), V.dp(16), V.dp(6));
-		LinearLayout.LayoutParams btnlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, V.dp(36));
-		bottomRow.addView(rsvpButton, btnlp);
+		// Going chip
+		LinearLayout goingChip=new LinearLayout(getActivity());
+		goingChip.setTag("goingChip");
+		goingChip.setGravity(Gravity.CENTER);
+		goingChip.setPadding(V.dp(10), V.dp(5), V.dp(10), V.dp(5));
+		TextView goingText=new TextView(getActivity());
+		goingText.setTag("goingText");
+		goingText.setTextSize(12);
+		goingText.setText("Going");
+		goingChip.addView(goingText);
+		LinearLayout.LayoutParams gcLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		gcLp.rightMargin=V.dp(8);
+		bottomRow.addView(goingChip, gcLp);
 
-		card.addView(bottomRow, brlp);
+		// Interested chip
+		LinearLayout interestedChip=new LinearLayout(getActivity());
+		interestedChip.setTag("interestedChip");
+		interestedChip.setGravity(Gravity.CENTER);
+		interestedChip.setPadding(V.dp(10), V.dp(5), V.dp(10), V.dp(5));
+		TextView interestedText=new TextView(getActivity());
+		interestedText.setTag("interestedText");
+		interestedText.setTextSize(12);
+		interestedText.setText("Interested");
+		interestedChip.addView(interestedText);
+		bottomRow.addView(interestedChip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		wrapper.addView(card, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-		return wrapper;
+		card.addView(bottomRow, brLp);
+
+		return card;
 	}
 }
