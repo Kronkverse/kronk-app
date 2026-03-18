@@ -86,6 +86,15 @@ public class CreateEventFragment extends MastodonToolbarFragment{
 		int surfaceVariant=UiUtils.getThemeColor(getActivity(), R.attr.colorM3SurfaceVariant);
 		int outline=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Outline);
 
+		// Top accent gradient bar
+		View accentBar=new View(getActivity());
+		GradientDrawable accentGrad=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{primaryColor, (primaryColor & 0x00FFFFFF) | 0xB3000000});
+		accentGrad.setCornerRadii(new float[]{V.dp(2), V.dp(2), V.dp(2), V.dp(2), 0, 0, 0, 0});
+		accentBar.setBackground(accentGrad);
+		LinearLayout.LayoutParams accentLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(3));
+		accentLp.bottomMargin=V.dp(20);
+		content.addView(accentBar, accentLp);
+
 		// Event Type Toggle
 		content.addView(createSectionLabel("Event Type", textSecondary));
 
@@ -256,6 +265,8 @@ public class CreateEventFragment extends MastodonToolbarFragment{
 		LinearLayout.LayoutParams divLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(1));
 		divLp.topMargin=V.dp(20);
 		divLp.bottomMargin=V.dp(20);
+		divLp.leftMargin=V.dp(20);
+		divLp.rightMargin=V.dp(20);
 		content.addView(divider, divLp);
 
 		// Create Button
@@ -267,9 +278,11 @@ public class CreateEventFragment extends MastodonToolbarFragment{
 		createBtn.setGravity(Gravity.CENTER);
 		createBtn.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
 		GradientDrawable createBg=new GradientDrawable();
-		createBg.setCornerRadius(V.dp(12));
+		createBg.setCornerRadius(V.dp(14));
 		createBg.setColor(primaryColor);
 		createBtn.setBackground(createBg);
+		createBtn.setElevation(V.dp(2));
+		createBtn.setLetterSpacing(0.02f);
 		createBtn.setOnClickListener(v->onCreateClick());
 		content.addView(createBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -368,15 +381,16 @@ public class CreateEventFragment extends MastodonToolbarFragment{
 			text.setTextColor(textPrimary);
 		}
 		pill.setBackground(bg);
+		pill.setElevation(active ? V.dp(2) : 0);
 	}
 
 	private TextView createSectionLabel(String text, int color){
 		TextView label=new TextView(getActivity());
 		label.setText(text);
-		label.setTextSize(13);
+		label.setTextSize(12);
 		label.setTypeface(null, Typeface.BOLD);
 		label.setTextColor(color);
-		label.setLetterSpacing(0.02f);
+		label.setLetterSpacing(0.04f);
 		LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		lp.topMargin=V.dp(12);
 		label.setLayoutParams(lp);
@@ -394,6 +408,18 @@ public class CreateEventFragment extends MastodonToolbarFragment{
 		bg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3Outline));
 		bg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface));
 		edit.setBackground(bg);
+		int focusPrimary=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		edit.setOnFocusChangeListener((v, hasFocus)->{
+			GradientDrawable fbg=new GradientDrawable();
+			fbg.setCornerRadius(V.dp(8));
+			fbg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface));
+			if(hasFocus){
+				fbg.setStroke(V.dp(1), focusPrimary);
+			}else{
+				fbg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3Outline));
+			}
+			v.setBackground(fbg);
+		});
 		return edit;
 	}
 

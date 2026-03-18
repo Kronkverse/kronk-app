@@ -53,6 +53,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	private View cancelledBanner;
 	private ImageView coverImage;
 	private LinearLayout goingAvatarsRow, interestedAvatarsRow;
+	private TextView goingHeaderText, interestedHeaderText;
 	private LinearLayout contentLayout;
 
 	private static final DateTimeFormatter FULL_DATE=DateTimeFormatter.ofPattern(EEEE, MMMM d, yyyy).withZone(ZoneId.systemDefault());
@@ -85,10 +86,30 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 		// Cover image
 		if(!TextUtils.isEmpty(event.imageUrl)){
+			android.widget.FrameLayout coverFrame=new android.widget.FrameLayout(getActivity());
+			coverFrame.setOutlineProvider(new ViewOutlineProvider(){
+				@Override
+				public void getOutline(View view, Outline outline){
+					outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(14));
+				}
+			});
+			coverFrame.setClipToOutline(true);
+
 			coverImage=new ImageView(getActivity());
 			coverImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
 			coverImage.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3SurfaceVariant));
-			contentLayout.addView(coverImage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(200)));
+			coverFrame.addView(coverImage, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+			View gradientOverlay=new View(getActivity());
+			GradientDrawable coverGradient=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0x66000000});
+			gradientOverlay.setBackground(coverGradient);
+			android.widget.FrameLayout.LayoutParams gradLp=new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+			gradLp.gravity=android.view.Gravity.BOTTOM;
+			gradLp.height=V.dp(100);
+			gradLp.topMargin=V.dp(100);
+			coverFrame.addView(gradientOverlay, gradLp);
+
+			contentLayout.addView(coverFrame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(200)));
 			ViewImageLoader.load(coverImage, null, new UrlImageLoaderRequest(event.imageUrl, V.dp(400), V.dp(200)));
 		}
 
@@ -307,12 +328,12 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		// Attendees section - Going
 		content.addView(createDivider(), createDividerLp(16));
 
-		TextView goingHeader=new TextView(getActivity());
-		goingHeader.setText("Going");
-		goingHeader.setTextSize(15);
-		goingHeader.setTypeface(null, Typeface.BOLD);
-		goingHeader.setTextColor(textPrimary);
-		content.addView(goingHeader, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		goingHeaderText=new TextView(getActivity());
+		goingHeaderText.setText("Going ("+event.goingCount+")");
+		goingHeaderText.setTextSize(15);
+		goingHeaderText.setTypeface(null, Typeface.BOLD);
+		goingHeaderText.setTextColor(textPrimary);
+		content.addView(goingHeaderText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		HorizontalScrollView goingScroll=new HorizontalScrollView(getActivity());
 		goingScroll.setHorizontalScrollBarEnabled(false);
@@ -326,14 +347,14 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		content.addView(goingScroll, goingScrollLp);
 
 		// Attendees section - Interested
-		TextView interestedHeader=new TextView(getActivity());
-		interestedHeader.setText("Interested");
-		interestedHeader.setTextSize(15);
-		interestedHeader.setTypeface(null, Typeface.BOLD);
-		interestedHeader.setTextColor(textPrimary);
+		interestedHeaderText=new TextView(getActivity());
+		interestedHeaderText.setText("Interested ("+event.interestedCount+")");
+		interestedHeaderText.setTextSize(15);
+		interestedHeaderText.setTypeface(null, Typeface.BOLD);
+		interestedHeaderText.setTextColor(textPrimary);
 		LinearLayout.LayoutParams intHeaderLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		intHeaderLp.topMargin=V.dp(16);
-		content.addView(interestedHeader, intHeaderLp);
+		content.addView(interestedHeaderText, intHeaderLp);
 
 		HorizontalScrollView interestedScroll=new HorizontalScrollView(getActivity());
 		interestedScroll.setHorizontalScrollBarEnabled(false);
@@ -360,7 +381,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			descriptionText=new TextView(getActivity());
 			descriptionText.setTextSize(15);
 			descriptionText.setTextColor(textPrimary);
-			descriptionText.setLineSpacing(V.dp(3), 1f);
+			descriptionText.setLineSpacing(V.dp(4), 1f);
 			LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 			descLp.topMargin=V.dp(8);
 			content.addView(descriptionText, descLp);
@@ -380,6 +401,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		inviteBg.setCornerRadius(V.dp(10));
 		inviteBg.setColor(primaryColor);
 		inviteBtn.setBackground(inviteBg);
+		inviteBtn.setElevation(V.dp(2));
 		inviteBtn.setOnClickListener(v->{
 			// Placeholder for future invite screen
 		});
@@ -541,6 +563,8 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 						event=result;
 						goingCountText.setText(event.goingCount+ going);
 						interestedCountText.setText(event.interestedCount+ interested);
+						goingHeaderText.setText("Going ("+event.goingCount+")");
+						interestedHeaderText.setText("Interested ("+event.interestedCount+")");
 						updateRsvpButtons();
 					}
 					@Override
@@ -640,11 +664,13 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			bg.setColor(color);
 			text.setTextColor(0xFFFFFFFF);
 			text.setText(label+ ✓);
+			btn.setElevation(V.dp(2));
 		}else{
 			bg.setColor(0x00000000);
 			bg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3Outline));
 			text.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 			text.setText(label);
+			btn.setElevation(0);
 		}
 		btn.setBackground(bg);
 	}
@@ -653,7 +679,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		LinearLayout btn=new LinearLayout(getActivity());
 		btn.setOrientation(LinearLayout.HORIZONTAL);
 		btn.setGravity(Gravity.CENTER);
-		btn.setPadding(V.dp(12), V.dp(10), V.dp(12), V.dp(10));
+		btn.setPadding(V.dp(16), V.dp(12), V.dp(16), V.dp(12));
 
 		GradientDrawable bg=new GradientDrawable();
 		bg.setCornerRadius(V.dp(10));
@@ -662,7 +688,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 		TextView text=new TextView(getActivity());
 		text.setText(label);
-		text.setTextSize(13);
+		text.setTextSize(14);
 		text.setTypeface(null, Typeface.BOLD);
 		text.setGravity(Gravity.CENTER);
 		text.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
@@ -674,6 +700,12 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	private LinearLayout createInfoRow(int iconRes, int iconColor){
 		LinearLayout row=new LinearLayout(getActivity());
 		row.setOrientation(LinearLayout.HORIZONTAL);
+		row.setPadding(V.dp(10), V.dp(8), V.dp(10), V.dp(8));
+		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		GradientDrawable rowBg=new GradientDrawable();
+		rowBg.setCornerRadius(V.dp(8));
+		rowBg.setColor((primaryColor & 0x00FFFFFF) | 0x14000000);
+		row.setBackground(rowBg);
 
 		ImageView icon=new ImageView(getActivity());
 		icon.setImageResource(iconRes);

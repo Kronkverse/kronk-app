@@ -47,6 +47,8 @@ import java.util.Map;
 import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
+import me.grishka.appkit.imageloader.ViewImageLoader;
+import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 
 public class EventsFragment extends Fragment implements ScrollableToTop{
@@ -116,7 +118,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		LinearLayout content=new LinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		// === Top bar: filter chips + view mode toggle ===
+		// === Top bar: filter chips + new event button + view mode toggle ===
 		LinearLayout topBar=new LinearLayout(getActivity());
 		topBar.setOrientation(LinearLayout.HORIZONTAL);
 		topBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -127,6 +129,18 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		filterScroll.setHorizontalScrollBarEnabled(false);
 		filterScroll.setClipToPadding(false);
 
+		// Wrap filterContainer in a faint purple pill background
+		LinearLayout filterWrapper=new LinearLayout(getActivity());
+		filterWrapper.setOrientation(LinearLayout.HORIZONTAL);
+		filterWrapper.setGravity(Gravity.CENTER_VERTICAL);
+		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		GradientDrawable filterWrapperBg=new GradientDrawable();
+		filterWrapperBg.setShape(GradientDrawable.RECTANGLE);
+		filterWrapperBg.setCornerRadius(V.dp(10));
+		filterWrapperBg.setColor((primaryColor & 0x00FFFFFF) | 0x14000000); // 8% opacity primary
+		filterWrapper.setBackground(filterWrapperBg);
+		filterWrapper.setPadding(V.dp(3), V.dp(3), V.dp(3), V.dp(3));
+
 		filterContainer=new LinearLayout(getActivity());
 		filterContainer.setOrientation(LinearLayout.HORIZONTAL);
 		filterContainer.setGravity(Gravity.CENTER_VERTICAL);
@@ -135,13 +149,36 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		for(int i=0; i<FILTERS.length; i++){
 			filterChips[i]=createFilterChip(FILTER_LABELS[i], i);
 			LinearLayout.LayoutParams chipLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-			if(i>0) chipLp.leftMargin=V.dp(8);
+			if(i>0) chipLp.leftMargin=V.dp(2);
 			filterContainer.addView(filterChips[i], chipLp);
 		}
 		updateFilterChipStyles();
 
-		filterScroll.addView(filterContainer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		filterWrapper.addView(filterContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		filterScroll.addView(filterWrapper, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		topBar.addView(filterScroll, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+		// "New Event" button
+		TextView newEventBtn=new TextView(getActivity());
+		newEventBtn.setText("+ New Event");
+		newEventBtn.setTextSize(13);
+		newEventBtn.setTypeface(null, Typeface.BOLD);
+		newEventBtn.setTextColor(0xFFFFFFFF);
+		newEventBtn.setGravity(Gravity.CENTER);
+		newEventBtn.setPadding(V.dp(14), V.dp(8), V.dp(14), V.dp(8));
+		GradientDrawable newEventBg=new GradientDrawable();
+		newEventBg.setShape(GradientDrawable.RECTANGLE);
+		newEventBg.setCornerRadius(V.dp(10));
+		newEventBg.setColor(primaryColor);
+		newEventBtn.setBackground(newEventBg);
+		newEventBtn.setOnClickListener(v->{
+			Bundle args=new Bundle();
+			args.putString("account", accountID);
+			Nav.go(getActivity(), CreateEventFragment.class, args);
+		});
+		LinearLayout.LayoutParams neLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		neLp.leftMargin=V.dp(8);
+		topBar.addView(newEventBtn, neLp);
 
 		// View mode toggle
 		LinearLayout viewToggle=new LinearLayout(getActivity());
@@ -285,10 +322,12 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			if(selected){
 				bg.setColor(primaryColor);
 				chip.setTextColor(0xFFFFFFFF);
+				chip.setElevation(V.dp(1));
 			}else{
 				bg.setColor(0x00000000);
-				bg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3Outline));
-				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+				// No border stroke for inactive chips
+				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+				chip.setElevation(0);
 			}
 			chip.setBackground(bg);
 		}
@@ -492,7 +531,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 				if(globalIndex<(startDow-1) || dayCounter>daysInMonth){
 					// Empty cell
 					View empty=new View(getActivity());
-					rowLayout.addView(empty, new LinearLayout.LayoutParams(0, V.dp(48), 1f));
+					rowLayout.addView(empty, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
 				}else{
 					int day=dayCounter;
 					LocalDate cellDate=displayedMonth.atDay(day);
@@ -503,17 +542,17 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 					LinearLayout cell=new LinearLayout(getActivity());
 					cell.setOrientation(LinearLayout.VERTICAL);
 					cell.setGravity(Gravity.CENTER_HORIZONTAL);
-					cell.setPadding(V.dp(2), V.dp(4), V.dp(2), V.dp(4));
+					cell.setPadding(V.dp(2), V.dp(4), V.dp(2), V.dp(2));
 
 					// Background for today/selected
 					GradientDrawable cellBg=new GradientDrawable();
 					cellBg.setShape(GradientDrawable.RECTANGLE);
 					cellBg.setCornerRadius(V.dp(8));
-					int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+					int cellPrimaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
 					if(isSelected){
-						cellBg.setColor((primaryColor & 0x00FFFFFF) | 0x33000000);
+						cellBg.setColor((cellPrimaryColor & 0x00FFFFFF) | 0x33000000);
 					}else if(isToday){
-						cellBg.setStroke(V.dp(2), primaryColor);
+						cellBg.setStroke(V.dp(2), cellPrimaryColor);
 					}
 					cell.setBackground(cellBg);
 
@@ -524,32 +563,53 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 					dayTv.setGravity(Gravity.CENTER);
 					if(isToday){
 						dayTv.setTypeface(null, Typeface.BOLD);
-						dayTv.setTextColor(primaryColor);
+						dayTv.setTextColor(cellPrimaryColor);
 					}else{
 						dayTv.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 					}
 					cell.addView(dayTv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-					// Event dots
+					// Event title pills (instead of dots)
 					if(dayEvents\!=null && \!dayEvents.isEmpty()){
-						LinearLayout dotsRow=new LinearLayout(getActivity());
-						dotsRow.setOrientation(LinearLayout.HORIZONTAL);
-						dotsRow.setGravity(Gravity.CENTER);
-						int dotCount=Math.min(dayEvents.size(), 3);
-						for(int d=0; d<dotCount; d++){
-							View dot=new View(getActivity());
-							int dotColor=getEventDotColor(dayEvents.get(d));
-							GradientDrawable dotBg=new GradientDrawable();
-							dotBg.setShape(GradientDrawable.OVAL);
-							dotBg.setColor(dotColor);
-							dot.setBackground(dotBg);
-							LinearLayout.LayoutParams dotLp=new LinearLayout.LayoutParams(V.dp(5), V.dp(5));
-							if(d>0) dotLp.leftMargin=V.dp(2);
-							dotsRow.addView(dot, dotLp);
+						LinearLayout pillsContainer=new LinearLayout(getActivity());
+						pillsContainer.setOrientation(LinearLayout.VERTICAL);
+						pillsContainer.setGravity(Gravity.CENTER_HORIZONTAL);
+						int pillCount=Math.min(dayEvents.size(), 2);
+						for(int d=0; d<pillCount; d++){
+							Event evt=dayEvents.get(d);
+							TextView pill=new TextView(getActivity());
+							String pillTitle=evt.title!=null ? evt.title : "";
+							if(pillTitle.length()>6) pillTitle=pillTitle.substring(0, 6)+"\u2026";
+							pill.setText(pillTitle);
+							pill.setTextSize(8);
+							pill.setTypeface(null, Typeface.BOLD);
+							int dotColor=getEventDotColor(evt);
+							pill.setTextColor(dotColor);
+							pill.setGravity(Gravity.CENTER);
+							pill.setPadding(V.dp(1), 0, V.dp(1), 0);
+							pill.setSingleLine(true);
+							GradientDrawable pillBg=new GradientDrawable();
+							pillBg.setShape(GradientDrawable.RECTANGLE);
+							pillBg.setCornerRadius(V.dp(3));
+							pillBg.setColor((dotColor & 0x00FFFFFF) | 0x33000000); // 20% opacity
+							pill.setBackground(pillBg);
+							LinearLayout.LayoutParams pillLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+							if(d>0) pillLp.topMargin=V.dp(1);
+							pillsContainer.addView(pill, pillLp);
 						}
-						LinearLayout.LayoutParams dotsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-						dotsLp.topMargin=V.dp(2);
-						cell.addView(dotsRow, dotsLp);
+						if(dayEvents.size()>2){
+							TextView moreText=new TextView(getActivity());
+							moreText.setText("+"+(dayEvents.size()-2));
+							moreText.setTextSize(7);
+							moreText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+							moreText.setGravity(Gravity.CENTER);
+							LinearLayout.LayoutParams moreLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+							moreLp.topMargin=V.dp(1);
+							pillsContainer.addView(moreText, moreLp);
+						}
+						LinearLayout.LayoutParams pillsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+						pillsLp.topMargin=V.dp(2);
+						cell.addView(pillsContainer, pillsLp);
 					}
 
 					cell.setOnClickListener(v->{
@@ -558,7 +618,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 						updateSelectedDayEvents();
 					});
 
-					rowLayout.addView(cell, new LinearLayout.LayoutParams(0, V.dp(48), 1f));
+					rowLayout.addView(cell, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
 					dayCounter++;
 				}
 			}
@@ -921,7 +981,9 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 	private class EventViewHolder extends RecyclerView.ViewHolder{
 		private final TextView dateBadgeMonth, dateBadgeDay;
-		private final TextView title, timeText, locationText, descriptionText, attendeesText, relativeTimeText;
+		private final TextView title, timeText, locationText, descriptionText, relativeTimeText;
+		private final TextView goingCountText, interestedCountText, hostText;
+		private final ImageView coverImage;
 		private final View dateBadge, goingChip, interestedChip, cancelledBadge;
 		private final TextView goingText, interestedText;
 
@@ -934,16 +996,29 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			timeText=itemView.findViewById(android.R.id.text1);
 			locationText=itemView.findViewById(android.R.id.text2);
 			descriptionText=itemView.findViewById(android.R.id.message);
-			attendeesText=itemView.findViewById(android.R.id.summary);
 			relativeTimeText=itemView.findViewById(android.R.id.hint);
 			goingChip=itemView.findViewWithTag("goingChip");
 			interestedChip=itemView.findViewWithTag("interestedChip");
 			goingText=(TextView)itemView.findViewWithTag("goingText");
 			interestedText=(TextView)itemView.findViewWithTag("interestedText");
 			cancelledBadge=itemView.findViewWithTag("cancelledBadge");
+			coverImage=(ImageView)itemView.findViewWithTag("coverImage");
+			goingCountText=(TextView)itemView.findViewWithTag("goingCount");
+			interestedCountText=(TextView)itemView.findViewWithTag("interestedCount");
+			hostText=(TextView)itemView.findViewWithTag("hostText");
 		}
 
 		void bind(Event event){
+			// Cover image
+			if(coverImage\!=null){
+				if(\!TextUtils.isEmpty(event.imageUrl)){
+					coverImage.setVisibility(View.VISIBLE);
+					ViewImageLoader.load(coverImage, null, new UrlImageLoaderRequest(event.imageUrl, V.dp(400), V.dp(140)));
+				}else{
+					coverImage.setVisibility(View.GONE);
+				}
+			}
+
 			// Date badge
 			if(event.startTime\!=null){
 				dateBadgeMonth.setText(MONTH_FORMAT.format(event.startTime).toUpperCase(Locale.ROOT));
@@ -997,13 +1072,32 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 				descriptionText.setVisibility(View.GONE);
 			}
 
-			// Attendees
-			int total=event.goingCount+event.interestedCount;
-			if(total>0){
-				attendeesText.setText(total+" attending");
-				attendeesText.setVisibility(View.VISIBLE);
-			}else{
-				attendeesText.setVisibility(View.GONE);
+			// Going / Interested counts
+			if(goingCountText\!=null){
+				if(event.goingCount>0){
+					goingCountText.setText(event.goingCount+" going");
+					goingCountText.setVisibility(View.VISIBLE);
+				}else{
+					goingCountText.setVisibility(View.GONE);
+				}
+			}
+			if(interestedCountText\!=null){
+				if(event.interestedCount>0){
+					interestedCountText.setText(event.interestedCount+" interested");
+					interestedCountText.setVisibility(View.VISIBLE);
+				}else{
+					interestedCountText.setVisibility(View.GONE);
+				}
+			}
+
+			// Host info
+			if(hostText\!=null){
+				if(event.account\!=null && \!TextUtils.isEmpty(event.account.displayName)){
+					hostText.setText("Hosted by "+event.account.displayName);
+					hostText.setVisibility(View.VISIBLE);
+				}else{
+					hostText.setVisibility(View.GONE);
+				}
 			}
 
 			// RSVP chips
@@ -1049,7 +1143,6 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		RecyclerView.LayoutParams cardLp=new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		cardLp.bottomMargin=V.dp(12);
 		card.setLayoutParams(cardLp);
-		card.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
 
 		GradientDrawable cardBg=new GradientDrawable();
 		cardBg.setShape(GradientDrawable.RECTANGLE);
@@ -1065,6 +1158,18 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(12));
 			}
 		});
+
+		// Cover image at the top of the card (before topRow)
+		ImageView coverImage=new ImageView(getActivity());
+		coverImage.setTag("coverImage");
+		coverImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+		coverImage.setVisibility(View.GONE);
+		card.addView(coverImage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(140)));
+
+		// Content area with padding (below cover image)
+		LinearLayout contentArea=new LinearLayout(getActivity());
+		contentArea.setOrientation(LinearLayout.VERTICAL);
+		contentArea.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
 
 		// Top row: date badge + title/meta
 		LinearLayout topRow=new LinearLayout(getActivity());
@@ -1150,7 +1255,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		titleCol.addView(relativeTime, rtLp);
 
 		topRow.addView(titleCol, titleColLp);
-		card.addView(topRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		contentArea.addView(topRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		// Time row
 		TextView timeText=new TextView(getActivity());
@@ -1161,7 +1266,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		LinearLayout.LayoutParams timeLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		timeLp.topMargin=V.dp(10);
 		timeLp.leftMargin=V.dp(62); // align with title (48 badge + 14 margin)
-		card.addView(timeText, timeLp);
+		contentArea.addView(timeText, timeLp);
 
 		// Location row
 		TextView locationText=new TextView(getActivity());
@@ -1172,7 +1277,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		LinearLayout.LayoutParams locLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		locLp.topMargin=V.dp(4);
 		locLp.leftMargin=V.dp(62);
-		card.addView(locationText, locLp);
+		contentArea.addView(locationText, locLp);
 
 		// Description
 		TextView descriptionText=new TextView(getActivity());
@@ -1186,9 +1291,53 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		descLp.topMargin=V.dp(8);
 		descLp.leftMargin=V.dp(62);
-		card.addView(descriptionText, descLp);
+		contentArea.addView(descriptionText, descLp);
 
-		// Bottom row: attendees + RSVP chips
+		// Host info row
+		TextView hostText=new TextView(getActivity());
+		hostText.setTag("hostText");
+		hostText.setTextSize(12);
+		hostText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		hostText.setVisibility(View.GONE);
+		LinearLayout.LayoutParams hostLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		hostLp.topMargin=V.dp(6);
+		hostLp.leftMargin=V.dp(62);
+		contentArea.addView(hostText, hostLp);
+
+		// Counts row: "X going · Y interested"
+		LinearLayout countsRow=new LinearLayout(getActivity());
+		countsRow.setOrientation(LinearLayout.HORIZONTAL);
+		countsRow.setGravity(Gravity.CENTER_VERTICAL);
+		LinearLayout.LayoutParams countsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		countsLp.topMargin=V.dp(4);
+		countsLp.leftMargin=V.dp(62);
+
+		TextView goingCount=new TextView(getActivity());
+		goingCount.setTag("goingCount");
+		goingCount.setTextSize(12);
+		goingCount.setTextColor(COLOR_GOING);
+		goingCount.setTypeface(null, Typeface.BOLD);
+		goingCount.setVisibility(View.GONE);
+		countsRow.addView(goingCount, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		TextView countSeparator=new TextView(getActivity());
+		countSeparator.setTag("countSeparator");
+		countSeparator.setText(" \u00b7 ");
+		countSeparator.setTextSize(12);
+		countSeparator.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		countsRow.addView(countSeparator, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		TextView interestedCount=new TextView(getActivity());
+		interestedCount.setTag("interestedCount");
+		interestedCount.setTextSize(12);
+		interestedCount.setTextColor(COLOR_INTERESTED);
+		interestedCount.setTypeface(null, Typeface.BOLD);
+		interestedCount.setVisibility(View.GONE);
+		countsRow.addView(interestedCount, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		contentArea.addView(countsRow, countsLp);
+
+		// Bottom row: RSVP chips
 		LinearLayout bottomRow=new LinearLayout(getActivity());
 		bottomRow.setOrientation(LinearLayout.HORIZONTAL);
 		bottomRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -1196,13 +1345,9 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		brLp.topMargin=V.dp(12);
 		brLp.leftMargin=V.dp(62);
 
-		// Attendees text
-		TextView attendees=new TextView(getActivity());
-		attendees.setId(android.R.id.summary);
-		attendees.setTextSize(12);
-		attendees.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		attendees.setVisibility(View.GONE);
-		bottomRow.addView(attendees, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+		// Spacer to push chips right
+		View spacer=new View(getActivity());
+		bottomRow.addView(spacer, new LinearLayout.LayoutParams(0, 0, 1f));
 
 		// Going chip
 		LinearLayout goingChip=new LinearLayout(getActivity());
@@ -1230,7 +1375,9 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		interestedChip.addView(interestedText);
 		bottomRow.addView(interestedChip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		card.addView(bottomRow, brLp);
+		contentArea.addView(bottomRow, brLp);
+
+		card.addView(contentArea, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		return card;
 	}
