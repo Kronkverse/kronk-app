@@ -56,7 +56,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	private TextView goingHeaderText, interestedHeaderText;
 	private LinearLayout contentLayout;
 
-	private static final DateTimeFormatter FULL_DATE=DateTimeFormatter.ofPattern(EEEE, MMMM d, yyyy).withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter FULL_DATE=DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").withZone(ZoneId.systemDefault());
 	private static final DateTimeFormatter TIME_FMT=DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
 
 	private static final int COLOR_GOING=0xFF6a9f8a;
