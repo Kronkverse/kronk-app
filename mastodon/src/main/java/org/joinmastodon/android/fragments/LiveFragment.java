@@ -225,6 +225,7 @@ public class LiveFragment extends Fragment{
 			+"<style>html,body,#meet{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style>"
 			+"<script src='https://"+JITSI_DOMAIN+"/external_api.js'></script>"
 			+"</head><body><div id='meet'></div><script>"
+			+"new MutationObserver(function(m){var fs=document.querySelectorAll('iframe');fs.forEach(function(f){if(!f.allow||f.allow.indexOf('microphone')===-1){f.allow='camera; microphone; display-capture; autoplay; clipboard-write';}});}).observe(document.body,{childList:true,subtree:true});"
 			+"var api=new JitsiMeetExternalAPI('"+JITSI_DOMAIN+"',{"
 			+"roomName:'"+ROOM_NAME+"',"
 			+"parentNode:document.getElementById('meet'),"
