@@ -101,7 +101,7 @@ public class EventCardStatusDisplayItem extends StatusDisplayItem{
 				ViewImageLoader.load(coverImage, null, item.coverRequest);
 			}else{
 				coverImage.setVisibility(View.GONE);
-				ViewImageLoader.cancelRequest(coverImage);
+				coverImage.setImageDrawable(null);
 			}
 
 			// Location

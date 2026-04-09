@@ -306,13 +306,13 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		LinearLayout.LayoutParams rsvpLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		rsvpLp.topMargin=V.dp(12);
 
-		goingBtn=createRsvpButton(Going, COLOR_GOING);
+		goingBtn=createRsvpButton("Going", COLOR_GOING);
 		goingBtnText=(TextView)((LinearLayout)goingBtn).getChildAt(0);
 		LinearLayout.LayoutParams gLp=new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
 		gLp.rightMargin=V.dp(8);
 		rsvpRow.addView(goingBtn, gLp);
 
-		interestedBtn=createRsvpButton(Interested, COLOR_INTERESTED);
+		interestedBtn=createRsvpButton("Interested", COLOR_INTERESTED);
 		interestedBtnText=(TextView)((LinearLayout)interestedBtn).getChildAt(0);
 		LinearLayout.LayoutParams iLp=new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
 		iLp.rightMargin=V.dp(8);
@@ -508,7 +508,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			if(!TextUtils.isEmpty(event.locationUrl)){
 				locationText.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
 				locationText.setOnClickListener(v->{
-					UiUtils.openURL(getActivity(), accountID, event.locationUrl);
+					UiUtils.openURL(getActivity(), accountID, event.locationUrl, null);
 				});
 			}
 		}else{
@@ -561,8 +561,8 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 					public void onSuccess(Event result){
 						if(getActivity()==null) return;
 						event=result;
-						goingCountText.setText(event.goingCount+ going);
-						interestedCountText.setText(event.interestedCount+ interested);
+						goingCountText.setText(event.goingCount+" going");
+						interestedCountText.setText(event.interestedCount+" interested");
 						goingHeaderText.setText("Going ("+event.goingCount+")");
 						interestedHeaderText.setText("Interested ("+event.interestedCount+")");
 						updateRsvpButtons();
@@ -599,7 +599,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	}
 
 	private void loadAttendees(){
-		new GetEventAttendees(event.id, going)
+		new GetEventAttendees(event.id, "going")
 				.setCallback(new Callback<>(){
 					@Override
 					public void onSuccess(List<Account> result){
@@ -613,7 +613,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 				})
 				.exec(accountID);
 
-		new GetEventAttendees(event.id, interested)
+		new GetEventAttendees(event.id, "interested")
 				.setCallback(new Callback<>(){
 					@Override
 					public void onSuccess(List<Account> result){
