@@ -290,11 +290,14 @@ public class LiveFragment extends Fragment{
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
 		if(requestCode==PERMISSION_REQUEST_CODE && pendingPermissionRequest!=null){
-			boolean allGranted=true;
-			for(int result : grantResults){
-				if(result!=PackageManager.PERMISSION_GRANTED){ allGranted=false; break; }
+			boolean hasCameraPerm=getActivity()!=null && getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
+			boolean hasMicPerm=getActivity()!=null && getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
+			ArrayList<String> granted=new ArrayList<>();
+			for(String res : pendingPermissionRequest.getResources()){
+				if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res) && hasCameraPerm) granted.add(res);
+				else if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) && hasMicPerm) granted.add(res);
 			}
-			if(allGranted) pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
+			if(!granted.isEmpty()) pendingPermissionRequest.grant(granted.toArray(new String[0]));
 			else pendingPermissionRequest.deny();
 			pendingPermissionRequest=null;
 		}
