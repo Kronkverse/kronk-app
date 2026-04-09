@@ -318,7 +318,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		iLp.rightMargin=V.dp(8);
 		rsvpRow.addView(interestedBtn, iLp);
 
-		cantGoBtn=createRsvpButton(Cant go", COLOR_CANT_GO);
+		cantGoBtn=createRsvpButton("Can't go", COLOR_CANT_GO);
 		cantGoBtnText=(TextView)((LinearLayout)cantGoBtn).getChildAt(0);
 		LinearLayout.LayoutParams cLp=new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
 		rsvpRow.addView(cantGoBtn, cLp);
@@ -547,11 +547,11 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 		styleRsvpButton(goingBtn, goingBtnText, isGoing, COLOR_GOING, "Going");
 		styleRsvpButton(interestedBtn, interestedBtnText, isInterested, COLOR_INTERESTED, "Interested");
-		styleRsvpButton(cantGoBtn, cantGoBtnText, isCantGo, COLOR_CANT_GO, "Cant go);
+		styleRsvpButton(cantGoBtn, cantGoBtnText, isCantGo, COLOR_CANT_GO, "Can't go");
 
-		goingBtn.setOnClickListener(v->doRsvp(isGoing ? remove : going));
-		interestedBtn.setOnClickListener(v->doRsvp(isInterested ? remove : interested));
-		cantGoBtn.setOnClickListener(v->doRsvp(isCantGo ? remove : not_going));
+		goingBtn.setOnClickListener(v->doRsvp(isGoing ? "remove" : "going"));
+		interestedBtn.setOnClickListener(v->doRsvp(isInterested ? "remove" : "interested"));
+		cantGoBtn.setOnClickListener(v->doRsvp(isCantGo ? "remove" : "not_going"));
 	}
 
 	private void doRsvp(String status){
@@ -577,9 +577,9 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 	private void confirmDelete(){
 		new M3AlertDialogBuilder(getActivity())
-				.setTitle(Delete Event)
-				.setMessage(Are you sure you want to delete this event?)
-				.setPositiveButton(Delete, (dlg, which)->{
+				.setTitle("Delete Event")
+				.setMessage("Are you sure you want to delete this event?")
+				.setPositiveButton("Delete", (dlg, which)->{
 					new DeleteEvent(event.id)
 							.setCallback(new Callback<>(){
 								@Override
@@ -594,7 +594,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 							})
 							.exec(accountID);
 				})
-				.setNegativeButton(Cancel, null)
+				.setNegativeButton("Cancel", null)
 				.show();
 	}
 

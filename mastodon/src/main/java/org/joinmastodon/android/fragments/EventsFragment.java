@@ -194,7 +194,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		calendarToggle=createViewToggleButton("Cal", false);
 
 		listToggle.setOnClickListener(v->{
-			if(\!calendarMode) return;
+			if(!calendarMode) return;
 			calendarMode=false;
 			updateViewToggleStyles();
 			showListView();
@@ -375,7 +375,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			bg.setShape(GradientDrawable.RECTANGLE);
 			float[] radii={V.dp(7), V.dp(7), 0, 0, 0, 0, V.dp(7), V.dp(7)};
 			bg.setCornerRadii(radii);
-			if(\!calendarMode){
+			if(!calendarMode){
 				bg.setColor(primaryColor);
 				btn.setTextColor(0xFFFFFFFF);
 			}else{
@@ -406,7 +406,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		calendarContainer.setVisibility(View.GONE);
 		refreshLayout.setVisibility(events.isEmpty() && loaded ? View.GONE : View.VISIBLE);
 		emptyView.setVisibility(events.isEmpty() && loaded ? View.VISIBLE : View.GONE);
-		if(\!loaded){
+		if(!loaded){
 			loadData();
 		}
 	}
@@ -570,7 +570,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 					cell.addView(dayTv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 					// Event title pills (instead of dots)
-					if(dayEvents\!=null && \!dayEvents.isEmpty()){
+					if(dayEvents!=null && !dayEvents.isEmpty()){
 						LinearLayout pillsContainer=new LinearLayout(getActivity());
 						pillsContainer.setOrientation(LinearLayout.VERTICAL);
 						pillsContainer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -682,7 +682,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			selectedDayEvents.clear();
 			selectedDayAdapter.notifyDataSetChanged();
 			View noDayEvents=selectedDaySection.findViewWithTag("noDayEvents");
-			if(noDayEvents\!=null) noDayEvents.setVisibility(View.GONE);
+			if(noDayEvents!=null) noDayEvents.setVisibility(View.GONE);
 			selectedDayList.setVisibility(View.GONE);
 			return;
 		}
@@ -702,10 +702,10 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		View noDayEvents=selectedDaySection.findViewWithTag("noDayEvents");
 		if(selectedDayEvents.isEmpty()){
 			selectedDayList.setVisibility(View.GONE);
-			if(noDayEvents\!=null) noDayEvents.setVisibility(View.VISIBLE);
+			if(noDayEvents!=null) noDayEvents.setVisibility(View.VISIBLE);
 		}else{
 			selectedDayList.setVisibility(View.VISIBLE);
-			if(noDayEvents\!=null) noDayEvents.setVisibility(View.GONE);
+			if(noDayEvents!=null) noDayEvents.setVisibility(View.GONE);
 		}
 	}
 
@@ -714,7 +714,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	private void loadCalendarEvents(){
 		allCalendarEvents.clear();
 		selectedDayEvents.clear();
-		if(selectedDayAdapter\!=null) selectedDayAdapter.notifyDataSetChanged();
+		if(selectedDayAdapter!=null) selectedDayAdapter.notifyDataSetChanged();
 
 		// Load upcoming events
 		new GetEvents(currentFilter.equals("upcoming") ? "upcoming" : currentFilter, null, 200)
@@ -756,7 +756,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 									break;
 								}
 							}
-							if(\!dup) allCalendarEvents.add(e);
+							if(!dup) allCalendarEvents.add(e);
 						}
 						rebuildCalendarGrid();
 						updateSelectedDayEvents();
@@ -852,7 +852,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 	@Override
 	public void scrollToTop(){
-		if(list\!=null && \!calendarMode)
+		if(list!=null && !calendarMode)
 			list.smoothScrollToPosition(0);
 	}
 
@@ -864,7 +864,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		sb.append(FULL_DATE_FORMAT.format(event.startTime));
 		sb.append(" \u00b7 ");
 		sb.append(TIME_FORMAT.format(event.startTime));
-		if(event.endTime\!=null){
+		if(event.endTime!=null){
 			sb.append(" \u2013 ");
 			sb.append(TIME_FORMAT.format(event.endTime));
 		}
@@ -929,7 +929,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 					}
 					@Override
 					public void onError(ErrorResponse error){
-						if(getActivity()\!=null) error.showToast(getActivity());
+						if(getActivity()!=null) error.showToast(getActivity());
 					}
 				})
 				.exec(accountID);
@@ -1010,8 +1010,8 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 		void bind(Event event){
 			// Cover image
-			if(coverImage\!=null){
-				if(\!TextUtils.isEmpty(event.imageUrl)){
+			if(coverImage!=null){
+				if(!TextUtils.isEmpty(event.imageUrl)){
 					coverImage.setVisibility(View.VISIBLE);
 					ViewImageLoader.load(coverImage, null, new UrlImageLoaderRequest(event.imageUrl, V.dp(400), V.dp(140)));
 				}else{
@@ -1020,7 +1020,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			}
 
 			// Date badge
-			if(event.startTime\!=null){
+			if(event.startTime!=null){
 				dateBadgeMonth.setText(MONTH_FORMAT.format(event.startTime).toUpperCase(Locale.ROOT));
 				dateBadgeDay.setText(DAY_FORMAT.format(event.startTime));
 				dateBadge.setVisibility(View.VISIBLE);
@@ -1034,7 +1034,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 			// Relative time
 			String relative=formatRelativeTime(event);
-			if(\!TextUtils.isEmpty(relative)){
+			if(!TextUtils.isEmpty(relative)){
 				relativeTimeText.setText(relative);
 				relativeTimeText.setVisibility(View.VISIBLE);
 				if("Now".equals(relative)){
@@ -1048,7 +1048,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 			// Time
 			String time=formatTimeRange(event);
-			if(\!TextUtils.isEmpty(time)){
+			if(!TextUtils.isEmpty(time)){
 				timeText.setText(time);
 				timeText.setVisibility(View.VISIBLE);
 			}else{
@@ -1056,7 +1056,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			}
 
 			// Location
-			if(\!TextUtils.isEmpty(event.locationName)){
+			if(!TextUtils.isEmpty(event.locationName)){
 				locationText.setText(event.locationName);
 				locationText.setVisibility(View.VISIBLE);
 			}else{
@@ -1064,7 +1064,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			}
 
 			// Description preview
-			if(\!TextUtils.isEmpty(event.description)){
+			if(!TextUtils.isEmpty(event.description)){
 				String desc=event.description.length()>140 ? event.description.substring(0, 140)+"\u2026" : event.description;
 				descriptionText.setText(desc);
 				descriptionText.setVisibility(View.VISIBLE);
@@ -1073,7 +1073,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			}
 
 			// Going / Interested counts
-			if(goingCountText\!=null){
+			if(goingCountText!=null){
 				if(event.goingCount>0){
 					goingCountText.setText(event.goingCount+" going");
 					goingCountText.setVisibility(View.VISIBLE);
@@ -1081,7 +1081,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 					goingCountText.setVisibility(View.GONE);
 				}
 			}
-			if(interestedCountText\!=null){
+			if(interestedCountText!=null){
 				if(event.interestedCount>0){
 					interestedCountText.setText(event.interestedCount+" interested");
 					interestedCountText.setVisibility(View.VISIBLE);
@@ -1091,8 +1091,8 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			}
 
 			// Host info
-			if(hostText\!=null){
-				if(event.account\!=null && \!TextUtils.isEmpty(event.account.displayName)){
+			if(hostText!=null){
+				if(event.account!=null && !TextUtils.isEmpty(event.account.displayName)){
 					hostText.setText("Hosted by "+event.account.displayName);
 					hostText.setVisibility(View.VISIBLE);
 				}else{
@@ -1103,7 +1103,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			// RSVP chips
 			cancelledBadge.setVisibility(event.cancelled ? View.VISIBLE : View.GONE);
 
-			if(\!event.cancelled){
+			if(!event.cancelled){
 				// Going chip
 				boolean isGoing="going".equals(event.rsvp);
 				goingChip.setVisibility(View.VISIBLE);
