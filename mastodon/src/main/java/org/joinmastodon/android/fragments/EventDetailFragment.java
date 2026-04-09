@@ -67,8 +67,8 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	public void onAttach(Activity activity){
 		super.onAttach(activity);
 		setNavigationBarColor(UiUtils.getThemeColor(activity, R.attr.colorM3Surface));
-		accountID=getArguments().getString(account);
-		event=Parcels.unwrap(getArguments().getParcelable(event));
+		accountID=getArguments().getString("account");
+		event=Parcels.unwrap(getArguments().getParcelable("event"));
 		setTitle(event.title);
 	}
 
@@ -141,7 +141,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			huddleBanner.addView(dot, dotLp);
 
 			TextView liveText=new TextView(getActivity());
-			liveText.setText(LIVE NOW);
+			liveText.setText("LIVE NOW");
 			liveText.setTextSize(13);
 			liveText.setTypeface(null, Typeface.BOLD);
 			liveText.setLetterSpacing(0.08f);
@@ -150,7 +150,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 			// Join Huddle button
 			TextView joinBtn=new TextView(getActivity());
-			joinBtn.setText(Join Huddle);
+			joinBtn.setText("Join Huddle");
 			joinBtn.setTextSize(13);
 			joinBtn.setTypeface(null, Typeface.BOLD);
 			joinBtn.setTextColor(0xFFFFFFFF);
@@ -263,7 +263,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		hostRow.setOrientation(LinearLayout.HORIZONTAL);
 		hostRow.setGravity(Gravity.CENTER_VERTICAL);
 		TextView hostedBy=new TextView(getActivity());
-		hostedBy.setText(Hosted by );
+		hostedBy.setText("Hosted by ");
 		hostedBy.setTextSize(14);
 		hostedBy.setTextColor(textSecondary);
 		hostRow.addView(hostedBy);
@@ -632,7 +632,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		row.removeAllViews();
 		if(accounts==null || accounts.isEmpty()){
 			TextView empty=new TextView(getActivity());
-			empty.setText(None yet);
+			empty.setText("None yet");
 			empty.setTextSize(13);
 			empty.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
 			row.addView(empty);
@@ -663,7 +663,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		if(active){
 			bg.setColor(color);
 			text.setTextColor(0xFFFFFFFF);
-			text.setText(label+ ✓);
+			text.setText(label+" \u2713");
 			btn.setElevation(V.dp(2));
 		}else{
 			bg.setColor(0x00000000);
@@ -753,7 +753,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		banner.setVisibility(View.GONE);
 
 		TextView text=new TextView(getActivity());
-		text.setText(This event has been cancelled);
+		text.setText("This event has been cancelled");
 		text.setTextSize(14);
 		text.setTypeface(null, Typeface.BOLD);
 		text.setTextColor(0xFFD32F2F);

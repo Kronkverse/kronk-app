@@ -31,7 +31,7 @@ public class EventCardStatusDisplayItem extends StatusDisplayItem{
 	private final String accountID;
 	private final ImageLoaderRequest coverRequest;
 
-	private static final DateTimeFormatter FULL_DATE=DateTimeFormatter.ofPattern(EEEE, MMMM d, yyyy).withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter FULL_DATE=DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").withZone(ZoneId.systemDefault());
 	private static final DateTimeFormatter TIME_FMT=DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
 
 	public EventCardStatusDisplayItem(String parentID, Callbacks callbacks, Context context, Status status, String accountID){
@@ -90,7 +90,7 @@ public class EventCardStatusDisplayItem extends StatusDisplayItem{
 			StringBuilder dateStr=new StringBuilder();
 			if(event.startTime!=null){
 				dateStr.append(FULL_DATE.format(event.startTime));
-				dateStr.append( u00b7 );
+				dateStr.append(" \u00b7 ");
 				dateStr.append(TIME_FMT.format(event.startTime));
 			}
 			dateText.setText(dateStr);
@@ -123,8 +123,8 @@ public class EventCardStatusDisplayItem extends StatusDisplayItem{
 			// RSVP counts
 			if(event.goingCount>0 || event.interestedCount>0){
 				rsvpRow.setVisibility(View.VISIBLE);
-				goingCountText.setText(event.goingCount+ going);
-				interestedCountText.setText(event.interestedCount+ interested);
+				goingCountText.setText(event.goingCount+" going");
+				interestedCountText.setText(event.interestedCount+" interested");
 				goingCountText.setVisibility(event.goingCount>0 ? View.VISIBLE : View.GONE);
 				interestedCountText.setVisibility(event.interestedCount>0 ? View.VISIBLE : View.GONE);
 			}else{
@@ -135,8 +135,8 @@ public class EventCardStatusDisplayItem extends StatusDisplayItem{
 			inner.setOnClickListener(v->{
 				Activity activity=(Activity) v.getContext();
 				Bundle args=new Bundle();
-				args.putString(account, item.accountID);
-				args.putParcelable(event, Parcels.wrap(event));
+				args.putString("account", item.accountID);
+				args.putParcelable("event", Parcels.wrap(event));
 				Nav.go(activity, EventDetailFragment.class, args);
 			});
 
