@@ -194,7 +194,10 @@ public class LiveFragment extends Fragment{
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
-				android.util.Log.i("KronkHuddle", "onPermissionRequest origin="+request.getOrigin()+" resources="+java.util.Arrays.toString(request.getResources()));
+				String origin=String.valueOf(request.getOrigin());
+				String resources=java.util.Arrays.toString(request.getResources());
+				android.util.Log.i("KronkHuddle", "onPermissionRequest origin="+origin+" resources="+resources);
+				toast("[1] WebView asked: "+resources+" from "+origin);
 				if(getActivity()==null){ request.deny(); return; }
 				boolean needsCamera=false, needsMic=false;
 				for(String res : request.getResources()){
@@ -206,6 +209,7 @@ public class LiveFragment extends Fragment{
 				android.util.Log.i("KronkHuddle", "perms needsCam="+needsCamera+" hasCam="+hasCameraPerm+" needsMic="+needsMic+" hasMic="+hasMicPerm);
 				if((!needsCamera || hasCameraPerm) && (!needsMic || hasMicPerm)){
 					android.util.Log.i("KronkHuddle", "granting WebView permission");
+					toast("[2] Granting WebView immediately (Android already has permission)");
 					request.grant(request.getResources());
 				}else{
 					pendingPermissionRequest=request;
@@ -213,6 +217,7 @@ public class LiveFragment extends Fragment{
 					if(needsCamera && !hasCameraPerm) perms.add(Manifest.permission.CAMERA);
 					if(needsMic && !hasMicPerm) perms.add(Manifest.permission.RECORD_AUDIO);
 					android.util.Log.i("KronkHuddle", "requesting Android permissions: "+perms);
+					toast("[2] Requesting Android perms: "+perms);
 					requestPermissions(perms.toArray(new String[0]), PERMISSION_REQUEST_CODE);
 				}
 			}
@@ -220,16 +225,15 @@ public class LiveFragment extends Fragment{
 			@Override
 			public boolean onConsoleMessage(android.webkit.ConsoleMessage cm){
 				android.util.Log.i("KronkHuddle/JS", cm.messageLevel()+" "+cm.sourceId()+":"+cm.lineNumber()+" "+cm.message());
+				String low=cm.message().toLowerCase();
 				if(cm.messageLevel()==android.webkit.ConsoleMessage.MessageLevel.ERROR
-						&& (cm.message().toLowerCase().contains("microphone")
-							|| cm.message().toLowerCase().contains("getusermedia")
-							|| cm.message().toLowerCase().contains("permission"))){
-					if(getActivity()!=null){
-						String msg=cm.message();
-						if(msg.length()>200) msg=msg.substring(0,200);
-						final String toShow=msg;
-						handler.post(()->android.widget.Toast.makeText(getActivity(), "JS: "+toShow, android.widget.Toast.LENGTH_LONG).show());
-					}
+						|| low.contains("microphone") || low.contains("camera")
+						|| low.contains("getusermedia") || low.contains("notallowed")
+						|| low.contains("notreadable") || low.contains("permission")
+						|| low.contains("gum")){
+					String msg=cm.message();
+					if(msg.length()>250) msg=msg.substring(0,250);
+					toast("JS: "+msg);
 				}
 				return true;
 			}
@@ -322,9 +326,18 @@ public class LiveFragment extends Fragment{
 				else if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) && hasMicPerm) granted.add(res);
 			}
 			android.util.Log.i("KronkHuddle", "after Android grant, hasCam="+hasCameraPerm+" hasMic="+hasMicPerm+" granting to WebView: "+granted);
+			toast("[3] Android result, granting WebView: "+granted);
 			if(!granted.isEmpty()) pendingPermissionRequest.grant(granted.toArray(new String[0]));
 			else pendingPermissionRequest.deny();
 			pendingPermissionRequest=null;
+		}
+	}
+
+	private void toast(String msg){
+		android.util.Log.i("KronkHuddle", "TOAST: "+msg);
+		if(getActivity()!=null){
+			Handler h=handler!=null ? handler : new Handler(Looper.getMainLooper());
+			h.post(()->{ if(getActivity()!=null) android.widget.Toast.makeText(getActivity(), msg, android.widget.Toast.LENGTH_LONG).show(); });
 		}
 	}
 
