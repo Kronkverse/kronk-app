@@ -218,62 +218,26 @@ public class LiveFragment extends Fragment{
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		String username=getUsername();
-		String escapedUsername=username.replace("\\", "\\\\").replace("'", "\\'");
+		String encodedUsername=android.net.Uri.encode("\""+username+"\"");
 
-		String html="<!DOCTYPE html><html><head>"
-			+"<meta name='viewport' content='width=device-width,initial-scale=1'>"
-			+"<style>html,body,#meet{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style>"
-			+"<script>"
-			+"(function(){var orig=document.createElement;document.createElement=function(tag){var el=orig.apply(document,arguments);if(tag&&tag.toLowerCase()==='iframe'){el.allow='camera; microphone; display-capture; autoplay; clipboard-write';el.setAttribute('allow','camera; microphone; display-capture; autoplay; clipboard-write');}return el;};})();"
-			+"</script>"
-			+"<script src='https://"+JITSI_DOMAIN+"/external_api.js'></script>"
-			+"</head><body><div id='meet'></div><script>"
-			+"var api=new JitsiMeetExternalAPI('"+JITSI_DOMAIN+"',{"
-			+"roomName:'"+ROOM_NAME+"',"
-			+"parentNode:document.getElementById('meet'),"
-			+"width:'100%',height:'100%',"
-			+"userInfo:{displayName:'"+escapedUsername+"'},"
-			+"configOverwrite:{"
-			+"prejoinPageEnabled:false,"
-			+"prejoinConfig:{enabled:false},"
-			+"disableDeepLinking:true,"
-			+"startWithAudioMuted:true,"
-			+"startWithVideoMuted:false,"
-			+"subject:'The Huddle',"
-			+"hideConferenceTimer:true,"
-			+"disableInviteFunctions:true,"
-			+"enableClosePage:false"
-			+"},"
-			+"interfaceConfigOverwrite:{"
-			+"SHOW_JITSI_WATERMARK:false,"
-			+"SHOW_BRAND_WATERMARK:false,"
-			+"SHOW_POWERED_BY:false,"
-			+"HIDE_INVITE_MORE_HEADER:true,"
-			+"DEFAULT_REMOTE_DISPLAY_NAME:'Kronker'"
-			+"}"
-			+"});"
-			+"var isGuest=false;"
-			+"api.addListener('passwordRequired',function(){"
-			+"isGuest=true;"
-			+"api.executeCommand('password','kronkfam2026');"
-			+"});"
-			+"api.addListener('videoConferenceJoined',function(){"
-			+"api.executeCommand('displayName','"+escapedUsername+"');"
-			+"if(!isGuest){api.executeCommand('password','kronkfam2026');}"
-			+"});"
-			+"api.addListener('readyToClose',function(){"
-			+"Android.leave();"
-			+"});"
-			+"</script></body></html>";
+		String url="https://"+JITSI_DOMAIN+"/"+ROOM_NAME
+			+"#userInfo.displayName="+encodedUsername
+			+"&config.prejoinPageEnabled=false"
+			+"&config.prejoinConfig.enabled=false"
+			+"&config.disableDeepLinking=true"
+			+"&config.startWithAudioMuted=true"
+			+"&config.startWithVideoMuted=false"
+			+"&config.subject=%22The%20Huddle%22"
+			+"&config.hideConferenceTimer=true"
+			+"&config.disableInviteFunctions=true"
+			+"&config.enableClosePage=false"
+			+"&interfaceConfig.SHOW_JITSI_WATERMARK=false"
+			+"&interfaceConfig.SHOW_BRAND_WATERMARK=false"
+			+"&interfaceConfig.SHOW_POWERED_BY=false"
+			+"&interfaceConfig.HIDE_INVITE_MORE_HEADER=true"
+			+"&interfaceConfig.DEFAULT_REMOTE_DISPLAY_NAME=%22Kronker%22";
 
-		webView.addJavascriptInterface(new Object(){
-			@android.webkit.JavascriptInterface
-			public void leave(){
-				handler.post(()->leaveRoom());
-			}
-		}, "Android");
-
-		webView.loadDataWithBaseURL("https://"+JITSI_DOMAIN+"/", html, "text/html", "UTF-8", null);
+		webView.loadUrl(url);
 	}
 
 	private void leaveRoom(){
