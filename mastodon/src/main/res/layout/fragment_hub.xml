@@ -57,7 +57,7 @@
 						android:layout_marginTop="8dp"
 						android:text="@string/tab_home"
 						android:textSize="14sp"
-						android:textStyle="medium"
+						android:textStyle="normal"
 						android:textColor="?colorM3OnSecondaryContainer"/>
 
 				</LinearLayout>
@@ -94,7 +94,7 @@
 						android:layout_marginTop="8dp"
 						android:text="@string/tab_events"
 						android:textSize="14sp"
-						android:textStyle="medium"
+						android:textStyle="normal"
 						android:textColor="?colorM3OnSecondaryContainer"/>
 
 				</LinearLayout>
@@ -138,7 +138,7 @@
 						android:layout_marginTop="8dp"
 						android:text="@string/tab_live"
 						android:textSize="14sp"
-						android:textStyle="medium"
+						android:textStyle="normal"
 						android:textColor="?colorM3OnSecondaryContainer"/>
 
 				</LinearLayout>
@@ -175,7 +175,7 @@
 						android:layout_marginTop="8dp"
 						android:text="@string/kommons_space"
 						android:textSize="14sp"
-						android:textStyle="medium"
+						android:textStyle="normal"
 						android:textColor="?colorM3OnSecondaryContainer"/>
 
 				</LinearLayout>
