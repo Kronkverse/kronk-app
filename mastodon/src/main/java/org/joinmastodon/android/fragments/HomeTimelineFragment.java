@@ -418,11 +418,13 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		View bellView=LayoutInflater.from(getActivity()).inflate(R.layout.badge_notification_icon, null);
 		notificationsBadge=bellView.findViewById(R.id.badge);
 		bellView.setOnClickListener(v->{
-			HomeFragment home=(HomeFragment)getParentFragment();
-			if(home.isShowingNotifications())
-				home.hideNotifications();
-			else
-				home.showNotifications();
+			android.app.Fragment parent=getParentFragment();
+			if(parent instanceof HomeFragment home){
+				if(home.isShowingNotifications())
+					home.hideNotifications();
+				else
+					home.showNotifications();
+			}
 		});
 		notificationsItem.setActionView(bellView);
 
@@ -871,7 +873,8 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 			Nav.go(getActivity(), ProfileFragment.class, args2);
 		});
 		profileAvatar.setOnLongClickListener(v->{
-			new AccountSwitcherSheet(getActivity(), (HomeFragment)getParentFragment()).show();
+			android.app.Fragment p=getParentFragment();
+			new AccountSwitcherSheet(getActivity(), p instanceof HomeFragment hf ? hf : null).show();
 			return true;
 		});
 
