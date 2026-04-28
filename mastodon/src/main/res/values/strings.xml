@@ -726,6 +726,7 @@ End-to-end encrypted</string>
 	<string name="tab_profile">Profile</string>
 	<string name="tab_events">Events</string>
 	<string name="tab_hub">Hub</string>
+	<string name="tab_feed">Feed</string>
 	<string name="spaces">Spaces</string>
 	<string name="kommons_space">₭ommons</string>
 	<string name="pin_post">Pin on profile</string>
