@@ -18,7 +18,6 @@ import android.webkit.WebView;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -54,7 +53,6 @@ public class LiveFragment extends Fragment{
 	private TextView participantNames;
 
 	private boolean inRoom;
-	private PermissionRequest pendingPermissionRequest;
 	private Handler handler;
 	private Runnable pollRunnable;
 
@@ -81,7 +79,7 @@ public class LiveFragment extends Fragment{
 		participantCount=rootView.findViewById(R.id.participant_count);
 		participantNames=rootView.findViewById(R.id.participant_names);
 
-		huddleButton.setOnClickListener(v->joinRoom());
+		huddleButton.setOnClickListener(v->checkPermissionsAndJoin());
 		leaveButton.setOnClickListener(v->leaveRoom());
 
 		handler=new Handler(Looper.getMainLooper());
@@ -167,6 +165,20 @@ public class LiveFragment extends Fragment{
 		});
 	}
 
+	private void checkPermissionsAndJoin(){
+		if(getActivity()==null) return;
+		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
+		boolean hasCam=getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
+		if(hasMic && hasCam){
+			joinRoom();
+		}else{
+			ArrayList<String> needed=new ArrayList<>();
+			if(!hasMic) needed.add(Manifest.permission.RECORD_AUDIO);
+			if(!hasCam) needed.add(Manifest.permission.CAMERA);
+			requestPermissions(needed.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+		}
+	}
+
 	private void joinRoom(){
 		inRoom=true;
 		stopPolling();
@@ -178,8 +190,7 @@ public class LiveFragment extends Fragment{
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setMediaPlaybackRequiresUserGesture(false);
-		String defaultUA=settings.getUserAgentString();
-		settings.setUserAgentString(defaultUA.replaceAll("\\bMobile\\b", "").replaceAll("\\bAndroid[^;)]*", ""));
+		settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
 
 		CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
@@ -194,23 +205,9 @@ public class LiveFragment extends Fragment{
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
-				if(getActivity()==null) return;
-				boolean needsCamera=false, needsMic=false;
-				for(String res : request.getResources()){
-					if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) needsCamera=true;
-					if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) needsMic=true;
-				}
-				boolean hasCameraPerm=getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
-				boolean hasMicPerm=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
-				if((!needsCamera || hasCameraPerm) && (!needsMic || hasMicPerm)){
-					request.grant(request.getResources());
-				}else{
-					pendingPermissionRequest=request;
-					ArrayList<String> perms=new ArrayList<>();
-					if(needsCamera && !hasCameraPerm) perms.add(Manifest.permission.CAMERA);
-					if(needsMic && !hasMicPerm) perms.add(Manifest.permission.RECORD_AUDIO);
-					requestPermissions(perms.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-				}
+				// Android permissions pre-verified in checkPermissionsAndJoin; grant immediately.
+				if(getActivity()!=null) request.grant(request.getResources());
+				else request.deny();
 			}
 		});
 
@@ -288,14 +285,13 @@ public class LiveFragment extends Fragment{
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
-		if(requestCode==PERMISSION_REQUEST_CODE && pendingPermissionRequest!=null){
-			boolean allGranted=true;
-			for(int result : grantResults){
-				if(result!=PackageManager.PERMISSION_GRANTED){ allGranted=false; break; }
-			}
-			if(allGranted) pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
-			else pendingPermissionRequest.deny();
-			pendingPermissionRequest=null;
+		if(requestCode!=PERMISSION_REQUEST_CODE) return;
+		if(getActivity()==null) return;
+		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
+		if(hasMic){
+			joinRoom();
+		}else{
+			android.widget.Toast.makeText(getActivity(), R.string.huddle_mic_required, android.widget.Toast.LENGTH_LONG).show();
 		}
 	}
 
