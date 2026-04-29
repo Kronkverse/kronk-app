@@ -29,8 +29,10 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -190,7 +192,7 @@ public class LiveFragment extends Fragment{
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setMediaPlaybackRequiresUserGesture(false);
-		settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+		// No UA override — WebView's native UA signals mobile to Jitsi, which selects VP8 codec first
 
 		CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
@@ -198,14 +200,22 @@ public class LiveFragment extends Fragment{
 			@Override
 			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request){
 				String scheme=request.getUrl().getScheme();
-				if("intent".equals(scheme) || "market".equals(scheme)) return true;
-				return false;
+				return "intent".equals(scheme) || "market".equals(scheme);
+			}
+
+			@Override
+			public void doUpdateVisitedHistory(WebView view, String url, boolean isReload){
+				// Jitsi navigates away from the room URL when the conference ends
+				if(inRoom && !url.contains("/"+ROOM_NAME)){
+					handler.post(()->leaveRoom());
+				}
 			}
 		});
+
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
-				// Android permissions pre-verified in checkPermissionsAndJoin; grant immediately.
+				// Android permissions verified in checkPermissionsAndJoin; grant immediately.
 				if(getActivity()!=null) request.grant(request.getResources());
 				else request.deny();
 			}
@@ -215,59 +225,25 @@ public class LiveFragment extends Fragment{
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		String username=getUsername();
-		String escapedUsername=username.replace("\\", "\\\\").replace("'", "\\'");
+		String encodedUsername;
+		try{
+			encodedUsername=URLEncoder.encode(username, "UTF-8").replace("+", "%20");
+		}catch(UnsupportedEncodingException e){
+			encodedUsername="Kronker";
+		}
 
-		String html="<!DOCTYPE html><html><head>"
-			+"<meta name='viewport' content='width=device-width,initial-scale=1'>"
-			+"<style>html,body,#meet{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style>"
-			+"<script src='https://"+JITSI_DOMAIN+"/external_api.js'></script>"
-			+"</head><body><div id='meet'></div><script>"
-			+"var api=new JitsiMeetExternalAPI('"+JITSI_DOMAIN+"',{"
-			+"roomName:'"+ROOM_NAME+"',"
-			+"parentNode:document.getElementById('meet'),"
-			+"width:'100%',height:'100%',"
-			+"userInfo:{displayName:'"+escapedUsername+"'},"
-			+"configOverwrite:{"
-			+"prejoinPageEnabled:false,"
-			+"prejoinConfig:{enabled:false},"
-			+"disableDeepLinking:true,"
-			+"startWithAudioMuted:true,"
-			+"startWithVideoMuted:false,"
-			+"subject:'The Huddle',"
-			+"hideConferenceTimer:true,"
-			+"disableInviteFunctions:true,"
-			+"enableClosePage:false"
-			+"},"
-			+"interfaceConfigOverwrite:{"
-			+"SHOW_JITSI_WATERMARK:false,"
-			+"SHOW_BRAND_WATERMARK:false,"
-			+"SHOW_POWERED_BY:false,"
-			+"HIDE_INVITE_MORE_HEADER:true,"
-			+"DEFAULT_REMOTE_DISPLAY_NAME:'Kronker'"
-			+"}"
-			+"});"
-			+"var isGuest=false;"
-			+"api.addListener('passwordRequired',function(){"
-			+"isGuest=true;"
-			+"api.executeCommand('password','kronkfam2026');"
-			+"});"
-			+"api.addListener('videoConferenceJoined',function(){"
-			+"api.executeCommand('displayName','"+escapedUsername+"');"
-			+"if(!isGuest){api.executeCommand('password','kronkfam2026');}"
-			+"});"
-			+"api.addListener('readyToClose',function(){"
-			+"Android.leave();"
-			+"});"
-			+"</script></body></html>";
+		String url="https://"+JITSI_DOMAIN+"/"+ROOM_NAME
+			+"#config.prejoinPageEnabled=false"
+			+"&config.prejoinConfig.enabled=false"
+			+"&config.disableDeepLinking=true"
+			+"&config.startWithAudioMuted=true"
+			+"&config.startWithVideoMuted=false"
+			+"&config.hideConferenceTimer=true"
+			+"&config.disableInviteFunctions=true"
+			+"&config.enableClosePage=false"
+			+"&userInfo.displayName="+encodedUsername;
 
-		webView.addJavascriptInterface(new Object(){
-			@android.webkit.JavascriptInterface
-			public void leave(){
-				handler.post(()->leaveRoom());
-			}
-		}, "Android");
-
-		webView.loadDataWithBaseURL("https://"+JITSI_DOMAIN+"/", html, "text/html", "UTF-8", null);
+		webView.loadUrl(url);
 	}
 
 	private void leaveRoom(){
