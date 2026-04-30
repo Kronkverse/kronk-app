@@ -10,6 +10,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.media.AudioManager;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -189,6 +190,9 @@ public class LiveFragment extends Fragment{
 		lobby.setVisibility(View.GONE);
 		jitsiContainer.setVisibility(View.VISIBLE);
 
+		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+		am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
 		webView=new WebView(getActivity());
 		WebSettings settings=webView.getSettings();
 		settings.setJavaScriptEnabled(true);
@@ -242,12 +246,14 @@ public class LiveFragment extends Fragment{
 			+"&config.enableClosePage=false"
 			+"&userInfo.displayName="+encodedUsername;
 
-		webView.loadUrl("https://"+JITSI_DOMAIN+"/test.html");
+		webView.loadUrl(jitsiUrl);
 	}
 
 	private void leaveRoom(){
 		inRoom=false;
 		roomNavigationStarted=false;
+		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+		am.setMode(AudioManager.MODE_NORMAL);
 		if(webView!=null){
 			webView.loadUrl("about:blank");
 			webviewContainer.removeView(webView);
