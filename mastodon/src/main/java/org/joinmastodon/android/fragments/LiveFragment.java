@@ -9,6 +9,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.media.AudioManager;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
@@ -18,7 +19,6 @@ import android.webkit.WebView;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -30,8 +30,10 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -54,7 +56,7 @@ public class LiveFragment extends Fragment{
 	private TextView participantNames;
 
 	private boolean inRoom;
-	private PermissionRequest pendingPermissionRequest;
+	private boolean roomNavigationStarted;
 	private Handler handler;
 	private Runnable pollRunnable;
 
@@ -81,7 +83,7 @@ public class LiveFragment extends Fragment{
 		participantCount=rootView.findViewById(R.id.participant_count);
 		participantNames=rootView.findViewById(R.id.participant_names);
 
-		huddleButton.setOnClickListener(v->joinRoom());
+		huddleButton.setOnClickListener(v->checkPermissionsAndJoin());
 		leaveButton.setOnClickListener(v->leaveRoom());
 
 		handler=new Handler(Looper.getMainLooper());
@@ -167,19 +169,35 @@ public class LiveFragment extends Fragment{
 		});
 	}
 
+	private void checkPermissionsAndJoin(){
+		if(getActivity()==null) return;
+		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
+		boolean hasCam=getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
+		if(hasMic && hasCam){
+			joinRoom();
+		}else{
+			ArrayList<String> needed=new ArrayList<>();
+			if(!hasMic) needed.add(Manifest.permission.RECORD_AUDIO);
+			if(!hasCam) needed.add(Manifest.permission.CAMERA);
+			requestPermissions(needed.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+		}
+	}
+
 	private void joinRoom(){
 		inRoom=true;
+		roomNavigationStarted=false;
 		stopPolling();
 		lobby.setVisibility(View.GONE);
 		jitsiContainer.setVisibility(View.VISIBLE);
+
+		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+		am.setMode(AudioManager.MODE_IN_COMMUNICATION);
 
 		webView=new WebView(getActivity());
 		WebSettings settings=webView.getSettings();
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setMediaPlaybackRequiresUserGesture(false);
-		String defaultUA=settings.getUserAgentString();
-		settings.setUserAgentString(defaultUA.replaceAll("\\bMobile\\b", "").replaceAll("\\bAndroid[^;)]*", ""));
 
 		CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
@@ -187,30 +205,23 @@ public class LiveFragment extends Fragment{
 			@Override
 			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request){
 				String scheme=request.getUrl().getScheme();
-				if("intent".equals(scheme) || "market".equals(scheme)) return true;
-				return false;
+				return "intent".equals(scheme) || "market".equals(scheme);
+			}
+
+			@Override
+			public void doUpdateVisitedHistory(WebView view, String url, boolean isReload){
+				if(url.contains("/"+ROOM_NAME)) roomNavigationStarted=true;
+				if(inRoom && roomNavigationStarted && !url.contains("/"+ROOM_NAME)){
+					handler.post(()->leaveRoom());
+				}
 			}
 		});
+
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
-				if(getActivity()==null) return;
-				boolean needsCamera=false, needsMic=false;
-				for(String res : request.getResources()){
-					if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) needsCamera=true;
-					if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) needsMic=true;
-				}
-				boolean hasCameraPerm=getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
-				boolean hasMicPerm=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
-				if((!needsCamera || hasCameraPerm) && (!needsMic || hasMicPerm)){
-					request.grant(request.getResources());
-				}else{
-					pendingPermissionRequest=request;
-					ArrayList<String> perms=new ArrayList<>();
-					if(needsCamera && !hasCameraPerm) perms.add(Manifest.permission.CAMERA);
-					if(needsMic && !hasMicPerm) perms.add(Manifest.permission.RECORD_AUDIO);
-					requestPermissions(perms.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-				}
+				if(getActivity()!=null) request.grant(request.getResources());
+				else request.deny();
 			}
 		});
 
@@ -218,63 +229,33 @@ public class LiveFragment extends Fragment{
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		String username=getUsername();
-		String escapedUsername=username.replace("\\", "\\\\").replace("'", "\\'");
+		String encodedUsername;
+		try{
+			encodedUsername=URLEncoder.encode(username, "UTF-8").replace("+", "%20");
+		}catch(UnsupportedEncodingException e){
+			encodedUsername="Kronker";
+		}
 
-		String html="<!DOCTYPE html><html><head>"
-			+"<meta name='viewport' content='width=device-width,initial-scale=1'>"
-			+"<style>html,body,#meet{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}</style>"
-			+"<script src='https://"+JITSI_DOMAIN+"/external_api.js'></script>"
-			+"</head><body><div id='meet'></div><script>"
-			+"var api=new JitsiMeetExternalAPI('"+JITSI_DOMAIN+"',{"
-			+"roomName:'"+ROOM_NAME+"',"
-			+"parentNode:document.getElementById('meet'),"
-			+"width:'100%',height:'100%',"
-			+"userInfo:{displayName:'"+escapedUsername+"'},"
-			+"configOverwrite:{"
-			+"prejoinPageEnabled:false,"
-			+"prejoinConfig:{enabled:false},"
-			+"disableDeepLinking:true,"
-			+"startWithAudioMuted:true,"
-			+"startWithVideoMuted:false,"
-			+"subject:'The Huddle',"
-			+"hideConferenceTimer:true,"
-			+"disableInviteFunctions:true,"
-			+"enableClosePage:false"
-			+"},"
-			+"interfaceConfigOverwrite:{"
-			+"SHOW_JITSI_WATERMARK:false,"
-			+"SHOW_BRAND_WATERMARK:false,"
-			+"SHOW_POWERED_BY:false,"
-			+"HIDE_INVITE_MORE_HEADER:true,"
-			+"DEFAULT_REMOTE_DISPLAY_NAME:'Kronker'"
-			+"}"
-			+"});"
-			+"var isGuest=false;"
-			+"api.addListener('passwordRequired',function(){"
-			+"isGuest=true;"
-			+"api.executeCommand('password','kronkfam2026');"
-			+"});"
-			+"api.addListener('videoConferenceJoined',function(){"
-			+"api.executeCommand('displayName','"+escapedUsername+"');"
-			+"if(!isGuest){api.executeCommand('password','kronkfam2026');}"
-			+"});"
-			+"api.addListener('readyToClose',function(){"
-			+"Android.leave();"
-			+"});"
-			+"</script></body></html>";
+		String jitsiUrl="https://"+JITSI_DOMAIN+"/"+ROOM_NAME
+			+"#config.prejoinPageEnabled=false"
+			+"&config.prejoinConfig.enabled=false"
+			+"&config.disableDeepLinking=true"
+			+"&config.startWithVideoMuted=false"
+			+"&config.hideConferenceTimer=true"
+			+"&config.disableInviteFunctions=true"
+			+"&config.enableClosePage=false"
+			+"&userInfo.displayName="+encodedUsername;
 
-		webView.addJavascriptInterface(new Object(){
-			@android.webkit.JavascriptInterface
-			public void leave(){
-				handler.post(()->leaveRoom());
-			}
-		}, "Android");
-
-		webView.loadDataWithBaseURL("https://"+JITSI_DOMAIN+"/", html, "text/html", "UTF-8", null);
+		webView.loadUrl(jitsiUrl);
 	}
 
 	private void leaveRoom(){
 		inRoom=false;
+		roomNavigationStarted=false;
+		if(getActivity()!=null){
+			AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+			am.setMode(AudioManager.MODE_NORMAL);
+		}
 		if(webView!=null){
 			webView.loadUrl("about:blank");
 			webviewContainer.removeView(webView);
@@ -288,20 +269,23 @@ public class LiveFragment extends Fragment{
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
-		if(requestCode==PERMISSION_REQUEST_CODE && pendingPermissionRequest!=null){
-			boolean allGranted=true;
-			for(int result : grantResults){
-				if(result!=PackageManager.PERMISSION_GRANTED){ allGranted=false; break; }
-			}
-			if(allGranted) pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
-			else pendingPermissionRequest.deny();
-			pendingPermissionRequest=null;
+		if(requestCode!=PERMISSION_REQUEST_CODE) return;
+		if(getActivity()==null) return;
+		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
+		if(hasMic){
+			joinRoom();
+		}else{
+			android.widget.Toast.makeText(getActivity(), R.string.huddle_mic_required, android.widget.Toast.LENGTH_LONG).show();
 		}
 	}
 
 	@Override
 	public void onDestroyView(){
 		stopPolling();
+		if(inRoom && getActivity()!=null){
+			AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+			am.setMode(AudioManager.MODE_NORMAL);
+		}
 		if(webView!=null){
 			webView.destroy();
 			webView=null;

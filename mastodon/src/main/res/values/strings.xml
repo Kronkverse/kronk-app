@@ -721,6 +721,7 @@
 	<string name="huddle_leave">Unhuddle</string>
 	<string name="huddle_powered_by">Powered by Jitsi Meet
 End-to-end encrypted</string>
+	<string name="huddle_mic_required">Microphone permission is required to join the Huddle</string>
 	<string name="huddle_people_in_room">%d person in room</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>

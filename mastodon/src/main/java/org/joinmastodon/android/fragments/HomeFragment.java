@@ -308,6 +308,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		// Forward to child fragments — Android does not do this for nested fragments automatically
+		if(liveFragment!=null) liveFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
+	}
+
+	@Override
 	public void onSaveInstanceState(Bundle outState){
 		super.onSaveInstanceState(outState);
 		outState.putInt("selectedTab", currentTab);
