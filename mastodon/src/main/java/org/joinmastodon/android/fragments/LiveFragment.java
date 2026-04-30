@@ -10,6 +10,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.media.AudioManager;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -187,6 +188,10 @@ public class LiveFragment extends Fragment{
 		lobby.setVisibility(View.GONE);
 		jitsiContainer.setVisibility(View.VISIBLE);
 
+		// Request audio focus so the system routes mic capture to this app
+		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+		am.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
+
 		webView=new WebView(getActivity());
 		WebSettings settings=webView.getSettings();
 		settings.setJavaScriptEnabled(true);
@@ -236,7 +241,6 @@ public class LiveFragment extends Fragment{
 			+"#config.prejoinPageEnabled=false"
 			+"&config.prejoinConfig.enabled=false"
 			+"&config.disableDeepLinking=true"
-			+"&config.startWithAudioMuted=true"
 			+"&config.startWithVideoMuted=false"
 			+"&config.hideConferenceTimer=true"
 			+"&config.disableInviteFunctions=true"
@@ -248,6 +252,8 @@ public class LiveFragment extends Fragment{
 
 	private void leaveRoom(){
 		inRoom=false;
+		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
+		am.abandonAudioFocus(null);
 		if(webView!=null){
 			webView.loadUrl("about:blank");
 			webviewContainer.removeView(webView);
