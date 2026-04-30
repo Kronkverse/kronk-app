@@ -10,7 +10,6 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.media.AudioManager;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -190,16 +189,11 @@ public class LiveFragment extends Fragment{
 		lobby.setVisibility(View.GONE);
 		jitsiContainer.setVisibility(View.VISIBLE);
 
-		// Request audio focus so the system routes mic capture to this app
-		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
-		am.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
-
 		webView=new WebView(getActivity());
 		WebSettings settings=webView.getSettings();
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
 		settings.setMediaPlaybackRequiresUserGesture(false);
-		// No UA override — WebView's native UA signals mobile to Jitsi, which selects VP8 codec first
 
 		CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
@@ -213,7 +207,6 @@ public class LiveFragment extends Fragment{
 			@Override
 			public void doUpdateVisitedHistory(WebView view, String url, boolean isReload){
 				if(url.contains("/"+ROOM_NAME)) roomNavigationStarted=true;
-				// Only detect end-of-call after we've navigated into the room
 				if(inRoom && roomNavigationStarted && !url.contains("/"+ROOM_NAME)){
 					handler.post(()->leaveRoom());
 				}
@@ -223,7 +216,6 @@ public class LiveFragment extends Fragment{
 		webView.setWebChromeClient(new WebChromeClient(){
 			@Override
 			public void onPermissionRequest(PermissionRequest request){
-				// Android permissions verified in checkPermissionsAndJoin; grant immediately.
 				if(getActivity()!=null) request.grant(request.getResources());
 				else request.deny();
 			}
@@ -250,26 +242,12 @@ public class LiveFragment extends Fragment{
 			+"&config.enableClosePage=false"
 			+"&userInfo.displayName="+encodedUsername;
 
-		// Pre-warm audio+video permissions from the Jitsi origin before Jitsi loads.
-		// Jitsi checks navigator.permissions.query('microphone') before calling getUserMedia;
-		// in WebView that returns 'prompt' until onPermissionRequest has been granted once.
-		// This warmup page forces onPermissionRequest to fire so permissions are 'granted'
-		// by the time Jitsi initialises, then navigates straight into the room.
-		String escapedUrl=jitsiUrl.replace("'","\\'");
-		String warmupHtml="<html><body><script>"
-			+"navigator.mediaDevices.getUserMedia({audio:true,video:true})"
-			+".then(function(s){s.getTracks().forEach(function(t){t.stop();});location.replace('"+escapedUrl+"');})"
-			+".catch(function(){location.replace('"+escapedUrl+"');});"
-			+"</script></body></html>";
-
-		webView.loadDataWithBaseURL("https://"+JITSI_DOMAIN+"/", warmupHtml, "text/html", "UTF-8", null);
+		webView.loadUrl(jitsiUrl);
 	}
 
 	private void leaveRoom(){
 		inRoom=false;
 		roomNavigationStarted=false;
-		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
-		am.abandonAudioFocus(null);
 		if(webView!=null){
 			webView.loadUrl("about:blank");
 			webviewContainer.removeView(webView);
