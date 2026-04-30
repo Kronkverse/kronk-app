@@ -56,6 +56,7 @@ public class LiveFragment extends Fragment{
 	private TextView participantNames;
 
 	private boolean inRoom;
+	private boolean roomNavigationStarted;
 	private Handler handler;
 	private Runnable pollRunnable;
 
@@ -184,6 +185,7 @@ public class LiveFragment extends Fragment{
 
 	private void joinRoom(){
 		inRoom=true;
+		roomNavigationStarted=false;
 		stopPolling();
 		lobby.setVisibility(View.GONE);
 		jitsiContainer.setVisibility(View.VISIBLE);
@@ -210,8 +212,9 @@ public class LiveFragment extends Fragment{
 
 			@Override
 			public void doUpdateVisitedHistory(WebView view, String url, boolean isReload){
-				// Jitsi navigates away from the room URL when the conference ends
-				if(inRoom && !url.contains("/"+ROOM_NAME)){
+				if(url.contains("/"+ROOM_NAME)) roomNavigationStarted=true;
+				// Only detect end-of-call after we've navigated into the room
+				if(inRoom && roomNavigationStarted && !url.contains("/"+ROOM_NAME)){
 					handler.post(()->leaveRoom());
 				}
 			}
@@ -237,7 +240,7 @@ public class LiveFragment extends Fragment{
 			encodedUsername="Kronker";
 		}
 
-		String url="https://"+JITSI_DOMAIN+"/"+ROOM_NAME
+		String jitsiUrl="https://"+JITSI_DOMAIN+"/"+ROOM_NAME
 			+"#config.prejoinPageEnabled=false"
 			+"&config.prejoinConfig.enabled=false"
 			+"&config.disableDeepLinking=true"
@@ -247,11 +250,24 @@ public class LiveFragment extends Fragment{
 			+"&config.enableClosePage=false"
 			+"&userInfo.displayName="+encodedUsername;
 
-		webView.loadUrl(url);
+		// Pre-warm audio+video permissions from the Jitsi origin before Jitsi loads.
+		// Jitsi checks navigator.permissions.query('microphone') before calling getUserMedia;
+		// in WebView that returns 'prompt' until onPermissionRequest has been granted once.
+		// This warmup page forces onPermissionRequest to fire so permissions are 'granted'
+		// by the time Jitsi initialises, then navigates straight into the room.
+		String escapedUrl=jitsiUrl.replace("'","\\'");
+		String warmupHtml="<html><body><script>"
+			+"navigator.mediaDevices.getUserMedia({audio:true,video:true})"
+			+".then(function(s){s.getTracks().forEach(function(t){t.stop();});location.replace('"+escapedUrl+"');})"
+			+".catch(function(){location.replace('"+escapedUrl+"');});"
+			+"</script></body></html>";
+
+		webView.loadDataWithBaseURL("https://"+JITSI_DOMAIN+"/", warmupHtml, "text/html", "UTF-8", null);
 	}
 
 	private void leaveRoom(){
 		inRoom=false;
+		roomNavigationStarted=false;
 		AudioManager am=(AudioManager)getActivity().getSystemService(android.content.Context.AUDIO_SERVICE);
 		am.abandonAudioFocus(null);
 		if(webView!=null){
