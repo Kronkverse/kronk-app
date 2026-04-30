@@ -242,7 +242,7 @@ public class LiveFragment extends Fragment{
 			+"&config.enableClosePage=false"
 			+"&userInfo.displayName="+encodedUsername;
 
-		webView.loadUrl(jitsiUrl);
+		webView.loadUrl("https://"+JITSI_DOMAIN+"/test.html");
 	}
 
 	private void leaveRoom(){
