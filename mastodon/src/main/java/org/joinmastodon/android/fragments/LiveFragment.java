@@ -92,31 +92,6 @@ public class LiveFragment extends Fragment{
 		return rootView;
 	}
 
-	private void checkPermissionsAndJoin(){
-		if(getActivity()==null) return;
-		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
-		boolean hasCam=getActivity().checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED;
-		if(hasMic && hasCam){
-			joinRoom();
-		}else{
-			ArrayList<String> needed=new ArrayList<>();
-			if(!hasMic) needed.add(Manifest.permission.RECORD_AUDIO);
-			if(!hasCam) needed.add(Manifest.permission.CAMERA);
-			requestPermissions(needed.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-		}
-	}
-
-	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
-		if(requestCode!=PERMISSION_REQUEST_CODE) return;
-		if(getActivity()==null) return;
-		boolean hasMic=getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED;
-		if(hasMic){
-			joinRoom();
-		}else{
-			android.widget.Toast.makeText(getActivity(), "Microphone permission is required for Huddle", android.widget.Toast.LENGTH_LONG).show();
-		}
-	}
 
 	@Override
 	public void onHiddenChanged(boolean hidden){

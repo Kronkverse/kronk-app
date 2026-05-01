@@ -108,7 +108,7 @@ public class KommonsFragment extends AppKitFragment{
 					if(getActivity()==null) return;
 					loading=false;
 					swipeRefresh.setRefreshing(false);
-					setEmptyState(getString(R.string.error_loading), error.getMessage());
+					setEmptyState(getString(R.string.error_loading), null);
 				}
 			})
 			.exec(accountID);
@@ -270,7 +270,7 @@ public class KommonsFragment extends AppKitFragment{
 			block.setPadding(0, 0, 0, V.dp(12));
 			if(!TextUtils.isEmpty(ch.statement)){
 				TextView stmt=new TextView(getActivity());
-				stmt.setTextAppearance(getActivity(), com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+				stmt.setTextAppearance(getActivity(), android.R.style.TextAppearance_Material_Body1);
 				stmt.setText(ch.statement);
 				stmt.setPadding(0, 0, 0, V.dp(4));
 				block.addView(stmt);
@@ -278,7 +278,7 @@ public class KommonsFragment extends AppKitFragment{
 			if(ch.conditions!=null){
 				for(Proposal.Condition cond:ch.conditions){
 					TextView condTv=new TextView(getActivity());
-					condTv.setTextAppearance(getActivity(), com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+					condTv.setTextAppearance(getActivity(), android.R.style.TextAppearance_Material_Caption);
 					condTv.setText((cond.met?"✓ ":"· ")+cond.text);
 					condTv.setPadding(V.dp(8), V.dp(2), 0, 0);
 					block.addView(condTv);
