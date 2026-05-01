@@ -21,7 +21,7 @@
 			android:layout_height="48dp"
 			android:src="@drawable/ic_arrow_back_24px"
 			android:tint="?colorM3OnSurface"
-			android:background="?selectableItemBackgroundBorderless"
+			android:background="?android:selectableItemBackgroundBorderless"
 			android:contentDescription="@string/back"/>
 
 		<TextView
@@ -117,7 +117,7 @@
 					android:text="@string/kommons_agree"
 					android:textSize="13sp"
 					android:stateListAnimator="@null"
-					style="@style/Widget.Material3.Button.OutlinedButton"/>
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
 
 				<Button
 					android:id="@+id/btn_abstain"
@@ -128,7 +128,7 @@
 					android:text="@string/kommons_abstain"
 					android:textSize="13sp"
 					android:stateListAnimator="@null"
-					style="@style/Widget.Material3.Button.OutlinedButton"/>
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
 
 				<Button
 					android:id="@+id/btn_block"
@@ -139,7 +139,7 @@
 					android:text="@string/kommons_block"
 					android:textSize="13sp"
 					android:stateListAnimator="@null"
-					style="@style/Widget.Material3.Button.OutlinedButton"/>
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
 
 			</LinearLayout>
 
