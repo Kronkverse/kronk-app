@@ -987,4 +987,5 @@ End-to-end encrypted</string>
         <item quantity="other">%d block</item>
     </plurals>
 
+    <string name="error_loading">Failed to load</string>
 </resources>
