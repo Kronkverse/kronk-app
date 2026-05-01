@@ -44,7 +44,7 @@ import me.grishka.appkit.views.FragmentRootLinearLayout;
 
 public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment {
 
-	public enum Space { HUB, FEED, EVENTS, HUDDLE }
+	public enum Space { HUB, FEED, EVENTS, HUDDLE, KOMMONS }
 
 	private FragmentRootLinearLayout content;
 	private FrameLayout fragmentContainer;
@@ -53,6 +53,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private HomeTimelineFragment feedFragment;
 	private EventsFragment eventsFragment;
 	private LiveFragment huddleFragment;
+	private KommonsFragment kommonsFragment;
 	private NotificationsListFragment notificationsFragment;
 
 	private View bottomNavWrap;
@@ -95,6 +96,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			huddleFragment = new LiveFragment();
 			huddleFragment.setArguments(new Bundle(lazyArgs));
 
+			kommonsFragment = new KommonsFragment();
+			kommonsFragment.setArguments(new Bundle(lazyArgs));
+
 			notificationsFragment = new NotificationsListFragment();
 			notificationsFragment.setArguments(new Bundle(lazyArgs));
 		}
@@ -134,6 +138,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 					.add(me.grishka.appkit.R.id.fragment_wrap, feedFragment).hide(feedFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, huddleFragment).hide(huddleFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, kommonsFragment).hide(kommonsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
 					.commit();
 
@@ -210,6 +215,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			case FEED: return feedFragment;
 			case EVENTS: return eventsFragment;
 			case HUDDLE: return huddleFragment;
+			case KOMMONS: return kommonsFragment;
 			default: return hubFragment;
 		}
 	}
@@ -256,6 +262,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				lf.loadData();
 		} else if (fragment instanceof LiveFragment lf) {
 			lf.loadData();
+		} else if (fragment instanceof KommonsFragment kf) {
+			kf.loadData();
 		}
 	}
 
@@ -303,6 +311,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	// Public API used by HomeTimelineFragment and AccountSwitcherSheet
+	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
+	public void removeSpaceBackCallback(Runnable cb) { removeBackCallback(cb); }
+
 	public void showNotifications() {
 		if (!showingNotifications) switchToNotifications();
 	}
@@ -340,6 +351,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if (feedFragment != null) getChildFragmentManager().putFragment(outState, "feedFragment", feedFragment);
 		if (eventsFragment != null) getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
 		if (huddleFragment != null) getChildFragmentManager().putFragment(outState, "huddleFragment", huddleFragment);
+		if (kommonsFragment != null) getChildFragmentManager().putFragment(outState, "kommonsFragment", kommonsFragment);
 		if (notificationsFragment != null) getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
 	}
 
@@ -351,6 +363,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		feedFragment = (HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "feedFragment");
 		eventsFragment = (EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
+		kommonsFragment = (KommonsFragment) getChildFragmentManager().getFragment(savedInstanceState, "kommonsFragment");
 		notificationsFragment = (NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
 		showingNotifications = savedInstanceState.getBoolean("showingNotifications");
 		currentSpace = Space.valueOf(savedInstanceState.getString("currentSpace", Space.HUB.name()));

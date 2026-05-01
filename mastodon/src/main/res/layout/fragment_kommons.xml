@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<FrameLayout
+		android:id="@+id/list_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent">
+
+		<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+			android:id="@+id/refresh_layout"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/proposal_list"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:clipToPadding="false"/>
+
+		</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+		<LinearLayout
+			android:id="@+id/empty_view"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:orientation="vertical"
+			android:gravity="center"
+			android:padding="32dp"
+			android:visibility="gone">
+
+			<TextView
+				android:id="@+id/empty_title"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textAppearance="@style/m3_title_medium"
+				android:textColor="?colorM3OnSurface"
+				android:gravity="center"/>
+
+			<TextView
+				android:id="@+id/empty_subtitle"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:textAppearance="@style/m3_body_medium"
+				android:textColor="?colorM3OnSurfaceVariant"
+				android:gravity="center"/>
+
+		</LinearLayout>
+
+	</FrameLayout>
+
+	<FrameLayout
+		android:id="@+id/detail_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"/>
+
+</FrameLayout>
