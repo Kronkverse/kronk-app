@@ -590,7 +590,10 @@ public class KommonsFragment extends AppKitFragment{
 			author=v.findViewById(R.id.author);
 			title=v.findViewById(R.id.title);
 			summary=v.findViewById(R.id.summary);
-			v.setOnClickListener(bv->openDetail(proposals.get(getAdapterPosition())));
+			v.setOnClickListener(bv->{
+				int pos=getAdapterPosition();
+				if(pos!=RecyclerView.NO_POSITION) openDetail(proposals.get(pos));
+			});
 		}
 
 		void bind(Proposal p){
@@ -602,12 +605,14 @@ public class KommonsFragment extends AppKitFragment{
 
 			boolean isFanned=p.currentVote!=null && "agree".equals(p.currentVote.position);
 			fanBtn.setSelected(isFanned);
-			fanBtn.setColorFilter(isFanned
-				? getResources().getColor(android.R.color.holo_purple, getActivity().getTheme())
-				: getResources().getColor(android.R.color.darker_gray, getActivity().getTheme()));
+			int fannedColor=getResources().getColor(android.R.color.holo_purple, itemView.getContext().getTheme());
+			int unfannedColor=getResources().getColor(android.R.color.darker_gray, itemView.getContext().getTheme());
+			fanBtn.setColorFilter(isFanned ? fannedColor : unfannedColor);
 			fanBtn.setOnClickListener(bv->{
 				bv.setEnabled(false);
-				Proposal current=proposals.get(getAdapterPosition());
+				int pos=getAdapterPosition();
+				if(pos==RecyclerView.NO_POSITION){ bv.setEnabled(true); return; }
+				Proposal current=proposals.get(pos);
 				boolean wasFanned=current.currentVote!=null && "agree".equals(current.currentVote.position);
 				if(wasFanned){
 					new UnvoteProposal(current.id)
@@ -683,7 +688,10 @@ public class KommonsFragment extends AppKitFragment{
 			title=v.findViewById(R.id.title);
 			summary=v.findViewById(R.id.summary);
 			// forest cards open detail (back goes back to forest, not list)
-			v.setOnClickListener(bv->openDetail(forest.get(getAdapterPosition())));
+			v.setOnClickListener(bv->{
+				int pos=getAdapterPosition();
+				if(pos!=RecyclerView.NO_POSITION) openDetail(forest.get(pos));
+			});
 		}
 
 		void bind(Proposal p){
@@ -691,13 +699,14 @@ public class KommonsFragment extends AppKitFragment{
 			fanCount.setText(String.valueOf(agreeCount));
 			boolean isFanned=p.currentVote!=null && "agree".equals(p.currentVote.position);
 			fanBtn.setSelected(isFanned);
-			fanBtn.setColorFilter(isFanned
-				? getResources().getColor(android.R.color.holo_purple, getActivity().getTheme())
-				: getResources().getColor(android.R.color.darker_gray, getActivity().getTheme()));
+			int fannedColor=getResources().getColor(android.R.color.holo_purple, itemView.getContext().getTheme());
+			int unfannedColor=getResources().getColor(android.R.color.darker_gray, itemView.getContext().getTheme());
+			fanBtn.setColorFilter(isFanned ? fannedColor : unfannedColor);
 			fanBtn.setOnClickListener(bv->{
-				// fan toggle for forest items
 				bv.setEnabled(false);
-				Proposal current=forest.get(getAdapterPosition());
+				int pos=getAdapterPosition();
+				if(pos==RecyclerView.NO_POSITION){ bv.setEnabled(true); return; }
+				Proposal current=forest.get(pos);
 				boolean wasFanned=current.currentVote!=null && "agree".equals(current.currentVote.position);
 				if(wasFanned){
 					new UnvoteProposal(current.id)
