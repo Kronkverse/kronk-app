@@ -60,14 +60,20 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            // ViewTreeLifecycleOwner is in androidx.lifecycle but its R.id comes from
-            // androidx.lifecycle (not androidx.lifecycle.runtime), and neither resolves at
-            // compile time in this non-ComponentActivity build. Reflect to call .set() so
-            // we use the correct tag key at runtime without a compile-time import.
+            // FragmentStackActivity extends android.app.Activity (not ComponentActivity), so no
+            // ambient ViewTreeLifecycleOwner is set on the window hierarchy. WindowRecomposer
+            // calls ViewTreeLifecycleOwner.get(view.rootView) during onAttachedToWindow, but
+            // "rootView" varies by timing: it may be this ComposeView (before first traversal),
+            // the fragment container (fragment_wrap, if its parent chain is momentarily
+            // disconnected), or the DecorView. Tag all three via reflection so it's found
+            // regardless of which view Compose treats as the root.
             try {
                 val cls = Class.forName("androidx.lifecycle.ViewTreeLifecycleOwner")
                 val set = cls.getMethod("set", android.view.View::class.java, LifecycleOwner::class.java)
-                set.invoke(null, this, this@KronkHubFragment)
+                val owner = this@KronkHubFragment as LifecycleOwner
+                for (v in listOfNotNull(this, container, activity?.window?.decorView)) {
+                    set.invoke(null, v, owner)
+                }
             } catch (_: ReflectiveOperationException) {}
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
