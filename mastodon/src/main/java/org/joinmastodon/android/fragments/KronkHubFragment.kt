@@ -21,7 +21,7 @@ class KronkHubFragment : AppKitFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        return ComposeView(requireContext()).apply {
+        return ComposeView(activity).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 KronkHomeScreen(
@@ -37,7 +37,7 @@ class KronkHubFragment : AppKitFragment() {
 
     private fun resolveDisplayName(): String {
         val id = accountId.ifBlank { return "You" }
-        val account = AccountSessionManager.getInstance().getAccount(id)?.account ?: return "You"
+        val account = AccountSessionManager.getInstance().getAccount(id)?.self ?: return "You"
         val name = account.displayName.ifBlank { null } ?: account.username ?: return "You"
         return name.split(" ").firstOrNull() ?: name
     }
@@ -62,7 +62,7 @@ class KronkHubFragment : AppKitFragment() {
         val session = AccountSessionManager.getInstance().getAccount(id) ?: return
         val args = Bundle().apply {
             putString("account", id)
-            putParcelable("profileAccount", Parcels.wrap(session.account))
+            putParcelable("profileAccount", Parcels.wrap(session.self))
         }
         Nav.go(activity, ProfileFragment::class.java, args)
     }
