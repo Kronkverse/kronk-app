@@ -122,7 +122,7 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
             }
         }
         return OwnerAnchorView(activity).apply {
-            addView(composeView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(composeView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
 
