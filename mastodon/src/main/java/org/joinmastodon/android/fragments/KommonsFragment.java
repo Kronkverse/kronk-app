@@ -1,11 +1,14 @@
 package org.joinmastodon.android.fragments;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -16,8 +19,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import org.joinmastodon.android.R;
+import org.joinmastodon.android.api.requests.proposals.ArchiveProposal;
+import org.joinmastodon.android.api.requests.proposals.CreateProposal;
 import org.joinmastodon.android.api.requests.proposals.GetProposals;
+import org.joinmastodon.android.api.requests.proposals.MarkProposalDelivered;
+import org.joinmastodon.android.api.requests.proposals.UnarchiveProposal;
+import org.joinmastodon.android.api.requests.proposals.UnvoteProposal;
+import org.joinmastodon.android.api.requests.proposals.UpdateProposal;
 import org.joinmastodon.android.api.requests.proposals.VoteOnProposal;
+import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.model.Proposal;
 
 import java.time.format.DateTimeFormatter;
@@ -36,11 +46,14 @@ public class KommonsFragment extends AppKitFragment{
 	private static final DateTimeFormatter DATE_FMT=DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
 
 	private String accountID;
+	private String selfAccountId;
 	private List<Proposal> proposals=new ArrayList<>();
+	private List<Proposal> forest=new ArrayList<>();
 	private boolean loading;
 
 	private View listContainer;
 	private ViewGroup detailContainer;
+	private ViewGroup forestContainer;
 	private RecyclerView recyclerView;
 	private SwipeRefreshLayout swipeRefresh;
 	private LinearLayout emptyView;
@@ -49,6 +62,7 @@ public class KommonsFragment extends AppKitFragment{
 	private ProposalAdapter adapter;
 	private Proposal selectedProposal;
 	private final Runnable detailBackCallback=this::showList;
+	private final Runnable forestBackCallback=this::hideForest;
 
 	@Nullable
 	@Override
@@ -56,6 +70,7 @@ public class KommonsFragment extends AppKitFragment{
 		View rootView=inflater.inflate(R.layout.fragment_kommons, container, false);
 		listContainer=rootView.findViewById(R.id.list_container);
 		detailContainer=rootView.findViewById(R.id.detail_container);
+		forestContainer=rootView.findViewById(R.id.forest_container);
 
 		swipeRefresh=rootView.findViewById(R.id.refresh_layout);
 		swipeRefresh.setOnRefreshListener(()->loadProposals(true));
@@ -69,7 +84,11 @@ public class KommonsFragment extends AppKitFragment{
 		adapter=new ProposalAdapter();
 		recyclerView.setAdapter(adapter);
 
+		rootView.findViewById(R.id.btn_plant_seed).setOnClickListener(v->showPlantSeedDialog());
+		rootView.findViewById(R.id.btn_forest).setOnClickListener(v->showForest());
+
 		accountID=getArguments()!=null ? getArguments().getString("account") : null;
+		selfAccountId=AccountSessionManager.get(accountID).self.id;
 
 		if(getArguments()==null || !getArguments().getBoolean("noAutoLoad")){
 			loadProposals(false);
@@ -94,7 +113,9 @@ public class KommonsFragment extends AppKitFragment{
 					loading=false;
 					swipeRefresh.setRefreshing(false);
 					proposals.clear();
-					proposals.addAll(result);
+					// active proposals first, archived at bottom
+					for(Proposal p:result) if(p.archivedAt==null) proposals.add(p);
+					for(Proposal p:result) if(p.archivedAt!=null) proposals.add(p);
 					adapter.notifyDataSetChanged();
 					if(proposals.isEmpty()){
 						setEmptyState(getString(R.string.kommons_empty_title), getString(R.string.kommons_empty_subtitle));
@@ -143,13 +164,47 @@ public class KommonsFragment extends AppKitFragment{
 		removeBackCallback(detailBackCallback);
 	}
 
+	private void showForest(){
+		View forestView=LayoutInflater.from(getActivity()).inflate(R.layout.fragment_kommons_forest, forestContainer, false);
+		forestContainer.removeAllViews();
+		forestContainer.addView(forestView);
+		listContainer.setVisibility(View.GONE);
+		forestContainer.setVisibility(View.VISIBLE);
+		addBackCallback(forestBackCallback);
+		forestView.findViewById(R.id.forest_btn_back).setOnClickListener(v->hideForest());
+
+		RecyclerView forestRv=forestView.findViewById(R.id.forest_list);
+		forestRv.setLayoutManager(new LinearLayoutManager(getActivity()));
+
+		new GetProposals("delivered")
+			.setCallback(new Callback<List<Proposal>>(){
+				@Override
+				public void onSuccess(List<Proposal> result){
+					if(getActivity()==null) return;
+					forest.clear();
+					forest.addAll(result);
+					ForestAdapter fa=new ForestAdapter();
+					forestRv.setAdapter(fa);
+				}
+				@Override
+				public void onError(ErrorResponse error){}
+			})
+			.exec(accountID);
+	}
+
+	private void hideForest(){
+		forestContainer.setVisibility(View.GONE);
+		listContainer.setVisibility(View.VISIBLE);
+		removeBackCallback(forestBackCallback);
+	}
+
 	private void bindDetail(View v, Proposal p){
 		((TextView)v.findViewById(R.id.detail_header_title)).setText(p.title);
 		v.findViewById(R.id.btn_back).setOnClickListener(bv->showList());
 
 		TextView statusBadge=v.findViewById(R.id.detail_status);
 		statusBadge.setText(statusLabel(p.status));
-		applyPositionColor(statusBadge, p.status);
+		applyStatusColor(statusBadge, p.status);
 
 		TextView meta=v.findViewById(R.id.detail_meta);
 		String author=p.createdByAccount!=null ? "@"+p.createdByAccount.username : "";
@@ -162,9 +217,186 @@ public class KommonsFragment extends AppKitFragment{
 
 		((TextView)v.findViewById(R.id.detail_body)).setText(p.body!=null ? p.body : "");
 
+		boolean isSeeder=p.createdByAccount!=null && p.createdByAccount.id.equals(selfAccountId);
+		bindSeederActions(v, p, isSeeder);
 		bindVoteSection(v, p);
 		bindVoters(v, p);
 		bindChallenges(v, p);
+		bindMatureButton(v, p, isSeeder);
+	}
+
+	private void bindSeederActions(View v, Proposal p, boolean isSeeder){
+		LinearLayout seederActions=v.findViewById(R.id.seeder_actions);
+		Button btnEdit=v.findViewById(R.id.btn_edit);
+		Button btnArchive=v.findViewById(R.id.btn_archive);
+		Button btnUnarchive=v.findViewById(R.id.btn_unarchive);
+
+		if(!isSeeder){
+			seederActions.setVisibility(View.GONE);
+			return;
+		}
+		seederActions.setVisibility(View.VISIBLE);
+
+		if(p.archivedAt!=null){
+			btnEdit.setVisibility(View.GONE);
+			btnArchive.setVisibility(View.GONE);
+			btnUnarchive.setVisibility(View.VISIBLE);
+		}else{
+			btnEdit.setVisibility(View.VISIBLE);
+			btnArchive.setVisibility(View.VISIBLE);
+			btnUnarchive.setVisibility(View.GONE);
+		}
+
+		btnEdit.setOnClickListener(bv->showEditDialog(p, v));
+		btnArchive.setOnClickListener(bv->doArchive(p, v));
+		btnUnarchive.setOnClickListener(bv->doUnarchive(p, v));
+	}
+
+	private void showEditDialog(Proposal p, View detailView){
+		View dialogView=LayoutInflater.from(getActivity()).inflate(android.R.layout.simple_list_item_2, null, false);
+		// Use a simple two-field AlertDialog
+		LinearLayout fields=new LinearLayout(getActivity());
+		fields.setOrientation(LinearLayout.VERTICAL);
+		int pad=V.dp(16);
+		fields.setPadding(pad, pad, pad, 0);
+
+		EditText titleField=new EditText(getActivity());
+		titleField.setHint(getString(R.string.kommons_title_hint));
+		titleField.setText(p.title);
+		titleField.setSingleLine(true);
+		fields.addView(titleField);
+
+		EditText bodyField=new EditText(getActivity());
+		bodyField.setHint(getString(R.string.kommons_body_hint));
+		bodyField.setText(p.body!=null ? p.body : "");
+		bodyField.setMinLines(3);
+		fields.addView(bodyField);
+
+		new AlertDialog.Builder(getActivity())
+			.setTitle(R.string.kommons_edit)
+			.setView(fields)
+			.setPositiveButton(android.R.string.ok, (d, w)->{
+				String newTitle=titleField.getText().toString().trim();
+				String newBody=bodyField.getText().toString().trim();
+				if(TextUtils.isEmpty(newTitle)) return;
+				new UpdateProposal(p.id, newTitle, newBody)
+					.setCallback(new Callback<Proposal>(){
+						@Override
+						public void onSuccess(Proposal updated){
+							if(getActivity()==null) return;
+							updateProposalInList(updated);
+							selectedProposal=updated;
+							bindDetail(detailView, updated);
+						}
+						@Override
+						public void onError(ErrorResponse error){}
+					})
+					.exec(accountID);
+			})
+			.setNegativeButton(android.R.string.cancel, null)
+			.show();
+	}
+
+	private void showPlantSeedDialog(){
+		LinearLayout fields=new LinearLayout(getActivity());
+		fields.setOrientation(LinearLayout.VERTICAL);
+		int pad=V.dp(16);
+		fields.setPadding(pad, pad, pad, 0);
+
+		EditText titleField=new EditText(getActivity());
+		titleField.setHint(getString(R.string.kommons_title_hint));
+		titleField.setSingleLine(true);
+		fields.addView(titleField);
+
+		EditText bodyField=new EditText(getActivity());
+		bodyField.setHint(getString(R.string.kommons_body_hint));
+		bodyField.setMinLines(3);
+		fields.addView(bodyField);
+
+		new AlertDialog.Builder(getActivity())
+			.setTitle(R.string.kommons_new_seed_title)
+			.setView(fields)
+			.setPositiveButton(android.R.string.ok, (d, w)->{
+				String title=titleField.getText().toString().trim();
+				String body=bodyField.getText().toString().trim();
+				if(TextUtils.isEmpty(title)) return;
+				new CreateProposal(title, body)
+					.setCallback(new Callback<Proposal>(){
+						@Override
+						public void onSuccess(Proposal created){
+							if(getActivity()==null) return;
+							proposals.add(0, created);
+							adapter.notifyItemInserted(0);
+							recyclerView.scrollToPosition(0);
+							recyclerView.setVisibility(View.VISIBLE);
+							emptyView.setVisibility(View.GONE);
+						}
+						@Override
+						public void onError(ErrorResponse error){}
+					})
+					.exec(accountID);
+			})
+			.setNegativeButton(android.R.string.cancel, null)
+			.show();
+	}
+
+	private void doArchive(Proposal p, View detailView){
+		new ArchiveProposal(p.id)
+			.setCallback(new Callback<Proposal>(){
+				@Override
+				public void onSuccess(Proposal updated){
+					if(getActivity()==null) return;
+					updateProposalInList(updated);
+					showList();
+				}
+				@Override
+				public void onError(ErrorResponse error){}
+			})
+			.exec(accountID);
+	}
+
+	private void doUnarchive(Proposal p, View detailView){
+		new UnarchiveProposal(p.id)
+			.setCallback(new Callback<Proposal>(){
+				@Override
+				public void onSuccess(Proposal updated){
+					if(getActivity()==null) return;
+					updateProposalInList(updated);
+					selectedProposal=updated;
+					bindDetail(detailView, updated);
+				}
+				@Override
+				public void onError(ErrorResponse error){}
+			})
+			.exec(accountID);
+	}
+
+	private void bindMatureButton(View v, Proposal p, boolean isSeeder){
+		Button btnMature=v.findViewById(R.id.btn_mature);
+		if(isSeeder && !"delivered".equals(p.status) && p.archivedAt==null){
+			btnMature.setVisibility(View.VISIBLE);
+			btnMature.setOnClickListener(bv->{
+				btnMature.setEnabled(false);
+				new MarkProposalDelivered(p.id)
+					.setCallback(new Callback<Proposal>(){
+						@Override
+						public void onSuccess(Proposal updated){
+							if(getActivity()==null) return;
+							updateProposalInList(updated);
+							selectedProposal=updated;
+							bindDetail(v, updated);
+						}
+						@Override
+						public void onError(ErrorResponse error){
+							if(getActivity()==null) return;
+							btnMature.setEnabled(true);
+						}
+					})
+					.exec(accountID);
+			});
+		}else{
+			btnMature.setVisibility(View.GONE);
+		}
 	}
 
 	private void bindVoteSection(View v, Proposal p){
@@ -189,13 +421,7 @@ public class KommonsFragment extends AppKitFragment{
 				@Override
 				public void onSuccess(Proposal updated){
 					if(getActivity()==null) return;
-					for(int i=0;i<proposals.size();i++){
-						if(proposals.get(i).id.equals(updated.id)){
-							proposals.set(i, updated);
-							adapter.notifyItemChanged(i);
-							break;
-						}
-					}
+					updateProposalInList(updated);
 					selectedProposal=updated;
 					String newPos=updated.currentVote!=null ? updated.currentVote.position : null;
 					updateVoteButtons(a, ab, bl, newPos);
@@ -288,24 +514,34 @@ public class KommonsFragment extends AppKitFragment{
 		}
 	}
 
+	private void updateProposalInList(Proposal updated){
+		for(int i=0;i<proposals.size();i++){
+			if(proposals.get(i).id.equals(updated.id)){
+				proposals.set(i, updated);
+				adapter.notifyItemChanged(i);
+				return;
+			}
+		}
+	}
+
 	private String statusLabel(String status){
 		if(status==null) return "";
 		switch(status){
 			case "open": return getString(R.string.kommons_status_open);
 			case "in_progress": return getString(R.string.kommons_status_in_progress);
 			case "vetoed": return getString(R.string.kommons_status_vetoed);
-			case "delivered": return getString(R.string.kommons_status_delivered);
+			case "delivered": return getString(R.string.kommons_status_matured);
 			default: return status.toUpperCase();
 		}
 	}
 
-	private void applyPositionColor(TextView tv, String pos){
-		if(pos==null) return;
+	private void applyStatusColor(TextView tv, String status){
+		if(status==null) return;
 		int colorRes;
-		switch(pos){
-			case "block": case "vetoed":
+		switch(status){
+			case "vetoed":
 				colorRes=android.R.color.holo_red_dark; break;
-			case "agree": case "delivered":
+			case "delivered":
 				colorRes=android.R.color.holo_green_dark; break;
 			default:
 				colorRes=android.R.color.darker_gray; break;
@@ -313,7 +549,21 @@ public class KommonsFragment extends AppKitFragment{
 		tv.setTextColor(getResources().getColor(colorRes, getActivity().getTheme()));
 	}
 
-	// ---- Adapter ----
+	private void applyPositionColor(TextView tv, String pos){
+		if(pos==null) return;
+		int colorRes;
+		switch(pos){
+			case "block":
+				colorRes=android.R.color.holo_red_dark; break;
+			case "agree":
+				colorRes=android.R.color.holo_green_dark; break;
+			default:
+				colorRes=android.R.color.darker_gray; break;
+		}
+		tv.setTextColor(getResources().getColor(colorRes, getActivity().getTheme()));
+	}
+
+	// ---- Main list adapter ----
 
 	private class ProposalAdapter extends RecyclerView.Adapter<ProposalViewHolder>{
 		@Override
@@ -328,23 +578,73 @@ public class KommonsFragment extends AppKitFragment{
 	}
 
 	private class ProposalViewHolder extends RecyclerView.ViewHolder{
-		private final TextView statusBadge, author, title, summary, voteAgree, voteAbstain, voteBlock;
+		private final TextView fanCount, statusBadge, author, title, summary;
+		private final ImageButton fanBtn;
 
 		ProposalViewHolder(View v){
 			super(v);
+			fanCount=v.findViewById(R.id.fan_count);
+			fanBtn=v.findViewById(R.id.fan_btn);
 			statusBadge=v.findViewById(R.id.status_badge);
 			author=v.findViewById(R.id.author);
 			title=v.findViewById(R.id.title);
 			summary=v.findViewById(R.id.summary);
-			voteAgree=v.findViewById(R.id.vote_agree);
-			voteAbstain=v.findViewById(R.id.vote_abstain);
-			voteBlock=v.findViewById(R.id.vote_block);
 			v.setOnClickListener(bv->openDetail(proposals.get(getAdapterPosition())));
 		}
 
 		void bind(Proposal p){
+			boolean archived=p.archivedAt!=null;
+			itemView.setAlpha(archived ? 0.45f : 1f);
+
+			int agreeCount=p.voteSummary!=null ? p.voteSummary.agree : 0;
+			fanCount.setText(String.valueOf(agreeCount));
+
+			boolean isFanned=p.currentVote!=null && "agree".equals(p.currentVote.position);
+			fanBtn.setSelected(isFanned);
+			fanBtn.setColorFilter(isFanned
+				? getResources().getColor(android.R.color.holo_purple, getActivity().getTheme())
+				: getResources().getColor(android.R.color.darker_gray, getActivity().getTheme()));
+			fanBtn.setOnClickListener(bv->{
+				bv.setEnabled(false);
+				Proposal current=proposals.get(getAdapterPosition());
+				boolean wasFanned=current.currentVote!=null && "agree".equals(current.currentVote.position);
+				if(wasFanned){
+					new UnvoteProposal(current.id)
+						.setCallback(new Callback<Proposal>(){
+							@Override
+							public void onSuccess(Proposal updated){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+								updateProposalInList(updated);
+							}
+							@Override
+							public void onError(ErrorResponse error){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+							}
+						})
+						.exec(accountID);
+				}else{
+					new VoteOnProposal(current.id, "agree")
+						.setCallback(new Callback<Proposal>(){
+							@Override
+							public void onSuccess(Proposal updated){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+								updateProposalInList(updated);
+							}
+							@Override
+							public void onError(ErrorResponse error){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+							}
+						})
+						.exec(accountID);
+				}
+			});
+
 			statusBadge.setText(statusLabel(p.status));
-			applyPositionColor(statusBadge, p.status);
+			applyStatusColor(statusBadge, p.status);
 			title.setText(p.title);
 			if(p.createdByAccount!=null) author.setText("@"+p.createdByAccount.username);
 			if(!TextUtils.isEmpty(p.summary)){
@@ -352,10 +652,106 @@ public class KommonsFragment extends AppKitFragment{
 			}else{
 				summary.setVisibility(View.GONE);
 			}
-			if(p.voteSummary!=null){
-				voteAgree.setText(p.voteSummary.agree+" agree");
-				voteAbstain.setText(p.voteSummary.abstain+" abstain");
-				voteBlock.setText(p.voteSummary.block+" block");
+		}
+	}
+
+	// ---- Forest adapter ----
+
+	private class ForestAdapter extends RecyclerView.Adapter<ForestViewHolder>{
+		@Override
+		public ForestViewHolder onCreateViewHolder(ViewGroup parent, int viewType){
+			return new ForestViewHolder(
+				LayoutInflater.from(getActivity()).inflate(R.layout.item_proposal_card, parent, false));
+		}
+		@Override
+		public void onBindViewHolder(ForestViewHolder h, int pos){ h.bind(forest.get(pos)); }
+		@Override
+		public int getItemCount(){ return forest.size(); }
+	}
+
+	private class ForestViewHolder extends RecyclerView.ViewHolder{
+		private final TextView fanCount, statusBadge, author, title, summary;
+		private final ImageButton fanBtn;
+
+		ForestViewHolder(View v){
+			super(v);
+			fanCount=v.findViewById(R.id.fan_count);
+			fanBtn=v.findViewById(R.id.fan_btn);
+			statusBadge=v.findViewById(R.id.status_badge);
+			author=v.findViewById(R.id.author);
+			title=v.findViewById(R.id.title);
+			summary=v.findViewById(R.id.summary);
+			// forest cards open detail (back goes back to forest, not list)
+			v.setOnClickListener(bv->openDetail(forest.get(getAdapterPosition())));
+		}
+
+		void bind(Proposal p){
+			int agreeCount=p.voteSummary!=null ? p.voteSummary.agree : 0;
+			fanCount.setText(String.valueOf(agreeCount));
+			boolean isFanned=p.currentVote!=null && "agree".equals(p.currentVote.position);
+			fanBtn.setSelected(isFanned);
+			fanBtn.setColorFilter(isFanned
+				? getResources().getColor(android.R.color.holo_purple, getActivity().getTheme())
+				: getResources().getColor(android.R.color.darker_gray, getActivity().getTheme()));
+			fanBtn.setOnClickListener(bv->{
+				// fan toggle for forest items
+				bv.setEnabled(false);
+				Proposal current=forest.get(getAdapterPosition());
+				boolean wasFanned=current.currentVote!=null && "agree".equals(current.currentVote.position);
+				if(wasFanned){
+					new UnvoteProposal(current.id)
+						.setCallback(new Callback<Proposal>(){
+							@Override
+							public void onSuccess(Proposal updated){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+								for(int i=0;i<forest.size();i++){
+									if(forest.get(i).id.equals(updated.id)){
+										forest.set(i, updated);
+										notifyItemChanged(i);
+										break;
+									}
+								}
+							}
+							@Override
+							public void onError(ErrorResponse error){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+							}
+						})
+						.exec(accountID);
+				}else{
+					new VoteOnProposal(current.id, "agree")
+						.setCallback(new Callback<Proposal>(){
+							@Override
+							public void onSuccess(Proposal updated){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+								for(int i=0;i<forest.size();i++){
+									if(forest.get(i).id.equals(updated.id)){
+										forest.set(i, updated);
+										notifyItemChanged(i);
+										break;
+									}
+								}
+							}
+							@Override
+							public void onError(ErrorResponse error){
+								if(getActivity()==null) return;
+								bv.setEnabled(true);
+							}
+						})
+						.exec(accountID);
+				}
+			});
+			statusBadge.setText(statusLabel(p.status));
+			applyStatusColor(statusBadge, p.status);
+			title.setText(p.title);
+			if(p.createdByAccount!=null) author.setText("@"+p.createdByAccount.username);
+			if(!TextUtils.isEmpty(p.summary)){
+				summary.setText(p.summary); summary.setVisibility(View.VISIBLE);
+			}else{
+				summary.setVisibility(View.GONE);
 			}
 		}
 	}

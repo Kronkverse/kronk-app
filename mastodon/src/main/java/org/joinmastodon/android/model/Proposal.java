@@ -32,6 +32,7 @@ public class Proposal extends BaseModel{
 	public List<Voter> voters;
 	public List<Challenge> challenges;
 	public Account createdByAccount;
+	public Instant archivedAt;
 
 	@Override
 	public void postprocess() throws ObjectValidationException{

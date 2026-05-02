@@ -9,102 +9,104 @@
 	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:orientation="vertical"
+		android:orientation="horizontal"
 		android:foreground="@drawable/fg_link_card"
-		android:paddingHorizontal="16dp"
-		android:paddingVertical="14dp"
 		android:clipToPadding="false">
 
+		<!-- Fan column -->
 		<LinearLayout
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:gravity="center_vertical"
-			android:layout_marginBottom="6dp">
+			android:id="@+id/fan_col"
+			android:layout_width="56dp"
+			android:layout_height="match_parent"
+			android:orientation="vertical"
+			android:gravity="center"
+			android:paddingVertical="14dp">
 
 			<TextView
-				android:id="@+id/status_badge"
+				android:id="@+id/fan_count"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:paddingHorizontal="8dp"
-				android:paddingVertical="3dp"
-				android:textSize="11sp"
-				android:textStyle="bold"
-				android:textAllCaps="true"
-				android:letterSpacing="0.04"
-				android:background="@drawable/bg_inline_status"
-				tools:text="OPEN"/>
+				android:textAppearance="@style/m3_title_medium"
+				android:textColor="?colorM3Primary"
+				tools:text="12"/>
 
-			<View
-				android:layout_width="0dp"
-				android:layout_height="0dp"
-				android:layout_weight="1"/>
-
-			<TextView
-				android:id="@+id/author"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3OnSurfaceVariant"
-				tools:text="@talita"/>
+			<ImageButton
+				android:id="@+id/fan_btn"
+				android:layout_width="36dp"
+				android:layout_height="36dp"
+				android:layout_marginTop="2dp"
+				android:src="@drawable/ic_toys_fan_24px"
+				android:tint="?colorM3OnSurfaceVariant"
+				android:background="?android:selectableItemBackgroundBorderless"
+				android:contentDescription="@string/kommons_fan"/>
 
 		</LinearLayout>
 
-		<TextView
-			android:id="@+id/title"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:textAppearance="@style/m3_title_medium"
-			android:textColor="?colorM3OnSurface"
-			android:maxLines="2"
-			android:ellipsize="end"
-			tools:text="Add a community calendar to Kronk"/>
-
-		<TextView
-			android:id="@+id/summary"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:textAppearance="@style/m3_body_medium"
-			android:textColor="?colorM3OnSurfaceVariant"
-			android:maxLines="2"
-			android:ellipsize="end"
-			android:visibility="gone"
-			tools:text="A shared events calendar where members can post and browse upcoming community events."/>
-
+		<!-- Main content -->
 		<LinearLayout
-			android:layout_width="match_parent"
+			android:layout_width="0dp"
 			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:layout_marginTop="10dp"
-			android:gravity="center_vertical">
+			android:layout_weight="1"
+			android:orientation="vertical"
+			android:paddingEnd="16dp"
+			android:paddingVertical="14dp">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:layout_marginBottom="4dp">
+
+				<TextView
+					android:id="@+id/status_badge"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:paddingHorizontal="8dp"
+					android:paddingVertical="3dp"
+					android:textSize="11sp"
+					android:textStyle="bold"
+					android:textAllCaps="true"
+					android:letterSpacing="0.04"
+					android:background="@drawable/bg_inline_status"
+					tools:text="OPEN"/>
+
+				<View
+					android:layout_width="0dp"
+					android:layout_height="0dp"
+					android:layout_weight="1"/>
+
+				<TextView
+					android:id="@+id/author"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textAppearance="@style/m3_body_small"
+					android:textColor="?colorM3OnSurfaceVariant"
+					tools:text="@talita"/>
+
+			</LinearLayout>
 
 			<TextView
-				android:id="@+id/vote_agree"
-				android:layout_width="wrap_content"
+				android:id="@+id/title"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:drawablePadding="4dp"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3Primary"
-				tools:text="12 agree"/>
+				android:textAppearance="@style/m3_title_medium"
+				android:textColor="?colorM3OnSurface"
+				android:maxLines="2"
+				android:ellipsize="end"
+				tools:text="Add a community calendar to Kronk"/>
 
 			<TextView
-				android:id="@+id/vote_abstain"
-				android:layout_width="wrap_content"
+				android:id="@+id/summary"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginStart="12dp"
-				android:textAppearance="@style/m3_body_small"
+				android:layout_marginTop="4dp"
+				android:textAppearance="@style/m3_body_medium"
 				android:textColor="?colorM3OnSurfaceVariant"
-				tools:text="3 abstain"/>
-
-			<TextView
-				android:id="@+id/vote_block"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginStart="12dp"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3Error"
-				tools:text="1 block"/>
+				android:maxLines="2"
+				android:ellipsize="end"
+				android:visibility="gone"
+				tools:text="A shared events calendar where members can post and browse upcoming community events."/>
 
 		</LinearLayout>
 

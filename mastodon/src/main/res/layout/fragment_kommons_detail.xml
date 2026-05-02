@@ -94,6 +94,51 @@
 				android:layout_marginBottom="20dp"
 				tools:text="A shared events calendar where members can post and browse upcoming community events."/>
 
+			<!-- Seeder actions (edit / archive / unarchive) — hidden for non-seeders -->
+			<LinearLayout
+				android:id="@+id/seeder_actions"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:layout_marginBottom="16dp"
+				android:visibility="gone">
+
+				<Button
+					android:id="@+id/btn_edit"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:layout_marginEnd="6dp"
+					android:text="@string/kommons_edit"
+					android:textSize="13sp"
+					android:stateListAnimator="@null"
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+				<Button
+					android:id="@+id/btn_archive"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:layout_marginStart="6dp"
+					android:text="@string/kommons_archive"
+					android:textSize="13sp"
+					android:stateListAnimator="@null"
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+				<Button
+					android:id="@+id/btn_unarchive"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:layout_marginStart="6dp"
+					android:text="@string/kommons_unarchive"
+					android:textSize="13sp"
+					android:stateListAnimator="@null"
+					android:visibility="gone"
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+			</LinearLayout>
+
 			<!-- Vote section -->
 			<TextView
 				android:layout_width="wrap_content"
@@ -217,7 +262,19 @@
 				android:id="@+id/challenges_list"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:orientation="vertical"/>
+				android:orientation="vertical"
+				android:layout_marginBottom="20dp"/>
+
+			<!-- Mature section (seeder only, non-delivered non-archived) -->
+			<Button
+				android:id="@+id/btn_mature"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/kommons_mature_seed"
+				android:textSize="13sp"
+				android:stateListAnimator="@null"
+				android:visibility="gone"
+				style="@style/Widget.Mastodon.M3.Button.Text"/>
 
 		</LinearLayout>
 

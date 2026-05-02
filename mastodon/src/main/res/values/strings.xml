@@ -986,6 +986,25 @@ End-to-end encrypted</string>
         <item quantity="one">%d block</item>
         <item quantity="other">%d block</item>
     </plurals>
+    <plurals name="kommons_fan_count">
+        <item quantity="one">%d fan</item>
+        <item quantity="other">%d fans</item>
+    </plurals>
+    <string name="kommons_fan">Fan this seed</string>
+    <string name="kommons_unfan">Unfan this seed</string>
+    <string name="kommons_plant_seed">Plant a seed</string>
+    <string name="kommons_the_forest">The Forest</string>
+    <string name="kommons_forest_intro">Seeds that have matured into trees.</string>
+    <string name="kommons_archive">Archive</string>
+    <string name="kommons_unarchive">Unarchive</string>
+    <string name="kommons_edit">Edit</string>
+    <string name="kommons_mature_seed">Mature this seed</string>
+    <string name="kommons_status_matured">Matured</string>
+    <string name="kommons_edit_title">Edit title</string>
+    <string name="kommons_edit_body">Edit body</string>
+    <string name="kommons_title_hint">Title</string>
+    <string name="kommons_body_hint">Describe your proposal…</string>
+    <string name="kommons_new_seed_title">Plant a seed</string>
 
     <string name="error_loading">Failed to load</string>
 </resources>
