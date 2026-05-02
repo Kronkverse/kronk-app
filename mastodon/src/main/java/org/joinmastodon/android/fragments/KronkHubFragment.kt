@@ -6,21 +6,54 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
 import org.joinmastodon.android.ui.compose.KronkHomeScreen
 import org.parceler.Parcels
 
-class KronkHubFragment : AppKitFragment() {
+// AppKitFragment extends android.app.Activity (not ComponentActivity), so there is no
+// ambient ViewTreeLifecycleOwner in the window hierarchy. This fragment owns its lifecycle.
+class KronkHubFragment : AppKitFragment(), LifecycleOwner {
+
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
 
     private val accountId: String get() = arguments?.getString("account") ?: ""
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    override fun onPause() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        super.onPause()
+    }
+
+    override fun onStop() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        super.onStop()
+    }
+
+    override fun onDestroyView() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        super.onDestroyView()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,13 +61,7 @@ class KronkHubFragment : AppKitFragment() {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            // AppKitFragment uses android.app.Fragment so the container FrameLayout never
-            // gets a ViewTreeLifecycleOwner set automatically. Wire it to the activity,
-            // which is a ComponentActivity and therefore a valid LifecycleOwner.
-            val act = activity
-            ViewTreeLifecycleOwner.set(this, act as LifecycleOwner)
-            ViewTreeViewModelStoreOwner.set(this, act as ViewModelStoreOwner)
-            ViewTreeSavedStateRegistryOwner.set(this, act as SavedStateRegistryOwner)
+            ViewTreeLifecycleOwner.set(this, this@KronkHubFragment)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
