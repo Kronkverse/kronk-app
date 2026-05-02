@@ -49,9 +49,9 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
         super.onStop()
     }
 
-    override fun onDestroyView() {
+    override fun onDestroy() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        super.onDestroyView()
+        super.onDestroy()
     }
 
     override fun onCreateView(
