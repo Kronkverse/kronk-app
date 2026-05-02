@@ -9,23 +9,37 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
 import org.joinmastodon.android.ui.compose.KronkHomeScreen
 import org.parceler.Parcels
 
-// AppKitFragment extends android.app.Activity (not ComponentActivity), so there is no
-// ambient ViewTreeLifecycleOwner in the window hierarchy. This fragment owns its lifecycle.
-class KronkHubFragment : AppKitFragment(), LifecycleOwner {
+// FragmentStackActivity extends android.app.Activity (not ComponentActivity). ComponentActivity
+// normally sets four ViewTree owners on the DecorView in onCreate; none are present here.
+// This fragment provides all three that Compose depends on so the entire Compose API surface
+// works without surprises as the screen grows.
+class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     override val lifecycle: Lifecycle get() = lifecycleRegistry
+
+    private val _viewModelStore = ViewModelStore()
+    override val viewModelStore: ViewModelStore get() = _viewModelStore
+
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
 
     private val accountId: String get() = arguments?.getString("account") ?: ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        savedStateController.performRestore(savedInstanceState)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }
 
@@ -51,7 +65,13 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
 
     override fun onDestroy() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        _viewModelStore.clear()
         super.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        savedStateController.performSave(outState)
     }
 
     override fun onCreateView(
@@ -60,21 +80,14 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            // FragmentStackActivity extends android.app.Activity (not ComponentActivity), so no
-            // ambient ViewTreeLifecycleOwner is set on the window hierarchy. WindowRecomposer
-            // calls ViewTreeLifecycleOwner.get(view.rootView) during onAttachedToWindow, but
-            // "rootView" varies by timing: it may be this ComposeView (before first traversal),
-            // the fragment container (fragment_wrap, if its parent chain is momentarily
-            // disconnected), or the DecorView. Tag all three via reflection so it's found
-            // regardless of which view Compose treats as the root.
-            try {
-                val cls = Class.forName("androidx.lifecycle.ViewTreeLifecycleOwner")
-                val set = cls.getMethod("set", android.view.View::class.java, LifecycleOwner::class.java)
-                val owner = this@KronkHubFragment as LifecycleOwner
-                for (v in listOfNotNull(this, container, activity?.window?.decorView)) {
-                    set.invoke(null, v, owner)
-                }
-            } catch (_: ReflectiveOperationException) {}
+            // ComponentActivity normally calls ViewTreeXxxOwner.set(decorView, this) for
+            // LifecycleOwner, ViewModelStoreOwner, and SavedStateRegistryOwner. None of that
+            // happens here. Tag all three candidate "root" views because WindowRecomposer's
+            // rootView resolution varies by timing (ComposeView, fragment_wrap container, or
+            // DecorView depending on when the child-fragment transaction runs relative to the
+            // first window traversal).
+            val candidates = listOfNotNull(this, container, activity?.window?.decorView)
+            reflectSetOwners(candidates)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
@@ -85,6 +98,22 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
                     onComposeTapped = ::navigateToCompose,
                 )
             }
+        }
+    }
+
+    private fun reflectSetOwners(views: List<View>) {
+        val pairs = listOf(
+            "androidx.lifecycle.ViewTreeLifecycleOwner"              to "androidx.lifecycle.LifecycleOwner",
+            "androidx.lifecycle.ViewTreeViewModelStoreOwner"         to "androidx.lifecycle.ViewModelStoreOwner",
+            "androidx.savedstate.ViewTreeSavedStateRegistryOwner"    to "androidx.savedstate.SavedStateRegistryOwner",
+        )
+        for ((treeClass, ownerInterface) in pairs) {
+            try {
+                val cls      = Class.forName(treeClass)
+                val paramCls = Class.forName(ownerInterface)
+                val set      = cls.getMethod("set", View::class.java, paramCls)
+                for (v in views) set.invoke(null, v, this)
+            } catch (_: ReflectiveOperationException) {}
         }
     }
 
