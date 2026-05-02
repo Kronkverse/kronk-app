@@ -60,11 +60,15 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            // ViewTreeLifecycleOwner.set() = view.setTag(R.id.view_tree_lifecycle_owner, owner).
-            // Both the static class and the app's merged R fail to resolve in this build.
-            // The library R class at androidx.lifecycle.runtime.R$id IS in the compile R.jar
-            // and holds the same runtime value as the merged app resource.
-            setTag(androidx.lifecycle.runtime.R.id.view_tree_lifecycle_owner, this@KronkHubFragment as LifecycleOwner)
+            // ViewTreeLifecycleOwner is in androidx.lifecycle but its R.id comes from
+            // androidx.lifecycle (not androidx.lifecycle.runtime), and neither resolves at
+            // compile time in this non-ComponentActivity build. Reflect to call .set() so
+            // we use the correct tag key at runtime without a compile-time import.
+            try {
+                val cls = Class.forName("androidx.lifecycle.ViewTreeLifecycleOwner")
+                val set = cls.getMethod("set", android.view.View::class.java, LifecycleOwner::class.java)
+                set.invoke(null, this, this@KronkHubFragment)
+            } catch (_: ReflectiveOperationException) {}
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
