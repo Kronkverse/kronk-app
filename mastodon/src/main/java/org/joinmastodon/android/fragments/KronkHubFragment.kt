@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
@@ -36,11 +37,12 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
 
     private val accountId: String get() = arguments?.getString("account") ?: ""
 
-    // Overrides onAttachedToWindow to tag every ancestor in the live view tree with all
-    // three ViewTree owners before AbstractComposeView.onAttachedToWindow() creates the
-    // WindowRecomposer. At this moment the parent chain is fully connected to the window,
-    // so whichever view Compose resolves as rootView, it will find the owner walking up.
-    private inner class OwnerProvidingComposeView(context: Context) : ComposeView(context) {
+    // FrameLayout wrapper that tags itself and all ancestors with ViewTree owners before
+    // its children attach. Because dispatchAttachedToWindow runs top-down, this fires
+    // before ComposeView.onAttachedToWindow() creates the WindowRecomposer, so Compose
+    // finds the owners when it walks up the parent chain. ComposeView itself is final
+    // in Kotlin so it cannot be subclassed directly.
+    private inner class OwnerAnchorView(context: Context) : FrameLayout(context) {
         override fun onAttachedToWindow() {
             var v: View? = this
             while (v != null) {
@@ -107,7 +109,7 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        return OwnerProvidingComposeView(activity).apply {
+        val composeView = ComposeView(activity).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
@@ -118,6 +120,9 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
                     onComposeTapped = ::navigateToCompose,
                 )
             }
+        }
+        return OwnerAnchorView(activity).apply {
+            addView(composeView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         }
     }
 
