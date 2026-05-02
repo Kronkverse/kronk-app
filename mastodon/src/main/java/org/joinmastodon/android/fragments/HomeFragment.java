@@ -49,7 +49,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private FragmentRootLinearLayout content;
 	private FrameLayout fragmentContainer;
 
-	private HubFragment hubFragment;
+	private KronkHubFragment hubFragment;
 	private HomeTimelineFragment feedFragment;
 	private EventsFragment eventsFragment;
 	private LiveFragment huddleFragment;
@@ -81,7 +81,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			Bundle args = new Bundle();
 			args.putString("account", accountID);
 
-			hubFragment = new HubFragment();
+			hubFragment = new KronkHubFragment();
 			hubFragment.setArguments(new Bundle(args));
 
 			feedFragment = new HomeTimelineFragment();
@@ -359,7 +359,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	public void onViewStateRestored(Bundle savedInstanceState) {
 		super.onViewStateRestored(savedInstanceState);
 		if (savedInstanceState == null || hubFragment != null) return;
-		hubFragment = (HubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubFragment");
+		hubFragment = (KronkHubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubFragment");
 		feedFragment = (HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "feedFragment");
 		eventsFragment = (EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
