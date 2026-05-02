@@ -6,6 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
@@ -22,7 +28,14 @@ class KronkHubFragment : AppKitFragment() {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            // AppKitFragment uses android.app.Fragment so the container FrameLayout never
+            // gets a ViewTreeLifecycleOwner set automatically. Wire it to the activity,
+            // which is a ComponentActivity and therefore a valid LifecycleOwner.
+            val act = activity
+            ViewTreeLifecycleOwner.set(this, act as LifecycleOwner)
+            ViewTreeViewModelStoreOwner.set(this, act as ViewModelStoreOwner)
+            ViewTreeSavedStateRegistryOwner.set(this, act as SavedStateRegistryOwner)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
                     displayName = resolveDisplayName(),
