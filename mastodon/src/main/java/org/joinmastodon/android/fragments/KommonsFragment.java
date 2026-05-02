@@ -60,6 +60,7 @@ public class KommonsFragment extends AppKitFragment{
 	private TextView emptyTitle;
 	private TextView emptySubtitle;
 	private ProposalAdapter adapter;
+	private ForestAdapter forestAdapter;
 	private Proposal selectedProposal;
 	private final Runnable detailBackCallback=this::showList;
 	private final Runnable forestBackCallback=this::hideForest;
@@ -183,8 +184,8 @@ public class KommonsFragment extends AppKitFragment{
 					if(getActivity()==null) return;
 					forest.clear();
 					forest.addAll(result);
-					ForestAdapter fa=new ForestAdapter();
-					forestRv.setAdapter(fa);
+					forestAdapter=new ForestAdapter();
+					forestRv.setAdapter(forestAdapter);
 				}
 				@Override
 				public void onError(ErrorResponse error){}
@@ -708,7 +709,7 @@ public class KommonsFragment extends AppKitFragment{
 								for(int i=0;i<forest.size();i++){
 									if(forest.get(i).id.equals(updated.id)){
 										forest.set(i, updated);
-										notifyItemChanged(i);
+										forestAdapter.notifyItemChanged(i);
 										break;
 									}
 								}
@@ -730,7 +731,7 @@ public class KommonsFragment extends AppKitFragment{
 								for(int i=0;i<forest.size();i++){
 									if(forest.get(i).id.equals(updated.id)){
 										forest.set(i, updated);
-										notifyItemChanged(i);
+										forestAdapter.notifyItemChanged(i);
 										break;
 									}
 								}
