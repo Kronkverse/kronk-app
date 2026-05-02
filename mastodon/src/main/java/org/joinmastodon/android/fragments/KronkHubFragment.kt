@@ -11,7 +11,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
-import org.joinmastodon.android.R
 import org.joinmastodon.android.api.session.AccountSessionManager
 import org.joinmastodon.android.ui.compose.KronkHomeScreen
 import org.parceler.Parcels
@@ -61,10 +60,11 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner {
         savedInstanceState: Bundle?,
     ): View {
         return ComposeView(activity).apply {
-            // ViewTreeLifecycleOwner.set() is view.setTag(R.id.view_tree_lifecycle_owner, owner).
-            // The static class has an import resolution bug in this build; use the tag directly.
-            // The lifecycle-runtime AAR's resource IDs are merged into the app's R class.
-            setTag(R.id.view_tree_lifecycle_owner, this@KronkHubFragment as LifecycleOwner)
+            // ViewTreeLifecycleOwner.set() = view.setTag(R.id.view_tree_lifecycle_owner, owner).
+            // Both the static class and the app's merged R fail to resolve in this build.
+            // The library R class at androidx.lifecycle.runtime.R$id IS in the compile R.jar
+            // and holds the same runtime value as the merged app resource.
+            setTag(androidx.lifecycle.runtime.R.id.view_tree_lifecycle_owner, this@KronkHubFragment as LifecycleOwner)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
