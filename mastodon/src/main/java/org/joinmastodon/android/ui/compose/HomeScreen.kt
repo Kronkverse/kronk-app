@@ -92,14 +92,6 @@ fun KronkHomeScreen(
                 )
             }
 
-            ComposeBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 14.dp),
-                onTap = onComposeTapped,
-            )
         }
 
         // Notification bell — top-right, clear of status bar
@@ -107,7 +99,7 @@ fun KronkHomeScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = 20.dp, top = 12.dp)
+                .padding(end = 20.dp, top = 20.dp)
                 .size(40.dp)
                 .clip(CircleShape)
                 .border(1.dp, KronkColors.BubbleBorder, CircleShape)
