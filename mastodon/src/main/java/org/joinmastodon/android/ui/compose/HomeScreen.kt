@@ -43,10 +43,10 @@ private val CENTER_BUBBLE_DP = 72f
 private val CONTAINER_DP = ORBIT_RADIUS_DP * 2 + 100f
 
 private val BUBBLES = listOf(
-    SpaceBubble("Murmur",   Icons.Default.Forum,            62f,   0f,   4200, 0,    8f),
-    SpaceBubble("Kommons",  Icons.Default.Groups,           62f,   90f,  5100, 600,  9f),
-    SpaceBubble("Huddle",   Icons.Default.RecordVoiceOver,  62f,   180f, 4600, 1200, 9f),
-    SpaceBubble("Kalendar", Icons.Default.CalendarMonth,    62f,   270f, 6200, 1800, 7f),
+    SpaceBubble("Murmur",   Icons.Default.Home,          62f,   0f,   4200, 0,    8f),
+    SpaceBubble("Kommons",  Icons.Default.Gavel,         62f,   90f,  5100, 600,  9f),
+    SpaceBubble("Huddle",   Icons.Default.Diversity2,    62f,   180f, 4600, 1200, 9f),
+    SpaceBubble("Kalendar", Icons.Default.CalendarMonth, 62f,   270f, 6200, 1800, 7f),
 )
 
 @Composable
