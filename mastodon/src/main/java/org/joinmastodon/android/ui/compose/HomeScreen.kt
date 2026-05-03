@@ -113,6 +113,9 @@ private fun OrbitLayout(
     onNotificationsTapped: () -> Unit,
 ) {
     val containerDp = CONTAINER_DP.dp
+    // absoluteOffset is from top-left of the Box, so profile must be
+    // explicitly placed at the container center rather than using contentAlignment.
+    val profileOffsetDp = ((CONTAINER_DP - CENTER_BUBBLE_DP) / 2).dp
 
     val floatValues = BUBBLES.mapIndexed { index, bubble ->
         val infinite = rememberInfiniteTransition(label = "float_$index")
@@ -131,7 +134,7 @@ private fun OrbitLayout(
         )
     }
 
-    Box(modifier = Modifier.size(containerDp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(containerDp)) {
         BUBBLES.forEachIndexed { index, bubble ->
             val floatY by floatValues[index]
 
@@ -151,8 +154,9 @@ private fun OrbitLayout(
             )
         }
 
-        // Center profile — rendered last so it sits on top of bubbles
+        // Profile rendered last (on top), offset to container center
         ProfileBubble(
+            modifier = Modifier.absoluteOffset(x = profileOffsetDp, y = profileOffsetDp),
             displayName = displayName,
             onClick = onProfileTapped,
             onNotificationsClick = onNotificationsTapped,
@@ -162,13 +166,14 @@ private fun OrbitLayout(
 
 @Composable
 private fun ProfileBubble(
+    modifier: Modifier = Modifier,
     displayName: String,
     onClick: () -> Unit,
     onNotificationsClick: () -> Unit,
 ) {
     val initial = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
 
-    Box(modifier = Modifier.size(CENTER_BUBBLE_DP.dp)) {
+    Box(modifier = modifier.size(CENTER_BUBBLE_DP.dp)) {
         // Profile circle
         Box(
             modifier = Modifier
