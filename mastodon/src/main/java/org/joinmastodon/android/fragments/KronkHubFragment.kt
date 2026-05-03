@@ -109,7 +109,7 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        val composeView = ComposeView(activity).apply {
+        val composeView = ComposeView(requireActivity()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 KronkHomeScreen(
@@ -121,7 +121,7 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
                 )
             }
         }
-        return OwnerAnchorView(activity).apply {
+        return OwnerAnchorView(requireActivity()).apply {
             addView(composeView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
@@ -155,13 +155,13 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
             putString("account", id)
             putParcelable("profileAccount", Parcels.wrap(session.self))
         }
-        Nav.go(activity, ProfileFragment::class.java, args)
+        Nav.go(requireActivity(), ProfileFragment::class.java, args)
     }
 
     private fun navigateToCompose() {
         val id = accountId.ifBlank { return }
         val args = Bundle().apply { putString("account", id) }
-        Nav.go(activity, ComposeFragment::class.java, args)
+        Nav.go(requireActivity(), ComposeFragment::class.java, args)
     }
 
     private fun homeFragment(): HomeFragment? = (parentFragment as? HomeFragment)
