@@ -62,6 +62,7 @@ Server-side cron polls GitHub releases every 5 minutes and updates the productio
 - **Don't remove Kronk branding.** Custom icons, colors, app name, and deep link schemes must stay.
 - **Don't break the self-update mechanism.** The `updater/` package and version check are critical.
 - **Keep minSdk at 23** unless explicitly agreed otherwise.
+- **Never tag or release without explicit confirmation.** Before running `git tag vX.Y.Z` or pushing any tag, state the exact version number and ask the user to confirm. Tagging immediately triggers CI and deploys to production within minutes — there is no safe window to abort. This applies even when the user says "ship it" or "release it"; always confirm the specific version first.
 
 ## Useful Links
 

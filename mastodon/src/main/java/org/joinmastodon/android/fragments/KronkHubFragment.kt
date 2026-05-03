@@ -13,9 +13,12 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
@@ -46,24 +49,12 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         override fun onAttachedToWindow() {
             var v: View? = this
             while (v != null) {
-                tagViewTreeOwners(v)
+                ViewTreeLifecycleOwner.set(v, this@KronkHubFragment)
+                ViewTreeViewModelStoreOwner.set(v, this@KronkHubFragment)
+                ViewTreeSavedStateRegistryOwner.set(v, this@KronkHubFragment)
                 v = v.parent as? View
             }
             super.onAttachedToWindow()
-        }
-    }
-
-    private fun tagViewTreeOwners(view: View) {
-        listOf(
-            "androidx.lifecycle.ViewTreeLifecycleOwner"           to "androidx.lifecycle.LifecycleOwner",
-            "androidx.lifecycle.ViewTreeViewModelStoreOwner"      to "androidx.lifecycle.ViewModelStoreOwner",
-            "androidx.savedstate.ViewTreeSavedStateRegistryOwner" to "androidx.savedstate.SavedStateRegistryOwner",
-        ).forEach { (cls, iface) ->
-            try {
-                val c = Class.forName(cls)
-                val m = c.getMethod("set", View::class.java, Class.forName(iface))
-                m.invoke(null, view, this@KronkHubFragment)
-            } catch (_: ReflectiveOperationException) {}
         }
     }
 
