@@ -89,7 +89,6 @@ fun KronkHomeScreen(
                     displayName = displayName,
                     onSpaceTapped = onSpaceTapped,
                     onProfileTapped = onProfileTapped,
-                    onNotificationsTapped = onNotificationsTapped,
                 )
             }
 
@@ -102,6 +101,39 @@ fun KronkHomeScreen(
                 onTap = onComposeTapped,
             )
         }
+
+        // Notification bell — top-right, clear of status bar
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = 20.dp, top = 12.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .border(1.dp, KronkColors.BubbleBorder, CircleShape)
+                .background(KronkColors.ComposeBg)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onNotificationsTapped,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                tint = KronkColors.Accent,
+                modifier = Modifier.size(20.dp),
+            )
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(KronkColors.NotifRed)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 1.dp, y = (-1).dp),
+            )
+        }
     }
 }
 
@@ -110,7 +142,6 @@ private fun OrbitLayout(
     displayName: String,
     onSpaceTapped: (String) -> Unit,
     onProfileTapped: () -> Unit,
-    onNotificationsTapped: () -> Unit,
 ) {
     val containerDp = CONTAINER_DP.dp
     // absoluteOffset is from top-left of the Box, so profile must be
@@ -159,7 +190,6 @@ private fun OrbitLayout(
             modifier = Modifier.absoluteOffset(x = profileOffsetDp, y = profileOffsetDp),
             displayName = displayName,
             onClick = onProfileTapped,
-            onNotificationsClick = onNotificationsTapped,
         )
     }
 }
@@ -169,79 +199,43 @@ private fun ProfileBubble(
     modifier: Modifier = Modifier,
     displayName: String,
     onClick: () -> Unit,
-    onNotificationsClick: () -> Unit,
 ) {
     val initial = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
 
-    Box(modifier = modifier.size(CENTER_BUBBLE_DP.dp)) {
-        // Profile circle
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                KronkColors.BrandLight.copy(alpha = 0.45f),
-                                Color.Transparent,
-                            ),
-                            radius = size.minDimension * 1.4f,
+    Box(
+        modifier = modifier
+            .size(CENTER_BUBBLE_DP.dp)
+            .drawBehind {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            KronkColors.BrandLight.copy(alpha = 0.45f),
+                            Color.Transparent,
                         ),
-                    )
-                }
-                .clip(CircleShape)
-                .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(KronkColors.BrandLight, KronkColors.BrandDark),
-                    )
+                        radius = size.minDimension * 1.4f,
+                    ),
                 )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = initial,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+            }
+            .clip(CircleShape)
+            .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(KronkColors.BrandLight, KronkColors.BrandDark),
+                )
             )
-        }
-
-        // Notification badge — top-right corner of profile circle
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 6.dp, y = (-6).dp)
-                .clip(CircleShape)
-                .background(KronkColors.ComposeBg)
-                .border(1.dp, KronkColors.BubbleBorder, CircleShape)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onNotificationsClick,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                tint = KronkColors.Accent,
-                modifier = Modifier.size(13.dp),
-            )
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(KronkColors.NotifRed)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 2.dp, y = (-2).dp),
-            )
-        }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = initial,
+            color = Color.White,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -291,7 +285,7 @@ private fun SpaceBubbleItem(
                 imageVector = bubble.icon,
                 contentDescription = bubble.label,
                 tint = KronkColors.Accent,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(30.dp),
             )
         }
 
