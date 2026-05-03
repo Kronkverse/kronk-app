@@ -13,12 +13,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
@@ -49,12 +46,26 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         override fun onAttachedToWindow() {
             var v: View? = this
             while (v != null) {
-                ViewTreeLifecycleOwner.set(v, this@KronkHubFragment)
-                ViewTreeViewModelStoreOwner.set(v, this@KronkHubFragment)
-                ViewTreeSavedStateRegistryOwner.set(v, this@KronkHubFragment)
+                tagViewTreeOwners(v)
                 v = v.parent as? View
             }
             super.onAttachedToWindow()
+        }
+    }
+
+    // R8 can rename interface class names (LifecycleOwner etc.), so we look up the
+    // "set" method by name and arity rather than by full signature to stay robust.
+    private fun tagViewTreeOwners(view: View) {
+        for (cls in listOf(
+            "androidx.lifecycle.ViewTreeLifecycleOwner",
+            "androidx.lifecycle.ViewTreeViewModelStoreOwner",
+            "androidx.savedstate.ViewTreeSavedStateRegistryOwner",
+        )) {
+            try {
+                val m = Class.forName(cls).methods
+                    .find { it.name == "set" && it.parameterCount == 2 } ?: continue
+                m.invoke(null, view, this@KronkHubFragment)
+            } catch (_: Exception) {}
         }
     }
 
