@@ -20,6 +20,7 @@ import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
 import org.joinmastodon.android.ui.compose.KronkHomeScreen
+import org.joinmastodon.android.ui.compose.KronkSpace
 import org.parceler.Parcels
 
 // FragmentStackActivity extends android.app.Activity (not ComponentActivity), so no
@@ -135,14 +136,13 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         return name.split(" ").firstOrNull() ?: name
     }
 
-    private fun navigateToSpace(space: String) {
+    private fun navigateToSpace(space: KronkSpace) {
         val target = when (space) {
-            "Murmur"   -> HomeFragment.Space.FEED
-            "Kommons"  -> HomeFragment.Space.KOMMONS
-            "Huddle"   -> HomeFragment.Space.HUDDLE
-            "Kalendar" -> HomeFragment.Space.EVENTS
-            else       -> null
-        } ?: return
+            KronkSpace.MURMUR   -> HomeFragment.Space.FEED
+            KronkSpace.KOMMONS  -> HomeFragment.Space.KOMMONS
+            KronkSpace.HUDDLE   -> HomeFragment.Space.HUDDLE
+            KronkSpace.KALENDAR -> HomeFragment.Space.EVENTS
+        }
         homeFragment()?.openSpace(target)
     }
 

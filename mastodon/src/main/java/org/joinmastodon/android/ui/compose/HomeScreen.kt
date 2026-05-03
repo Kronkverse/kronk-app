@@ -28,11 +28,19 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
 
-private data class SpaceBubble(
-    val label: String,
-    val icon: ImageVector,
-    val sizeDp: Float,
+// Icon for each space — exhaustive when forces an update here whenever KronkSpace grows.
+private val KronkSpace.icon: ImageVector get() = when (this) {
+    KronkSpace.MURMUR   -> Icons.Default.Home
+    KronkSpace.KOMMONS  -> Icons.Default.Gavel
+    KronkSpace.HUDDLE   -> Icons.Default.Diversity2
+    KronkSpace.KALENDAR -> Icons.Default.CalendarMonth
+}
+
+// Orbit placement config — visual positioning only, independent of space identity.
+private data class OrbitEntry(
+    val space: KronkSpace,
     val angleDeg: Float,
+    val sizeDp: Float = 62f,
     val floatDurationMs: Int,
     val floatDelayMs: Int,
     val floatAmplitudeDp: Float,
@@ -42,17 +50,18 @@ private val ORBIT_RADIUS_DP = 130f
 private val CENTER_BUBBLE_DP = 72f
 private val CONTAINER_DP = ORBIT_RADIUS_DP * 2 + 100f
 
-private val BUBBLES = listOf(
-    SpaceBubble("Murmur",   Icons.Default.Home,          62f,   0f,   4200, 0,    8f),
-    SpaceBubble("Kommons",  Icons.Default.Gavel,         62f,   90f,  5100, 600,  9f),
-    SpaceBubble("Huddle",   Icons.Default.Diversity2,    62f,   180f, 4600, 1200, 9f),
-    SpaceBubble("Kalendar", Icons.Default.CalendarMonth, 62f,   270f, 6200, 1800, 7f),
+// To add a space: add it to KronkSpace, add its icon above, add a row here.
+private val ORBIT = listOf(
+    OrbitEntry(KronkSpace.MURMUR,   0f,   62f, 4200, 0,    8f),
+    OrbitEntry(KronkSpace.KOMMONS,  90f,  62f, 5100, 600,  9f),
+    OrbitEntry(KronkSpace.HUDDLE,   180f, 62f, 4600, 1200, 9f),
+    OrbitEntry(KronkSpace.KALENDAR, 270f, 62f, 6200, 1800, 7f),
 )
 
 @Composable
 fun KronkHomeScreen(
     displayName: String = "You",
-    onSpaceTapped: (String) -> Unit = {},
+    onSpaceTapped: (KronkSpace) -> Unit = {},
     onNotificationsTapped: () -> Unit = {},
     onProfileTapped: () -> Unit = {},
     onComposeTapped: () -> Unit = {},
@@ -91,7 +100,6 @@ fun KronkHomeScreen(
                     onProfileTapped = onProfileTapped,
                 )
             }
-
         }
 
         // Notification bell — top-right, clear of status bar
@@ -132,56 +140,115 @@ fun KronkHomeScreen(
 @Composable
 private fun OrbitLayout(
     displayName: String,
-    onSpaceTapped: (String) -> Unit,
+    onSpaceTapped: (KronkSpace) -> Unit,
     onProfileTapped: () -> Unit,
 ) {
     val containerDp = CONTAINER_DP.dp
-    // absoluteOffset is from top-left of the Box, so profile must be
-    // explicitly placed at the container center rather than using contentAlignment.
     val profileOffsetDp = ((CONTAINER_DP - CENTER_BUBBLE_DP) / 2).dp
 
-    val floatValues = BUBBLES.mapIndexed { index, bubble ->
+    val floatValues = ORBIT.mapIndexed { index, entry ->
         val infinite = rememberInfiniteTransition(label = "float_$index")
         infinite.animateFloat(
             initialValue = 0f,
-            targetValue = bubble.floatAmplitudeDp,
+            targetValue = entry.floatAmplitudeDp,
             animationSpec = infiniteRepeatable(
                 animation = tween(
-                    durationMillis = bubble.floatDurationMs,
+                    durationMillis = entry.floatDurationMs,
                     easing = FastOutSlowInEasing,
                 ),
                 repeatMode = RepeatMode.Reverse,
-                initialStartOffset = StartOffset(bubble.floatDelayMs),
+                initialStartOffset = StartOffset(entry.floatDelayMs),
             ),
             label = "floatY_$index",
         )
     }
 
     Box(modifier = Modifier.size(containerDp)) {
-        BUBBLES.forEachIndexed { index, bubble ->
+        ORBIT.forEachIndexed { index, entry ->
             val floatY by floatValues[index]
 
-            val angleRad = Math.toRadians(bubble.angleDeg.toDouble() - 90.0)
+            val angleRad = Math.toRadians(entry.angleDeg.toDouble() - 90.0)
             val orbitX = (cos(angleRad) * ORBIT_RADIUS_DP).toFloat()
             val orbitY = (sin(angleRad) * ORBIT_RADIUS_DP).toFloat()
 
-            val colWidth = bubble.sizeDp + 20f
+            val colWidth = entry.sizeDp + 20f
             val leftDp = (CONTAINER_DP / 2 + orbitX - colWidth / 2).dp
-            val topDp = (CONTAINER_DP / 2 + orbitY - bubble.sizeDp / 2).dp
+            val topDp = (CONTAINER_DP / 2 + orbitY - entry.sizeDp / 2).dp
 
-            SpaceBubbleItem(
-                bubble = bubble,
+            OrbitBubble(
+                entry = entry,
                 floatYDp = floatY,
                 modifier = Modifier.absoluteOffset(x = leftDp, y = topDp),
-                onClick = { onSpaceTapped(bubble.label) },
+                onClick = { onSpaceTapped(entry.space) },
             )
         }
 
-        // Profile rendered last (on top), offset to container center
         ProfileBubble(
             modifier = Modifier.absoluteOffset(x = profileOffsetDp, y = profileOffsetDp),
             displayName = displayName,
             onClick = onProfileTapped,
+        )
+    }
+}
+
+@Composable
+private fun OrbitBubble(
+    entry: OrbitEntry,
+    floatYDp: Float,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val sizeDp = entry.sizeDp.dp
+    val bubbleBrush = Brush.radialGradient(
+        colors = listOf(KronkColors.BubbleFill1, KronkColors.BubbleFill2),
+    )
+
+    Column(
+        modifier = modifier
+            .width(entry.sizeDp.dp + 20.dp)
+            .offset(y = floatYDp.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(sizeDp)
+                .drawBehind {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                KronkColors.Accent.copy(alpha = 0.2f),
+                                Color.Transparent,
+                            ),
+                            radius = size.minDimension * 0.9f,
+                        ),
+                    )
+                }
+                .clip(CircleShape)
+                .background(bubbleBrush)
+                .border(1.dp, KronkColors.BubbleBorder, CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = entry.space.icon,
+                contentDescription = entry.space.displayName,
+                tint = KronkColors.Accent,
+                modifier = Modifier.size(30.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Text(
+            text = entry.space.displayName,
+            color = KronkColors.TextPrimary.copy(alpha = 0.82f),
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
         )
     }
 }
@@ -227,95 +294,6 @@ private fun ProfileBubble(
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Composable
-private fun SpaceBubbleItem(
-    bubble: SpaceBubble,
-    floatYDp: Float,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val sizeDp = bubble.sizeDp.dp
-    val bubbleBrush = Brush.radialGradient(
-        colors = listOf(KronkColors.BubbleFill1, KronkColors.BubbleFill2),
-    )
-
-    Column(
-        modifier = modifier
-            .width(bubble.sizeDp.dp + 20.dp)
-            .offset(y = floatYDp.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(sizeDp)
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                KronkColors.Accent.copy(alpha = 0.2f),
-                                Color.Transparent,
-                            ),
-                            radius = size.minDimension * 0.9f,
-                        ),
-                    )
-                }
-                .clip(CircleShape)
-                .background(bubbleBrush)
-                .border(1.dp, KronkColors.BubbleBorder, CircleShape)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = bubble.icon,
-                contentDescription = bubble.label,
-                tint = KronkColors.Accent,
-                modifier = Modifier.size(30.dp),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(5.dp))
-
-        Text(
-            text = bubble.label,
-            color = KronkColors.TextPrimary.copy(alpha = 0.82f),
-            fontSize = 10.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun ComposeBar(modifier: Modifier = Modifier, onTap: () -> Unit) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(KronkColors.ComposeBg)
-            .border(1.dp, KronkColors.BubbleBorder, RoundedCornerShape(24.dp))
-            .clickable(onClick = onTap)
-            .padding(horizontal = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "✦",
-            color = KronkColors.Accent.copy(alpha = 0.7f),
-            fontSize = 14.sp,
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = "What's on your mind?",
-            color = KronkColors.TextMuted.copy(alpha = 0.7f),
-            fontSize = 14.sp,
-            modifier = Modifier.weight(1f),
         )
     }
 }
