@@ -15,8 +15,17 @@ public class CheckInviteLink extends MastodonAPIRequest<CheckInviteLink.Response
 		return "";
 	}
 
+	public static class Inviter extends BaseModel{
+		public String id;
+		public String username;
+		public String acct;
+		public String display_name;
+		public String url;
+	}
+
 	public static class Response extends BaseModel{
 		@RequiredField
 		public String inviteCode;
+		public Inviter inviter;
 	}
 }

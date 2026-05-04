@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/tabbar_wrap"
+	android:id="@+id/bottom_nav_wrap"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
 	android:background="@drawable/bg_tabbar"
@@ -9,20 +8,21 @@
 	android:outlineProvider="bounds"
 	android:clipChildren="false">
 
-	<org.joinmastodon.android.ui.views.TabBar
-		android:id="@+id/tabbar"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="80dp"
-		tools:ignore="RtlHardcoded,RtlSymmetry">
+		android:orientation="horizontal">
 
 		<FrameLayout
-			android:id="@+id/tab_live"
+			android:id="@+id/nav_profile"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/tab_live">
+			android:contentDescription="@string/tab_profile"
+			android:clickable="true"
+			android:focusable="true">
 
 			<ImageView
 				android:layout_width="32dp"
@@ -31,8 +31,9 @@
 				android:layout_marginTop="12dp"
 				android:scaleType="center"
 				android:importantForAccessibility="no"
+				android:duplicateParentState="true"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_live"/>
+				android:src="@drawable/ic_tab_profile"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -42,21 +43,24 @@
 				android:layout_gravity="bottom"
 				android:gravity="center"
 				android:textSize="12dp"
-				android:textColor="?colorM3OnSurfaceVariant"
+				android:textColor="@color/nav_item_color"
+				android:duplicateParentState="true"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_live"/>
+				android:text="@string/tab_profile"/>
 
 		</FrameLayout>
 
 		<FrameLayout
-			android:id="@+id/tab_home"
+			android:id="@+id/nav_hub"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/home_timeline">
+			android:contentDescription="@string/tab_hub"
+			android:clickable="true"
+			android:focusable="true">
 
 			<ImageView
 				android:layout_width="32dp"
@@ -65,8 +69,9 @@
 				android:layout_marginTop="12dp"
 				android:scaleType="center"
 				android:importantForAccessibility="no"
+				android:duplicateParentState="true"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_home"/>
+				android:src="@drawable/ic_tab_hub"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -76,21 +81,24 @@
 				android:layout_gravity="bottom"
 				android:gravity="center"
 				android:textSize="12dp"
-				android:textColor="?colorM3OnSurfaceVariant"
+				android:textColor="@color/nav_item_color"
+				android:duplicateParentState="true"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_home"/>
+				android:text="@string/tab_hub"/>
 
 		</FrameLayout>
 
 		<FrameLayout
-			android:id="@+id/tab_events"
+			android:id="@+id/nav_notifications"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/tab_events">
+			android:contentDescription="@string/notifications"
+			android:clickable="true"
+			android:focusable="true">
 
 			<ImageView
 				android:layout_width="32dp"
@@ -99,8 +107,9 @@
 				android:layout_marginTop="12dp"
 				android:scaleType="center"
 				android:importantForAccessibility="no"
+				android:duplicateParentState="true"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_events"/>
+				android:src="@drawable/ic_tab_notifications"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -110,12 +119,14 @@
 				android:layout_gravity="bottom"
 				android:gravity="center"
 				android:textSize="12dp"
-				android:textColor="?colorM3OnSurfaceVariant"
+				android:textColor="@color/nav_item_color"
+				android:duplicateParentState="true"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_events"/>
+				android:text="@string/notifications"/>
 
 		</FrameLayout>
-	</org.joinmastodon.android.ui.views.TabBar>
+
+	</LinearLayout>
 
 </FrameLayout>

@@ -46,6 +46,17 @@ import org.joinmastodon.android.api.MastodonAPIRequest;
 import org.joinmastodon.android.api.requests.catalog.GetDonationCampaigns;
 import org.joinmastodon.android.api.requests.markers.SaveMarkers;
 import org.joinmastodon.android.api.requests.invites.GetPersonalInvite;
+import org.joinmastodon.android.ui.OutlineProviders;
+import org.joinmastodon.android.ui.M3AlertDialogBuilder;
+import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import org.joinmastodon.android.api.requests.timelines.GetHomeTimeline;
 import org.joinmastodon.android.api.requests.timelines.GetListTimeline;
 import org.joinmastodon.android.api.requests.timelines.GetPublicTimeline;
@@ -77,6 +88,7 @@ import org.joinmastodon.android.ui.views.NestedRecyclerScrollView;
 import org.joinmastodon.android.ui.views.NewPostsButtonContainer;
 import org.joinmastodon.android.updater.GithubSelfUpdater;
 import org.parceler.Parcels;
+import me.grishka.appkit.imageloader.ViewImageLoader;import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -124,6 +136,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 	private boolean donationBannerDismissing;
 	private NestedRecyclerScrollView scrollWrapper;
 	private TextView notificationsBadge;
+	private ImageView profileAvatar;
 
 	private String scrollBackItemID;
 	private int scrollBackItemOffset, scrollBackItemIndex;
@@ -405,11 +418,13 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		View bellView=LayoutInflater.from(getActivity()).inflate(R.layout.badge_notification_icon, null);
 		notificationsBadge=bellView.findViewById(R.id.badge);
 		bellView.setOnClickListener(v->{
-			HomeFragment home=(HomeFragment)getParentFragment();
-			if(home.isShowingNotifications())
-				home.hideNotifications();
-			else
-				home.showNotifications();
+			android.app.Fragment parent=getParentFragment();
+			if(parent instanceof HomeFragment home){
+				if(home.isShowingNotifications())
+					home.hideNotifications();
+				else
+					home.showNotifications();
+			}
 		});
 		notificationsItem.setActionView(bellView);
 
@@ -515,11 +530,7 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 					public void onSuccess(PersonalInvite result){
 						if(getActivity()==null)
 							return;
-						String shareText=getString(R.string.invite_share_text, result.url);
-						Intent shareIntent=new Intent(Intent.ACTION_SEND);
-						shareIntent.setType("text/plain");
-						shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-						startActivity(Intent.createChooser(shareIntent, getString(R.string.invite)));
+						showInviteQrDialog(result.url);
 					}
 
 					@Override
@@ -529,6 +540,61 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 					}
 				})
 				.exec(accountID);
+	}
+
+	private void showInviteQrDialog(String url){
+		try{
+			QRCodeWriter writer=new QRCodeWriter();
+			BitMatrix matrix=writer.encode(url, BarcodeFormat.QR_CODE, 512, 512,
+					java.util.Map.of(EncodeHintType.MARGIN, 1, EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H));
+			int width=matrix.getWidth();
+			int height=matrix.getHeight();
+			Bitmap bitmap=Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+			for(int x=0;x<width;x++){
+				for(int y=0;y<height;y++){
+					bitmap.setPixel(x, y, matrix.get(x, y) ? Color.BLACK : Color.WHITE);
+				}
+			}
+
+			ImageView qrView=new ImageView(getActivity());
+			qrView.setImageBitmap(bitmap);
+			qrView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+			int padding=V.dp(24);
+			qrView.setPadding(padding, padding, padding, 0);
+
+			LinearLayout dialogLayout=new LinearLayout(getActivity());
+			dialogLayout.setOrientation(LinearLayout.VERTICAL);
+			dialogLayout.addView(qrView, new LinearLayout.LayoutParams(
+					ViewGroup.LayoutParams.MATCH_PARENT, V.dp(300)));
+
+			TextView urlText=new TextView(getActivity());
+			urlText.setText(url);
+			urlText.setTextSize(12);
+			urlText.setGravity(android.view.Gravity.CENTER);
+			urlText.setPadding(padding, V.dp(12), padding, 0);
+			urlText.setTextIsSelectable(true);
+			dialogLayout.addView(urlText);
+
+			new M3AlertDialogBuilder(getActivity())
+					.setTitle(R.string.invite)
+					.setView(dialogLayout)
+					.setPositiveButton(R.string.button_share, (dlg, which)->{
+						String shareText=getString(R.string.invite_share_text, url);
+						Intent shareIntent=new Intent(Intent.ACTION_SEND);
+						shareIntent.setType("text/plain");
+						shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+						startActivity(Intent.createChooser(shareIntent, getString(R.string.invite)));
+					})
+					.setNegativeButton(R.string.cancel, null)
+					.show();
+		}catch(WriterException e){
+			// Fallback to share intent
+			String shareText=getString(R.string.invite_share_text, url);
+			Intent shareIntent=new Intent(Intent.ACTION_SEND);
+			shareIntent.setType("text/plain");
+			shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+			startActivity(Intent.createChooser(shareIntent, getString(R.string.invite)));
+		}
 	}
 
 	private void loadNewPosts(){
@@ -793,14 +859,43 @@ public class HomeTimelineFragment extends StatusListFragment implements ToolbarD
 		listsDropdown.setBackgroundTintList(listsDropdownText.getTextColors());
 		listsDropdown.addView(listsDropdownText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-		FrameLayout logoWrap=new FrameLayout(getActivity());
-		FrameLayout.LayoutParams ddlp=new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START);
+		// Profile avatar
+		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
+		profileAvatar=new ImageView(getActivity());
+		profileAvatar.setOutlineProvider(OutlineProviders.OVAL);
+		profileAvatar.setClipToOutline(true);
+		profileAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+		ViewImageLoader.loadWithoutAnimation(profileAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(32), V.dp(32)));
+		profileAvatar.setOnClickListener(v->{
+			Bundle args2=new Bundle();
+			args2.putString("account", accountID);
+			args2.putParcelable("profileAccount", Parcels.wrap(self));
+			Nav.go(getActivity(), ProfileFragment.class, args2);
+		});
+		profileAvatar.setOnLongClickListener(v->{
+			android.app.Fragment p=getParentFragment();
+			new AccountSwitcherSheet(getActivity(), p instanceof HomeFragment hf ? hf : null).show();
+			return true;
+		});
+
+		// Logo wrap with avatar + dropdown
+		LinearLayout logoWrap=new LinearLayout(getActivity());
+		logoWrap.setOrientation(LinearLayout.HORIZONTAL);
+		logoWrap.setGravity(Gravity.CENTER_VERTICAL);
+
+		LinearLayout.LayoutParams avatarLp=new LinearLayout.LayoutParams(V.dp(32), V.dp(32));
+		avatarLp.setMarginStart(V.dp(4));
+		avatarLp.setMarginEnd(V.dp(8));
+		avatarLp.topMargin=avatarLp.bottomMargin=V.dp(8);
+		logoWrap.addView(profileAvatar, avatarLp);
+
+		LinearLayout.LayoutParams ddlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
 		ddlp.topMargin=ddlp.bottomMargin=V.dp(8);
 		logoWrap.addView(listsDropdown, ddlp);
 
 		Toolbar toolbar=getToolbar();
 		toolbar.addView(logoWrap, new Toolbar.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-		toolbar.setContentInsetsRelative(V.dp(16), 0);
+		toolbar.setContentInsetsRelative(V.dp(4), 0);
 	}
 
 	private void showNewPostsButton(){
