@@ -1,7 +1,10 @@
 package org.joinmastodon.android.fragments;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.graphics.Outline;
+import android.widget.EditText;
+import android.widget.Toast;
 import android.view.WindowInsets;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -26,6 +29,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.events.GetEvents;
 import org.joinmastodon.android.api.requests.events.RsvpEvent;
+import org.joinmastodon.android.api.requests.events.ShareEvent;
 import org.joinmastodon.android.model.Event;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.parceler.Parcels;
@@ -145,7 +149,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 
 		// "+ Host" button
 		TextView newEventBtn = new TextView(getActivity());
-		newEventBtn.setText("+ Host");
+		newEventBtn.setText("+ Event");
 		newEventBtn.setTextSize(13);
 		newEventBtn.setTextColor(COLOR_BLURPLE_MUTED);
 		newEventBtn.setLetterSpacing(0.02f);
@@ -692,11 +696,34 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 			if (sb.length() > 0) sb.append(" · ");
 			sb.append(event.interestedCount).append(" maybe");
 		}
-		if (event.account != null && !TextUtils.isEmpty(event.account.displayName)) {
-			if (sb.length() > 0) sb.append(" · ");
-			sb.append("by ").append(event.account.displayName);
-		}
 		return sb.toString();
+	}
+
+	private void showShareDialog(Event event) {
+		EditText input = new EditText(getActivity());
+		input.setHint("Add a comment (optional)");
+		input.setPadding(V.dp(20), V.dp(12), V.dp(20), V.dp(12));
+		new AlertDialog.Builder(getActivity())
+				.setTitle("Share event")
+				.setView(input)
+				.setPositiveButton("Share", (d, w) -> {
+					String comment = input.getText().toString().trim();
+					new ShareEvent(event.id, comment)
+							.setCallback(new Callback<>() {
+								@Override
+								public void onSuccess(Event result) {
+									if (getActivity() != null)
+										Toast.makeText(getActivity(), "Shared to timeline", Toast.LENGTH_SHORT).show();
+								}
+								@Override
+								public void onError(ErrorResponse error) {
+									if (getActivity() != null) error.showToast(getActivity());
+								}
+							})
+							.exec(accountID);
+				})
+				.setNegativeButton("Cancel", null)
+				.show();
 	}
 
 	private void openEventDetail(Event event) {
@@ -758,6 +785,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		private final LinearLayout goingBtn, maybeBtn, skipBtn;
 		private final TextView goingBtnText, maybeBtnText, skipBtnText;
 		private final LinearLayout rsvpGroup;
+		private final View shareBtn;
 
 		EventViewHolder() {
 			super(createEventCardView());
@@ -773,6 +801,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 			maybeBtnText = itemView.findViewWithTag("maybeBtnText");
 			skipBtnText = itemView.findViewWithTag("skipBtnText");
 			rsvpGroup = itemView.findViewWithTag("rsvpGroup");
+			shareBtn = itemView.findViewWithTag("shareBtn");
 		}
 
 		void bind(Event event) {
@@ -808,6 +837,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 				rsvpGroup.setVisibility(View.GONE);
 			}
 
+			shareBtn.setOnClickListener(v -> showShareDialog(event));
 			itemView.setOnClickListener(v -> openEventDetail(event));
 		}
 
@@ -901,6 +931,16 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		metaLp.topMargin = V.dp(3);
 		contentCol.addView(metaText, metaLp);
+
+		TextView shareBtn = new TextView(getActivity());
+		shareBtn.setTag("shareBtn");
+		shareBtn.setText("Share");
+		shareBtn.setTextSize(11);
+		shareBtn.setTextColor(COLOR_BLURPLE_MUTED);
+		shareBtn.setLetterSpacing(0.02f);
+		LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		shareLp.topMargin = V.dp(6);
+		contentCol.addView(shareBtn, shareLp);
 
 		row.addView(contentCol, contentLp);
 
