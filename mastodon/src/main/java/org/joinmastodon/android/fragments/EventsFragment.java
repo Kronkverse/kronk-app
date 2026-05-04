@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.viewpager2.widget.ViewPager2;
 
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.events.GetEvents;
@@ -68,6 +69,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 	private boolean calendarMode = false;
 	private View listToggle;
 	private View calendarToggle;
+	private ViewPager2 viewPager;
 	private LinearLayout calendarContainer;
 	private LinearLayout calendarGrid;
 	private TextView calendarMonthLabel;
@@ -181,15 +183,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 
 		listToggle.setOnClickListener(v -> {
 			if (!calendarMode) return;
-			calendarMode = false;
-			updateViewToggleStyles();
-			showListView();
+			viewPager.setCurrentItem(0, true);
 		});
 		calendarToggle.setOnClickListener(v -> {
 			if (calendarMode) return;
-			calendarMode = true;
-			updateViewToggleStyles();
-			showCalendarView();
+			viewPager.setCurrentItem(1, true);
 		});
 
 		viewToggle.addView(listToggle);
@@ -206,7 +204,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		topDivider.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 		content.addView(topDivider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
-		// List
+		// List page
 		refreshLayout = new SwipeRefreshLayout(getActivity());
 		refreshLayout.setColorSchemeColors(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
 
@@ -221,14 +219,6 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		refreshLayout.addView(list, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 		refreshLayout.setOnRefreshListener(this::loadData);
 
-		// Calendar
-		calendarContainer = new LinearLayout(getActivity());
-		calendarContainer.setOrientation(LinearLayout.VERTICAL);
-		calendarContainer.setVisibility(View.GONE);
-		buildCalendarHeader();
-		buildCalendarGridContainer();
-
-		// Empty state
 		emptyView = new TextView(getActivity());
 		emptyView.setTextSize(14);
 		emptyView.setTextColor(COLOR_BLURPLE_MUTED);
@@ -238,9 +228,34 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		emptyView.setVisibility(View.GONE);
 		updateEmptyStateText();
 
-		content.addView(refreshLayout, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-		content.addView(calendarContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-		content.addView(emptyView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		FrameLayout listPage = new FrameLayout(getActivity());
+		listPage.addView(refreshLayout, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+		listPage.addView(emptyView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+
+		// Calendar page
+		calendarContainer = new LinearLayout(getActivity());
+		calendarContainer.setOrientation(LinearLayout.VERTICAL);
+		buildCalendarHeader();
+		buildCalendarGridContainer();
+
+		// ViewPager2 holding both pages
+		viewPager = new ViewPager2(getActivity());
+		viewPager.setAdapter(new TwoPageAdapter(listPage, calendarContainer));
+		viewPager.setOffscreenPageLimit(1);
+		viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+			@Override
+			public void onPageSelected(int position) {
+				calendarMode = position == 1;
+				updateViewToggleStyles();
+				if (calendarMode) {
+					if (allCalendarEvents.isEmpty()) loadCalendarEvents();
+				} else {
+					if (!loaded) loadData();
+				}
+			}
+		});
+
+		content.addView(viewPager, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
 		root.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 		return root;
@@ -350,18 +365,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 	}
 
 	private void showListView() {
-		calendarContainer.setVisibility(View.GONE);
-		boolean empty = events.isEmpty() && loaded;
-		refreshLayout.setVisibility(empty ? View.GONE : View.VISIBLE);
-		emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
-		if (!loaded) loadData();
+		viewPager.setCurrentItem(0, true);
 	}
 
 	private void showCalendarView() {
-		refreshLayout.setVisibility(View.GONE);
-		emptyView.setVisibility(View.GONE);
-		calendarContainer.setVisibility(View.VISIBLE);
-		loadCalendarEvents();
+		viewPager.setCurrentItem(1, true);
 	}
 
 	// ==================== Calendar Header ====================
@@ -931,5 +939,35 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 		View sep = new View(getActivity());
 		sep.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 		return sep;
+	}
+
+	// ==================== ViewPager2 Adapter ====================
+
+	private static class TwoPageAdapter extends RecyclerView.Adapter<TwoPageAdapter.PageHolder> {
+		private final View[] pages;
+
+		TwoPageAdapter(View... pages) { this.pages = pages; }
+
+		@Override
+		public PageHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+			View page = pages[viewType];
+			page.setLayoutParams(new RecyclerView.LayoutParams(
+					ViewGroup.LayoutParams.MATCH_PARENT,
+					ViewGroup.LayoutParams.MATCH_PARENT));
+			return new PageHolder(page);
+		}
+
+		@Override
+		public void onBindViewHolder(PageHolder holder, int position) {}
+
+		@Override
+		public int getItemCount() { return pages.length; }
+
+		@Override
+		public int getItemViewType(int position) { return position; }
+
+		static class PageHolder extends RecyclerView.ViewHolder {
+			PageHolder(View v) { super(v); }
+		}
 	}
 }
