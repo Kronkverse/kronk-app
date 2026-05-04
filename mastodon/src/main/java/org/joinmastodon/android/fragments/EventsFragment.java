@@ -59,6 +59,8 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 	private EventsAdapter adapter;
 	public boolean loaded;
 	public boolean dataLoading;
+	private boolean calendarLoaded;
+	private boolean calendarLoading;
 
 	private String currentFilter = "upcoming";
 	private static final String[] FILTERS = {"upcoming", "past", "mine", "invited"};
@@ -248,7 +250,12 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 				calendarMode = position == 1;
 				updateViewToggleStyles();
 				if (calendarMode) {
-					if (allCalendarEvents.isEmpty()) loadCalendarEvents();
+					if (!calendarLoaded && !calendarLoading) {
+						loadCalendarEvents();
+					} else if (calendarLoaded) {
+						rebuildCalendarGrid();
+					}
+					// if calendarLoading: callback will call rebuildCalendarGrid() when done
 				} else {
 					if (!loaded) loadData();
 				}
@@ -285,8 +292,13 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 			currentFilter = FILTERS[index];
 			updateFilterChipStyles();
 			updateEmptyStateText();
-			if (calendarMode) loadCalendarEvents();
-			else loadData();
+			if (calendarMode) {
+				calendarLoaded = false;
+				loadCalendarEvents();
+			} else {
+				loaded = false;
+				loadData();
+			}
 		});
 		return tab;
 	}
@@ -561,6 +573,8 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 	// ==================== Calendar Data ====================
 
 	private void loadCalendarEvents() {
+		calendarLoading = true;
+		calendarLoaded = false;
 		allCalendarEvents.clear();
 		new GetEvents(currentFilter.equals("upcoming") ? "upcoming" : currentFilter, null, 200)
 				.setCallback(new Callback<>() {
@@ -569,11 +583,13 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 						if (getActivity() == null) return;
 						allCalendarEvents.addAll(result);
 						if ("upcoming".equals(currentFilter)) loadPastForCalendar();
-						else rebuildCalendarGrid();
+						else finishCalendarLoad();
 					}
 					@Override
 					public void onError(ErrorResponse error) {
-						if (getActivity() != null) rebuildCalendarGrid();
+						if (getActivity() == null) return;
+						calendarLoading = false;
+						rebuildCalendarGrid();
 					}
 				})
 				.exec(accountID);
@@ -592,14 +608,22 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 							}
 							if (!dup) allCalendarEvents.add(e);
 						}
-						rebuildCalendarGrid();
+						finishCalendarLoad();
 					}
 					@Override
 					public void onError(ErrorResponse error) {
-						if (getActivity() != null) rebuildCalendarGrid();
+						if (getActivity() == null) return;
+						calendarLoading = false;
+						rebuildCalendarGrid();
 					}
 				})
 				.exec(accountID);
+	}
+
+	private void finishCalendarLoad() {
+		calendarLoading = false;
+		calendarLoaded = true;
+		rebuildCalendarGrid();
 	}
 
 	// ==================== Data Loading ====================
