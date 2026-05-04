@@ -725,7 +725,7 @@ End-to-end encrypted</string>
 	<string name="huddle_people_in_room">%d person in room</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>
-	<string name="tab_events">Events</string>
+	<string name="tab_events">₭alendar</string>
 	<string name="tab_hub">Hub</string>
 	<string name="tab_feed">Feed</string>
 	<string name="spaces">Spaces</string>
