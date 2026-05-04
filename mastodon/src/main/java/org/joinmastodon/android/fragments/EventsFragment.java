@@ -2,6 +2,7 @@ package org.joinmastodon.android.fragments;
 
 import android.app.Fragment;
 import android.graphics.Outline;
+import android.view.WindowInsets;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -47,6 +48,7 @@ import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.utils.V;
 
 public class EventsFragment extends Fragment implements ScrollableToTop {
+	private LinearLayout content;
 	private RecyclerView list;
 	private SwipeRefreshLayout refreshLayout;
 	private TextView emptyView;
@@ -96,13 +98,18 @@ public class EventsFragment extends Fragment implements ScrollableToTop {
 			loadData();
 	}
 
+	public void onApplyWindowInsets(WindowInsets insets) {
+		if (content != null)
+			content.setPadding(0, insets.getSystemWindowInsetTop(), 0, 0);
+	}
+
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
 		FrameLayout root = new FrameLayout(getActivity());
 		root.setBackgroundColor(UiUtils.getThemeColor(getActivity(), android.R.attr.colorBackground));
 
-		LinearLayout content = new LinearLayout(getActivity());
+		content = new LinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
 		// Top bar
