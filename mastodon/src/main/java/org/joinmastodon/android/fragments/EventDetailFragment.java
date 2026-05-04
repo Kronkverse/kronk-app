@@ -371,16 +371,15 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 		TextView inviteBtn=new TextView(getActivity());
 		inviteBtn.setText("Invite");
-		inviteBtn.setTextSize(15);
+		inviteBtn.setTextSize(14);
 		inviteBtn.setTypeface(null, Typeface.BOLD);
-		inviteBtn.setTextColor(0xFFFFFFFF);
+		inviteBtn.setTextColor(primaryColor);
 		inviteBtn.setGravity(Gravity.CENTER);
-		inviteBtn.setPadding(V.dp(16), V.dp(12), V.dp(16), V.dp(12));
+		inviteBtn.setPadding(V.dp(16), V.dp(10), V.dp(16), V.dp(10));
 		GradientDrawable inviteBg=new GradientDrawable();
 		inviteBg.setCornerRadius(V.dp(10));
-		inviteBg.setColor(primaryColor);
+		inviteBg.setStroke(V.dp(1), primaryColor);
 		inviteBtn.setBackground(inviteBg);
-		inviteBtn.setElevation(V.dp(2));
 		inviteBtn.setOnClickListener(v->{
 			// Placeholder for future invite screen
 		});
