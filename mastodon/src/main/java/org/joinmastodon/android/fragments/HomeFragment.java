@@ -62,6 +62,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private NotificationsListFragment notificationsFragment;
 	private LiveFragment liveFragment;
 	private ProfileFragment profileFragment;
+	private EventsFragment eventsFragment;
 	private TabBar tabBar;
 	private View tabBarWrap;
 	private ImageView tabBarAvatar;
@@ -92,6 +93,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			liveFragment.setArguments(args);
 			notificationsFragment=new NotificationsListFragment();
 			notificationsFragment.setArguments(args);
+			eventsFragment=new EventsFragment();
+			eventsFragment.setArguments(new Bundle(args));
 			args=new Bundle(args);
 			args.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.getInstance().getAccount(accountID).self));
 			args.putBoolean("noAutoLoad", true);
@@ -134,6 +137,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, liveFragment).hide(liveFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
 					.commit();
 
@@ -162,6 +166,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		homeTimelineFragment=(HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "homeTimelineFragment");
 		liveFragment=(LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "liveFragment");
 		notificationsFragment=(NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
+		eventsFragment=(EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		profileFragment=(ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
 		currentTab=savedInstanceState.getInt("selectedTab");
 		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
@@ -171,6 +176,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				.hide(homeTimelineFragment)
 				.hide(liveFragment)
 				.hide(notificationsFragment)
+				.hide(eventsFragment)
 				.hide(profileFragment)
 				.show(showingNotifications ? notificationsFragment : current)
 				.commit();
@@ -211,12 +217,15 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		WindowInsets topOnlyInsets=insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
 		homeTimelineFragment.onApplyWindowInsets(topOnlyInsets);
 		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
+		eventsFragment.onApplyWindowInsets(topOnlyInsets);
 		profileFragment.onApplyWindowInsets(topOnlyInsets);
 	}
 
 	private Fragment fragmentForTab(@IdRes int tab){
 		if(tab==R.id.tab_live){
 			return liveFragment;
+		}else if(tab==R.id.tab_events){
+			return eventsFragment;
 		}else if(tab==R.id.tab_profile){
 			return profileFragment;
 		}
@@ -322,6 +331,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		getChildFragmentManager().putFragment(outState, "homeTimelineFragment", homeTimelineFragment);
 		getChildFragmentManager().putFragment(outState, "liveFragment", liveFragment);
 		getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
+		getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
 		getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
 	}
 

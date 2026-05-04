@@ -96,6 +96,7 @@ public abstract class StatusDisplayItem{
 			case FOLLOW_REQUEST_ACTIONS -> new FollowRequestActionsDisplayItem.Holder(activity, parent);
 			case QUOTE_ERROR -> new QuoteErrorStatusDisplayItem.Holder(activity, parent);
 			case NESTED_QUOTE -> new NestedQuoteStatusDisplayItem.Holder(activity, parent);
+			case EVENT_CARD -> new EventCardStatusDisplayItem.Holder(activity, parent);
 		};
 	}
 
@@ -192,6 +193,9 @@ public abstract class StatusDisplayItem{
 		if(statusForContent.card!=null && statusForContent.mediaAttachments.isEmpty() && TextUtils.isEmpty(statusForContent.spoilerText)){
 			contentItems.add(new LinkCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
 		}
+		if(statusForContent.event!=null){
+			contentItems.add(new EventCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
+		}
 		if(statusForContent.quote!=null){
 			if(statusForContent.quote.state==Quote.State.ACCEPTED){
 				if(statusForContent.quote.quotedStatus!=null && (flags & FLAG_IS_QUOTE)==0){
@@ -277,7 +281,8 @@ public abstract class StatusDisplayItem{
 		FOLLOW_REQUEST_ACTIONS,
 		HEADER_COMPACT,
 		QUOTE_ERROR,
-		NESTED_QUOTE
+		NESTED_QUOTE,
+		EVENT_CARD
 	}
 
 	public static abstract class Holder<T> extends BindableViewHolder<T> implements UsableRecyclerView.DisableableClickable{

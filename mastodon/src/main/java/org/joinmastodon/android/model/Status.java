@@ -54,6 +54,7 @@ public class Status extends BaseModel implements DisplayItemsParent{
 	public Status reblog;
 	public Poll poll;
 	public Card card;
+	public Event event;
 	public String language;
 	public String text;
 	public List<FilterResult> filtered;
