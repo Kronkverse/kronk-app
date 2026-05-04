@@ -96,10 +96,15 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	private static final DateTimeFormatter FULL_DATE_FORMAT=DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault());
 	private static final DateTimeFormatter MONTH_YEAR_FORMAT=DateTimeFormatter.ofPattern("MMMM yyyy");
 
-	// Colors matching the web frontend
-	private static final int COLOR_GOING=0xFF6a9f8a;
-	private static final int COLOR_INTERESTED=0xFFb8945f;
-	private static final int COLOR_CANCELLED=0xFFD32F2F;
+	// Blurple palette matching the web frontend
+	private static final int COLOR_BLURPLE      =0xFF563ACC;
+	private static final int COLOR_BLURPLE_MID  =0xFF6364FF;
+	private static final int COLOR_BLURPLE_MUTED=0xFF858AFA;
+	private static final int COLOR_BLURPLE_FAINT=0x146364FF; // 8% opacity
+	private static final int COLOR_GOING        =0xFF6A9F8A;
+	private static final int COLOR_INTERESTED   =0xFFB8945F;
+	private static final int COLOR_CANCELLED    =0xFFC75D6E;
+	private static final int COLOR_NEUTRAL      =0xFF6B7280;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -131,38 +136,25 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		topBar.setGravity(Gravity.CENTER_VERTICAL);
 		topBar.setPadding(V.dp(12), V.dp(8), V.dp(12), V.dp(8));
 
-		// Filter chips in a horizontal scroll view
+		// Filter tabs — underline style matching the web
 		HorizontalScrollView filterScroll=new HorizontalScrollView(getActivity());
 		filterScroll.setHorizontalScrollBarEnabled(false);
 		filterScroll.setClipToPadding(false);
 
-		// Wrap filterContainer in a faint purple pill background
-		LinearLayout filterWrapper=new LinearLayout(getActivity());
-		filterWrapper.setOrientation(LinearLayout.HORIZONTAL);
-		filterWrapper.setGravity(Gravity.CENTER_VERTICAL);
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		GradientDrawable filterWrapperBg=new GradientDrawable();
-		filterWrapperBg.setShape(GradientDrawable.RECTANGLE);
-		filterWrapperBg.setCornerRadius(V.dp(10));
-		filterWrapperBg.setColor((primaryColor & 0x00FFFFFF) | 0x14000000); // 8% opacity primary
-		filterWrapper.setBackground(filterWrapperBg);
-		filterWrapper.setPadding(V.dp(3), V.dp(3), V.dp(3), V.dp(3));
-
 		filterContainer=new LinearLayout(getActivity());
 		filterContainer.setOrientation(LinearLayout.HORIZONTAL);
-		filterContainer.setGravity(Gravity.CENTER_VERTICAL);
+		filterContainer.setGravity(Gravity.BOTTOM);
 
 		filterChips=new View[FILTERS.length];
 		for(int i=0; i<FILTERS.length; i++){
 			filterChips[i]=createFilterChip(FILTER_LABELS[i], i);
 			LinearLayout.LayoutParams chipLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-			if(i>0) chipLp.leftMargin=V.dp(2);
+			if(i>0) chipLp.leftMargin=V.dp(16);
 			filterContainer.addView(filterChips[i], chipLp);
 		}
 		updateFilterChipStyles();
 
-		filterWrapper.addView(filterContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-		filterScroll.addView(filterWrapper, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		filterScroll.addView(filterContainer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		topBar.addView(filterScroll, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
 		// "New Event" button
@@ -176,7 +168,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		GradientDrawable newEventBg=new GradientDrawable();
 		newEventBg.setShape(GradientDrawable.RECTANGLE);
 		newEventBg.setCornerRadius(V.dp(10));
-		newEventBg.setColor(primaryColor);
+		newEventBg.setColor(COLOR_BLURPLE);
 		newEventBtn.setBackground(newEventBg);
 		newEventBtn.setOnClickListener(v->{
 			Bundle args=new Bundle();
@@ -187,14 +179,20 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		neLp.leftMargin=V.dp(8);
 		topBar.addView(newEventBtn, neLp);
 
-		// View mode toggle
+		// View mode toggle — segmented control style
 		LinearLayout viewToggle=new LinearLayout(getActivity());
 		viewToggle.setOrientation(LinearLayout.HORIZONTAL);
 		viewToggle.setGravity(Gravity.CENTER);
+		viewToggle.setClipToOutline(true);
+		viewToggle.setOutlineProvider(new ViewOutlineProvider(){
+			@Override public void getOutline(View view, android.graphics.Outline outline){
+				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(8));
+			}
+		});
 		GradientDrawable toggleBg=new GradientDrawable();
 		toggleBg.setShape(GradientDrawable.RECTANGLE);
 		toggleBg.setCornerRadius(V.dp(8));
-		toggleBg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		toggleBg.setStroke(V.dp(1), COLOR_BLURPLE_MUTED);
 		viewToggle.setBackground(toggleBg);
 
 		listToggle=createViewToggleButton("List", true);
@@ -298,13 +296,22 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	// ==================== Filter Chips ====================
 
 	private View createFilterChip(String label, int index){
+		// Each tab is a FrameLayout containing the text + a bottom underline indicator
+		android.widget.FrameLayout tab=new android.widget.FrameLayout(getActivity());
 		TextView chip=new TextView(getActivity());
 		chip.setText(label);
-		chip.setTextSize(13);
-		chip.setTypeface(null, Typeface.BOLD);
+		chip.setTextSize(14);
 		chip.setGravity(Gravity.CENTER);
-		chip.setPadding(V.dp(14), V.dp(7), V.dp(14), V.dp(7));
-		chip.setOnClickListener(v->{
+		chip.setPadding(V.dp(4), V.dp(4), V.dp(4), V.dp(12));
+		tab.addView(chip, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		// Bottom underline indicator
+		View indicator=new View(getActivity());
+		indicator.setTag("indicator");
+		indicator.setBackgroundColor(COLOR_BLURPLE);
+		android.widget.FrameLayout.LayoutParams indicatorLp=new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(2));
+		indicatorLp.gravity=Gravity.BOTTOM;
+		tab.addView(indicator, indicatorLp);
+		tab.setOnClickListener(v->{
 			if(currentFilter.equals(FILTERS[index])) return;
 			currentFilter=FILTERS[index];
 			updateFilterChipStyles();
@@ -315,28 +322,24 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 				loadData();
 			}
 		});
-		return chip;
+		return tab;
 	}
 
 	private void updateFilterChipStyles(){
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
 		for(int i=0; i<filterChips.length; i++){
-			TextView chip=(TextView)filterChips[i];
+			android.widget.FrameLayout tab=(android.widget.FrameLayout)filterChips[i];
+			TextView chip=(TextView)tab.getChildAt(0);
+			View indicator=tab.findViewWithTag("indicator");
 			boolean selected=currentFilter.equals(FILTERS[i]);
-			GradientDrawable bg=new GradientDrawable();
-			bg.setShape(GradientDrawable.RECTANGLE);
-			bg.setCornerRadius(V.dp(20));
 			if(selected){
-				bg.setColor(primaryColor);
-				chip.setTextColor(0xFFFFFFFF);
-				chip.setElevation(V.dp(1));
+				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+				chip.setTypeface(null, Typeface.BOLD);
+				indicator.setVisibility(View.VISIBLE);
 			}else{
-				bg.setColor(0x00000000);
-				// No border stroke for inactive chips
 				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-				chip.setElevation(0);
+				chip.setTypeface(null, Typeface.NORMAL);
+				indicator.setVisibility(View.INVISIBLE);
 			}
-			chip.setBackground(bg);
 		}
 	}
 
@@ -374,7 +377,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	}
 
 	private void updateViewToggleStyles(){
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		int surfaceColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface);
 		// List button
 		{
 			TextView btn=(TextView)listToggle;
@@ -383,11 +386,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			float[] radii={V.dp(7), V.dp(7), 0, 0, 0, 0, V.dp(7), V.dp(7)};
 			bg.setCornerRadii(radii);
 			if(!calendarMode){
-				bg.setColor(primaryColor);
+				bg.setColor(COLOR_BLURPLE);
 				btn.setTextColor(0xFFFFFFFF);
 			}else{
 				bg.setColor(0x00000000);
-				btn.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+				btn.setTextColor(COLOR_BLURPLE_MUTED);
 			}
 			btn.setBackground(bg);
 		}
@@ -399,11 +402,11 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			float[] radii={0, 0, V.dp(7), V.dp(7), V.dp(7), V.dp(7), 0, 0};
 			bg.setCornerRadii(radii);
 			if(calendarMode){
-				bg.setColor(primaryColor);
+				bg.setColor(COLOR_BLURPLE);
 				btn.setTextColor(0xFFFFFFFF);
 			}else{
 				bg.setColor(0x00000000);
-				btn.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+				btn.setTextColor(COLOR_BLURPLE_MUTED);
 			}
 			btn.setBackground(bg);
 		}
@@ -438,7 +441,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		prevBtn.setText("<");
 		prevBtn.setTextSize(20);
 		prevBtn.setTypeface(null, Typeface.BOLD);
-		prevBtn.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
+		prevBtn.setTextColor(COLOR_BLURPLE_MID);
 		prevBtn.setGravity(Gravity.CENTER);
 		prevBtn.setPadding(V.dp(12), V.dp(4), V.dp(12), V.dp(4));
 		prevBtn.setOnClickListener(v->{
@@ -463,7 +466,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		nextBtn.setText(">");
 		nextBtn.setTextSize(20);
 		nextBtn.setTypeface(null, Typeface.BOLD);
-		nextBtn.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
+		nextBtn.setTextColor(COLOR_BLURPLE_MID);
 		nextBtn.setGravity(Gravity.CENTER);
 		nextBtn.setPadding(V.dp(12), V.dp(4), V.dp(12), V.dp(4));
 		nextBtn.setOnClickListener(v->{
@@ -491,11 +494,13 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		DayOfWeek[] days={DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY};
 		for(DayOfWeek dow : days){
 			TextView tv=new TextView(getActivity());
-			tv.setText(dow.getDisplayName(TextStyle.SHORT, Locale.getDefault()));
+			// Single letter (M T W T F S S) matching web's 11px uppercase letter-spaced headers
+			tv.setText(dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()).toUpperCase(Locale.ROOT));
 			tv.setTextSize(11);
 			tv.setTypeface(null, Typeface.BOLD);
-			tv.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+			tv.setTextColor(COLOR_BLURPLE_MUTED);
 			tv.setGravity(Gravity.CENTER);
+			tv.setLetterSpacing(0.06f);
 			weekdayRow.addView(tv, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 		}
 		calendarContainer.addView(weekdayRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -536,9 +541,17 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 			for(int col=0; col<7; col++){
 				int globalIndex=row*7+col;
 				if(globalIndex<(startDow-1) || dayCounter>daysInMonth){
-					// Empty cell
+					// Empty cell (faint border to maintain grid structure)
 					View empty=new View(getActivity());
-					rowLayout.addView(empty, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
+					GradientDrawable emptyBg=new GradientDrawable();
+					emptyBg.setShape(GradientDrawable.RECTANGLE);
+					emptyBg.setCornerRadius(V.dp(6));
+					emptyBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+					empty.setBackground(emptyBg);
+					empty.setAlpha(0.35f);
+					LinearLayout.LayoutParams emptyLp=new LinearLayout.LayoutParams(0, V.dp(80), 1f);
+					emptyLp.setMargins(V.dp(1), V.dp(1), V.dp(1), V.dp(1));
+					rowLayout.addView(empty, emptyLp);
 				}else{
 					int day=dayCounter;
 					LocalDate cellDate=displayedMonth.atDay(day);
@@ -548,75 +561,71 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 
 					LinearLayout cell=new LinearLayout(getActivity());
 					cell.setOrientation(LinearLayout.VERTICAL);
-					cell.setGravity(Gravity.CENTER_HORIZONTAL);
-					cell.setPadding(V.dp(2), V.dp(4), V.dp(2), V.dp(2));
+					cell.setPadding(V.dp(4), V.dp(4), V.dp(4), V.dp(4));
 
-					// Background for today/selected
 					GradientDrawable cellBg=new GradientDrawable();
 					cellBg.setShape(GradientDrawable.RECTANGLE);
-					cellBg.setCornerRadius(V.dp(8));
-					int cellPrimaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-					if(isSelected){
-						cellBg.setColor((cellPrimaryColor & 0x00FFFFFF) | 0x33000000);
+					cellBg.setCornerRadius(V.dp(6));
+					if(isSelected && isToday){
+						cellBg.setColor(COLOR_BLURPLE_FAINT);
+						cellBg.setStroke(V.dp(2), COLOR_BLURPLE);
+					}else if(isSelected){
+						cellBg.setColor(COLOR_BLURPLE_FAINT);
+						cellBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 					}else if(isToday){
-						cellBg.setStroke(V.dp(2), cellPrimaryColor);
+						cellBg.setColor(COLOR_BLURPLE_FAINT);
+						cellBg.setStroke(V.dp(2), COLOR_BLURPLE_MID);
+					}else{
+						cellBg.setColor(0x00000000);
+						cellBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 					}
 					cell.setBackground(cellBg);
 
-					// Day number
+					// Day number \u2014 12sp, bold for today
 					TextView dayTv=new TextView(getActivity());
 					dayTv.setText(String.valueOf(day));
-					dayTv.setTextSize(13);
+					dayTv.setTextSize(12);
 					dayTv.setGravity(Gravity.CENTER);
 					if(isToday){
 						dayTv.setTypeface(null, Typeface.BOLD);
-						dayTv.setTextColor(cellPrimaryColor);
+						dayTv.setTextColor(COLOR_BLURPLE_MID);
 					}else{
 						dayTv.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 					}
 					cell.addView(dayTv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-					// Event title pills (instead of dots)
+					// Event label pills \u2014 9sp full-width text matching web's event dots
 					if(dayEvents!=null && !dayEvents.isEmpty()){
-						LinearLayout pillsContainer=new LinearLayout(getActivity());
-						pillsContainer.setOrientation(LinearLayout.VERTICAL);
-						pillsContainer.setGravity(Gravity.CENTER_HORIZONTAL);
-						int pillCount=Math.min(dayEvents.size(), 2);
+						int pillCount=Math.min(dayEvents.size(), 3);
 						for(int d=0; d<pillCount; d++){
 							Event evt=dayEvents.get(d);
 							TextView pill=new TextView(getActivity());
-							String pillTitle=evt.title!=null ? evt.title : "";
-							if(pillTitle.length()>6) pillTitle=pillTitle.substring(0, 6)+"\u2026";
-							pill.setText(pillTitle);
-							pill.setTextSize(8);
+							pill.setText(evt.title!=null ? evt.title : "");
+							pill.setTextSize(9);
 							pill.setTypeface(null, Typeface.BOLD);
-							int dotColor=getEventDotColor(evt);
-							pill.setTextColor(dotColor);
-							pill.setGravity(Gravity.CENTER);
-							pill.setPadding(V.dp(1), 0, V.dp(1), 0);
 							pill.setSingleLine(true);
+							pill.setEllipsize(TextUtils.TruncateAt.END);
+							int dotColor=getEventDotColor(evt);
+							pill.setTextColor(0xFFFFFFFF);
+							pill.setPadding(V.dp(3), V.dp(1), V.dp(3), V.dp(1));
 							GradientDrawable pillBg=new GradientDrawable();
 							pillBg.setShape(GradientDrawable.RECTANGLE);
 							pillBg.setCornerRadius(V.dp(3));
-							pillBg.setColor((dotColor & 0x00FFFFFF) | 0x33000000); // 20% opacity
+							pillBg.setColor(dotColor);
 							pill.setBackground(pillBg);
-							LinearLayout.LayoutParams pillLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-							if(d>0) pillLp.topMargin=V.dp(1);
-							pillsContainer.addView(pill, pillLp);
+							LinearLayout.LayoutParams pillLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+							pillLp.topMargin=V.dp(2);
+							cell.addView(pill, pillLp);
 						}
-						if(dayEvents.size()>2){
+						if(dayEvents.size()>3){
 							TextView moreText=new TextView(getActivity());
-							moreText.setText("+"+(dayEvents.size()-2));
-							moreText.setTextSize(7);
-							moreText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-							moreText.setGravity(Gravity.CENTER);
+							moreText.setText("+"+(dayEvents.size()-3));
+							moreText.setTextSize(8);
+							moreText.setTextColor(COLOR_BLURPLE_MUTED);
 							LinearLayout.LayoutParams moreLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 							moreLp.topMargin=V.dp(1);
-							pillsContainer.addView(moreText, moreLp);
+							cell.addView(moreText, moreLp);
 						}
-						LinearLayout.LayoutParams pillsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-						pillsLp.topMargin=V.dp(2);
-						cell.addView(pillsContainer, pillsLp);
 					}
 
 					cell.setOnClickListener(v->{
@@ -625,7 +634,9 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 						updateSelectedDayEvents();
 					});
 
-					rowLayout.addView(cell, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
+					LinearLayout.LayoutParams cellLp=new LinearLayout.LayoutParams(0, V.dp(80), 1f);
+					cellLp.setMargins(V.dp(1), V.dp(1), V.dp(1), V.dp(1));
+					rowLayout.addView(cell, cellLp);
 					dayCounter++;
 				}
 			}
@@ -637,7 +648,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	private int getEventDotColor(Event event){
 		if("going".equals(event.rsvp)) return COLOR_GOING;
 		if("interested".equals(event.rsvp)) return COLOR_INTERESTED;
-		return UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
+		return COLOR_BLURPLE;
 	}
 
 	// ==================== Selected Day Section ====================
@@ -947,14 +958,17 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	private void styleChip(View chip, TextView text, boolean active, int activeColor){
 		GradientDrawable bg=new GradientDrawable();
 		bg.setShape(GradientDrawable.RECTANGLE);
-		bg.setCornerRadius(V.dp(8));
+		bg.setCornerRadius(V.dp(6));
 		if(active){
 			bg.setColor(activeColor);
+			bg.setStroke(1, activeColor);
 			text.setTextColor(0xFFFFFFFF);
+			text.setTypeface(null, Typeface.BOLD);
 		}else{
 			bg.setColor(0x00000000);
-			bg.setStroke(V.dp(1), UiUtils.getThemeColor(chip.getContext(), R.attr.colorM3Outline));
-			text.setTextColor(UiUtils.getThemeColor(chip.getContext(), android.R.attr.textColorPrimary));
+			bg.setStroke(1, UiUtils.getThemeColor(chip.getContext(), R.attr.colorM3OutlineVariant));
+			text.setTextColor(UiUtils.getThemeColor(chip.getContext(), android.R.attr.textColorSecondary));
+			text.setTypeface(null, Typeface.NORMAL);
 		}
 		chip.setBackground(bg);
 	}
@@ -1045,7 +1059,7 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 				relativeTimeText.setText(relative);
 				relativeTimeText.setVisibility(View.VISIBLE);
 				if("Now".equals(relative)){
-					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary));
+					relativeTimeText.setTextColor(COLOR_CANCELLED);
 				}else{
 					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), android.R.attr.textColorSecondary));
 				}
@@ -1155,13 +1169,12 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		cardBg.setShape(GradientDrawable.RECTANGLE);
 		cardBg.setCornerRadius(V.dp(12));
 		cardBg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface));
-		cardBg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		cardBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 		card.setBackground(cardBg);
-		card.setElevation(V.dp(1));
 		card.setClipToOutline(true);
 		card.setOutlineProvider(new ViewOutlineProvider(){
 			@Override
-			public void getOutline(View view, Outline outline){
+			public void getOutline(View view, android.graphics.Outline outline){
 				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(12));
 			}
 		});
@@ -1182,35 +1195,35 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		LinearLayout topRow=new LinearLayout(getActivity());
 		topRow.setOrientation(LinearLayout.HORIZONTAL);
 
-		// Date badge
+		// Date badge — blurple faint pill matching web's date sidebar
 		LinearLayout dateBadge=new LinearLayout(getActivity());
 		dateBadge.setTag("dateBadge");
 		dateBadge.setOrientation(LinearLayout.VERTICAL);
 		dateBadge.setGravity(Gravity.CENTER);
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
 		GradientDrawable dateBg=new GradientDrawable();
 		dateBg.setShape(GradientDrawable.RECTANGLE);
 		dateBg.setCornerRadius(V.dp(10));
-		dateBg.setColor((primaryColor & 0x00FFFFFF) | 0x1A000000); // 10% opacity of primary
+		dateBg.setColor(COLOR_BLURPLE_FAINT);
+		dateBg.setStroke(1, COLOR_BLURPLE_MID & 0x33FFFFFF | 0x33000000);
 		dateBadge.setBackground(dateBg);
-		dateBadge.setPadding(V.dp(2), V.dp(6), V.dp(2), V.dp(6));
-		LinearLayout.LayoutParams dateLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(48));
+		dateBadge.setPadding(V.dp(4), V.dp(6), V.dp(4), V.dp(6));
+		LinearLayout.LayoutParams dateLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(52));
 		dateLp.rightMargin=V.dp(14);
 
 		TextView monthText=new TextView(getActivity());
 		monthText.setTag("dateBadgeMonth");
 		monthText.setTextSize(10);
 		monthText.setTypeface(null, Typeface.BOLD);
-		monthText.setTextColor(primaryColor);
+		monthText.setTextColor(COLOR_BLURPLE_MUTED);
 		monthText.setGravity(Gravity.CENTER);
-		monthText.setLetterSpacing(0.06f);
+		monthText.setLetterSpacing(0.12f);
 		dateBadge.addView(monthText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		TextView dayText=new TextView(getActivity());
 		dayText.setTag("dateBadgeDay");
-		dayText.setTextSize(18);
-		dayText.setTypeface(null, Typeface.BOLD);
-		dayText.setTextColor(primaryColor);
+		dayText.setTextSize(22);
+		dayText.setTypeface(android.graphics.Typeface.SERIF, Typeface.BOLD);
+		dayText.setTextColor(COLOR_BLURPLE);
 		dayText.setGravity(Gravity.CENTER);
 		dayText.setIncludeFontPadding(false);
 		dateBadge.addView(dayText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
