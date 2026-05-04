@@ -308,6 +308,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
 		feedFragment.onApplyWindowInsets(topOnly);
 		notificationsFragment.onApplyWindowInsets(topOnly);
+		eventsFragment.onApplyWindowInsets(topOnly);
 	}
 
 	// Public API used by HomeTimelineFragment and AccountSwitcherSheet
