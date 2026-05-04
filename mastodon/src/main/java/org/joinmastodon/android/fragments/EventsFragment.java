@@ -108,6 +108,13 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 		displayedMonth=YearMonth.now();
 	}
 
+	@Override
+	public void onHiddenChanged(boolean hidden){
+		super.onHiddenChanged(hidden);
+		if(!hidden && !loaded && !dataLoading)
+			loadData();
+	}
+
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
