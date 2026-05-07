@@ -138,6 +138,23 @@ public class MainActivity extends FragmentStackActivity{
 			}
 		}
 
+		if(path != null && path.startsWith("/kalendar")){
+			AccountSession kalSession;
+			if(accountID==null)
+				kalSession=AccountSessionManager.getInstance().getLastActiveAccount();
+			else
+				kalSession=AccountSessionManager.get(accountID);
+			if(kalSession==null || !kalSession.activated)
+				return;
+			Bundle args=new Bundle();
+			args.putString("account", kalSession.getID());
+			HomeFragment hf=new HomeFragment();
+			hf.setArguments(args);
+			showFragmentClearingBackStack(hf);
+			getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_events));
+			return;
+		}
+
 		AccountSession session;
 		if(accountID==null)
 			session=AccountSessionManager.getInstance().getLastActiveAccount();
