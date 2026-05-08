@@ -809,6 +809,14 @@ public class UiUtils{
 		}
 		Uri uri=Uri.parse(url);
 		if(accountID!=null && "https".equals(uri.getScheme()) && !Objects.equals(url, objectURL)){
+			String uriPath=uri.getPath();
+			if(AccountSessionManager.getInstance().getAccount(accountID).domain.equalsIgnoreCase(uri.getAuthority())
+					&& uriPath!=null
+					&& (uriPath.equals("/home") || uriPath.equals("/huddle") || uriPath.startsWith("/kalendar") || uriPath.equals("/kommons"))
+					&& context instanceof MainActivity ma){
+				ma.handleURL(uri, accountID);
+				return;
+			}
 			List<String> path=uri.getPathSegments();
 			if(AccountSessionManager.getInstance().getAccount(accountID).domain.equalsIgnoreCase(uri.getAuthority()) && path.size()==2 && path.get(0).matches("^@[a-zA-Z0-9_]+$") && path.get(1).matches("^[0-9]+$")){
 				// Match URLs like https://mastodon.social/@Gargron/108132679274083591
