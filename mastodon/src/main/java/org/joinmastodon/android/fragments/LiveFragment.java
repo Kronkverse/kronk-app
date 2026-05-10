@@ -244,6 +244,7 @@ public class LiveFragment extends Fragment{
 			+"&config.hideConferenceTimer=true"
 			+"&config.disableInviteFunctions=true"
 			+"&config.enableClosePage=false"
+			+"&config.disableLobbyMode=true"
 			+"&userInfo.displayName="+encodedUsername;
 
 		webView.loadUrl(jitsiUrl);
