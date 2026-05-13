@@ -15,6 +15,12 @@
 	<string name="notifications">Notifications</string>
 
 	<string name="user_followed_you">%s followed you</string>
+	<string name="user_nudged_you">%s nudged you</string>
+	<string name="nudge">Nudge</string>
+	<string name="nudged">Nudged!</string>
+	<string name="nudge_waiting">Waiting…</string>
+	<string name="nudge_back">Nudge back</string>
+	<string name="nudge_streak">%d nudges exchanged</string>
 	<string name="user_sent_follow_request">%s sent you a follow request</string>
 	<string name="user_favorited">%s frothed:</string>
 	<string name="notification_boosted">%s boosted:</string>
