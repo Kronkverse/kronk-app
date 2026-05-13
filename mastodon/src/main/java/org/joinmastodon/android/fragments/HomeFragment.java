@@ -131,6 +131,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		tabBar.setListeners(this::onTabSelected, this::onTabLongClick);
 		tabBarWrap=content.findViewById(R.id.tabbar_wrap);
 
+		View kosmosFab=content.findViewById(R.id.kosmos_fab);
+		if(kosmosFab!=null){
+			kosmosFab.setOnClickListener(v->new org.joinmastodon.android.ui.sheets.KosmosSheet(getActivity())
+					.setOnSpaceSelectedListener(space->onKosmosSpaceSelected(space))
+					.show());
+		}
+
 		if(savedInstanceState==null){
 			getChildFragmentManager().beginTransaction()
 					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
@@ -283,6 +290,17 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		WindowInsets topOnlyInsets=insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
 		homeTimelineFragment.onApplyWindowInsets(topOnlyInsets);
 		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
+	}
+
+	private void onKosmosSpaceSelected(org.joinmastodon.android.model.KronkSpace space){
+		switch(space.id){
+			case "home" -> { tabBar.selectTab(R.id.tab_home); onTabSelected(R.id.tab_home); }
+			case "huddle" -> { tabBar.selectTab(R.id.tab_live); onTabSelected(R.id.tab_live); }
+			case "kalendar" -> { tabBar.selectTab(R.id.tab_events); onTabSelected(R.id.tab_events); }
+			default -> android.widget.Toast.makeText(getActivity(),
+					getString(R.string.space_coming_soon, getActivity().getString(space.nameRes)),
+					android.widget.Toast.LENGTH_SHORT).show();
+		}
 	}
 
 	private Fragment fragmentForTab(@IdRes int tab){

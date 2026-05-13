@@ -118,4 +118,20 @@
 		</FrameLayout>
 	</org.joinmastodon.android.ui.views.TabBar>
 
+	<!-- Kosmos FAB — floats above the centre of the tab bar -->
+	<ImageView
+		android:id="@+id/kosmos_fab"
+		android:layout_width="56dp"
+		android:layout_height="56dp"
+		android:layout_gravity="top|center_horizontal"
+		android:layout_marginTop="-28dp"
+		android:src="@drawable/ic_kosmos_24px"
+		android:background="@drawable/bg_kosmos_fab"
+		android:elevation="8dp"
+		android:padding="14dp"
+		android:scaleType="centerInside"
+		android:contentDescription="@string/kosmos_title"
+		android:clickable="true"
+		android:focusable="true"/>
+
 </FrameLayout>
