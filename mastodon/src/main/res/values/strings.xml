@@ -926,6 +926,7 @@ End-to-end encrypted</string>
 	<string name="user_quoted_post">%s quoted your post:</string>
 	<string name="user_edited_quoted_post">%s edited a post you quoted</string>
 	<string name="notification_type_quote">Quotes</string>
+	<string name="notification_type_nudge">Nudges</string>
 	<string name="create_quote">Quote</string>
 	<string name="cannot_quote_post">You are not allowed to quote this post</string>
 	<string name="cannot_quote_post_followers_only">Only followers can quote this post</string>
