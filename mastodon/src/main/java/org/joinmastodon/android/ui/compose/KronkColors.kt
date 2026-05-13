@@ -22,4 +22,6 @@ object KronkColors {
 
     val TabBarBg = Color(0x881A0E40)
     val ComposeBg = Color(0x441A0E40)
+
+    val SheetBg = Color(0xFF1A1025)  // deep dark purple, sheet background
 }
