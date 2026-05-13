@@ -92,6 +92,7 @@ public class NotificationHeaderStatusDisplayItem extends StatusDisplayItem{
 					case FAVORITE -> R.string.user_favorited;
 					case UPDATE -> R.string.user_edited_post;
 					case QUOTED_UPDATE -> R.string.user_edited_quoted_post;
+					case NUDGE -> R.string.user_nudged_you;
 					default -> throw new IllegalStateException("Unexpected value: "+notification.notification.type);
 				}, "{{name}}");
 			}
@@ -205,12 +206,14 @@ public class NotificationHeaderStatusDisplayItem extends StatusDisplayItem{
 				case FOLLOW, FOLLOW_REQUEST -> R.drawable.ic_person_add_fill1_24px;
 				case POLL -> R.drawable.ic_insert_chart_fill1_24px;
 				case UPDATE, QUOTED_UPDATE -> R.drawable.ic_edit_24px;
+				case NUDGE -> R.drawable.ic_waving_hand_24px;
 				default -> throw new IllegalStateException("Unexpected value: "+item.notification.notification.type);
 			});
 			icon.setImageTintList(ColorStateList.valueOf(UiUtils.getThemeColor(item.context, switch(item.notification.notification.type){
 				case FAVORITE -> R.attr.colorFavorite;
 				case REBLOG -> R.attr.colorBoost;
 				case FOLLOW, FOLLOW_REQUEST, UPDATE -> R.attr.colorM3Primary;
+				case NUDGE -> R.attr.colorM3Primary;
 				default -> R.attr.colorM3Outline;
 			})));
 			itemView.setPadding(itemView.getPaddingLeft(), itemView.getPaddingTop(), itemView.getPaddingRight(), item.notification.status==null ? V.dp(12) : 0);

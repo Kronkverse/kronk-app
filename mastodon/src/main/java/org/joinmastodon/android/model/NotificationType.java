@@ -28,7 +28,9 @@ public enum NotificationType{
 	@SerializedName("quote")
 	QUOTE,
 	@SerializedName("quoted_update")
-	QUOTED_UPDATE;
+	QUOTED_UPDATE,
+	@SerializedName("nudge")
+	NUDGE;
 
 	public boolean canBeGrouped(){
 		return this==REBLOG || this==FAVORITE || this==FOLLOW;
