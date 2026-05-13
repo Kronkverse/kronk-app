@@ -15,7 +15,7 @@ jobs:
     if: |
       github.event.issue.pull_request &&
       github.event.issue.state == 'open' &&
-      trim(github.event.comment.body) == '/build-apk'
+      contains(github.event.comment.body, '/build-apk')
 
     steps:
       - name: Get PR branch
