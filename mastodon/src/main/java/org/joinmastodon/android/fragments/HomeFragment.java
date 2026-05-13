@@ -32,11 +32,12 @@ import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
+import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
 import org.joinmastodon.android.ui.utils.UiUtils;
-import org.joinmastodon.android.ui.views.SwipeInterceptFrameLayout;
 import org.joinmastodon.android.ui.views.TabBar;
 import org.joinmastodon.android.utils.ObjectIdComparator;
+import org.parceler.Parcels;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -50,28 +51,27 @@ import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
 import me.grishka.appkit.fragments.LoaderFragment;
+import me.grishka.appkit.imageloader.ViewImageLoader;
+import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 import me.grishka.appkit.views.FragmentRootLinearLayout;
 
 public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment{
 	private FragmentRootLinearLayout content;
-	private SwipeInterceptFrameLayout fragmentContainer;
 	private HomeTimelineFragment homeTimelineFragment;
 	private NotificationsListFragment notificationsFragment;
 	private LiveFragment liveFragment;
+	private ProfileFragment profileFragment;
 	private EventsFragment eventsFragment;
 	private TabBar tabBar;
 	private View tabBarWrap;
+	private ImageView tabBarAvatar;
 	@IdRes
 	private int currentTab=R.id.tab_home;
 	private int previousTab=R.id.tab_home;
 	private boolean showingNotifications;
-	private boolean animating;
 
 	private String accountID;
-
-	// Tab order for swipe navigation
-	private static final int[] TAB_ORDER={R.id.tab_live, R.id.tab_home, R.id.tab_events};
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -95,6 +95,11 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			notificationsFragment.setArguments(args);
 			eventsFragment=new EventsFragment();
 			eventsFragment.setArguments(new Bundle(args));
+			args=new Bundle(args);
+			args.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.getInstance().getAccount(accountID).self));
+			args.putBoolean("noAutoLoad", true);
+			profileFragment=new ProfileFragment();
+			profileFragment.setArguments(args);
 		}
 
 		E.register(this);
@@ -112,18 +117,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		content=new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		fragmentContainer=new SwipeInterceptFrameLayout(getActivity());
+		FrameLayout fragmentContainer=new FrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
-		fragmentContainer.setOnSwipeListener(new SwipeInterceptFrameLayout.OnSwipeListener(){
-			@Override
-			public void onSwipeLeft(){
-				swipeToNextTab();
-			}
-			@Override
-			public void onSwipeRight(){
-				swipeToPreviousTab();
-			}
-		});
 		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
 		inflater.inflate(R.layout.tab_bar, content);
@@ -131,12 +126,19 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		tabBar.setListeners(this::onTabSelected, this::onTabLongClick);
 		tabBarWrap=content.findViewById(R.id.tabbar_wrap);
 
+		tabBarAvatar=tabBar.findViewById(R.id.tab_profile_ava);
+		tabBarAvatar.setOutlineProvider(OutlineProviders.OVAL);
+		tabBarAvatar.setClipToOutline(true);
+		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
+		ViewImageLoader.loadWithoutAnimation(tabBarAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(24), V.dp(24)));
+
 		if(savedInstanceState==null){
 			getChildFragmentManager().beginTransaction()
 					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, liveFragment).hide(liveFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
 					.commit();
 
 			String defaultTab=getArguments().getString("tab");
@@ -156,76 +158,6 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		return content;
 	}
 
-	private int currentTabIndex(){
-		for(int i=0; i<TAB_ORDER.length; i++){
-			if(TAB_ORDER[i]==currentTab) return i;
-		}
-		return 1;
-	}
-
-	private int tabIndex(@IdRes int tab){
-		for(int i=0; i<TAB_ORDER.length; i++){
-			if(TAB_ORDER[i]==tab) return i;
-		}
-		return 1;
-	}
-
-	private void swipeToNextTab(){
-		if(animating) return;
-		if(showingNotifications){
-			hideNotifications();
-			return;
-		}
-		int idx=currentTabIndex();
-		if(idx<TAB_ORDER.length-1){
-			int nextTab=TAB_ORDER[idx+1];
-			tabBar.selectTab(nextTab);
-			switchTabAnimated(nextTab, true);
-		}
-	}
-
-	private void swipeToPreviousTab(){
-		if(animating) return;
-		if(showingNotifications){
-			hideNotifications();
-			return;
-		}
-		int idx=currentTabIndex();
-		if(idx>0){
-			int prevTab=TAB_ORDER[idx-1];
-			tabBar.selectTab(prevTab);
-			switchTabAnimated(prevTab, false);
-		}
-	}
-
-	private void switchTabAnimated(@IdRes int newTab, boolean slideLeft){
-		Fragment oldFrag=fragmentForTab(currentTab);
-		Fragment newFrag=fragmentForTab(newTab);
-		View outgoing=oldFrag.getView();
-		View incoming=newFrag.getView();
-
-		if(outgoing==null || incoming==null){
-			// Fallback to instant switch
-			onTabSelected(newTab);
-			return;
-		}
-
-		animating=true;
-		// Show new fragment without hiding old yet (both visible during animation)
-		getChildFragmentManager().beginTransaction().show(newFrag).commit();
-		getChildFragmentManager().executePendingTransactions();
-
-		maybeTriggerLoading(newFrag);
-
-		fragmentContainer.animateSlide(outgoing, incoming, slideLeft, ()->{
-			// After animation, properly hide old fragment
-			getChildFragmentManager().beginTransaction().hide(oldFrag).commit();
-			currentTab=newTab;
-			animating=false;
-			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-		});
-	}
-
 	@Override
 	public void onViewStateRestored(Bundle savedInstanceState){
 		super.onViewStateRestored(savedInstanceState);
@@ -235,6 +167,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		liveFragment=(LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "liveFragment");
 		notificationsFragment=(NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
 		eventsFragment=(EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
+		profileFragment=(ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
 		currentTab=savedInstanceState.getInt("selectedTab");
 		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
 		tabBar.selectTab(currentTab);
@@ -244,6 +177,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				.hide(liveFragment)
 				.hide(notificationsFragment)
 				.hide(eventsFragment)
+				.hide(profileFragment)
 				.show(showingNotifications ? notificationsFragment : current)
 				.commit();
 		if(showingNotifications)
@@ -283,6 +217,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		WindowInsets topOnlyInsets=insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
 		homeTimelineFragment.onApplyWindowInsets(topOnlyInsets);
 		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
+		profileFragment.onApplyWindowInsets(topOnlyInsets);
+		eventsFragment.onApplyWindowInsets(topOnlyInsets);
 	}
 
 	private Fragment fragmentForTab(@IdRes int tab){
@@ -290,6 +226,8 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			return liveFragment;
 		}else if(tab==R.id.tab_events){
 			return eventsFragment;
+		}else if(tab==R.id.tab_profile){
+			return profileFragment;
 		}
 		return homeTimelineFragment;
 	}
@@ -327,9 +265,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void onTabSelected(@IdRes int tab){
-		if(animating) return;
 		Fragment newFragment=fragmentForTab(tab);
 		if(showingNotifications){
+			// Leaving notifications overlay — hide notifications, show the new tab
 			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
 			showingNotifications=false;
 			maybeTriggerLoading(newFragment);
@@ -342,9 +280,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				scrollable.scrollToTop();
 			return;
 		}
-		// Animate tab tap too
-		boolean slideLeft=tabIndex(tab)>tabIndex(currentTab);
-		switchTabAnimated(tab, slideLeft);
+		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(newFragment).commit();
+		maybeTriggerLoading(newFragment);
+		currentTab=tab;
+		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
 	}
 
 	private void maybeTriggerLoading(Fragment newFragment){
@@ -353,9 +292,6 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				lf.loadData();
 		}else if(newFragment instanceof LiveFragment){
 			((LiveFragment) newFragment).loadData();
-		}else if(newFragment instanceof EventsFragment ef){
-			if(!ef.loaded && !ef.dataLoading)
-				ef.loadData();
 		}
 		if(newFragment instanceof NotificationsListFragment){
 			NotificationManager nm=getActivity().getSystemService(NotificationManager.class);
@@ -364,12 +300,27 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private boolean onTabLongClick(@IdRes int tab){
+		if(tab==R.id.tab_profile){
+			ArrayList<String> options=new ArrayList<>();
+			for(AccountSession session:AccountSessionManager.getInstance().getLoggedInAccounts()){
+				options.add(session.self.displayName+"\n("+session.self.username+"@"+session.domain+")");
+			}
+			new AccountSwitcherSheet(getActivity(), this).show();
+			return true;
+		}
 		if(tab==R.id.tab_home && BuildConfig.DEBUG){
 			Bundle args=new Bundle();
 			args.putString("account", accountID);
 			Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
 		}
 		return false;
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		// Forward to child fragments — Android does not do this for nested fragments automatically
+		if(liveFragment!=null) liveFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
 	}
 
 	@Override
@@ -381,6 +332,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		getChildFragmentManager().putFragment(outState, "liveFragment", liveFragment);
 		getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
 		getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
+		getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
 	}
 
 	@Override
