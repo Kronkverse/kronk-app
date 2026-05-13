@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
@@ -16,12 +17,11 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import me.grishka.appkit.Nav
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
-import org.joinmastodon.android.ui.compose.KronkHomeScreen
+import org.joinmastodon.android.ui.compose.KosmosSheet
 import org.joinmastodon.android.ui.compose.KronkSpace
-import org.parceler.Parcels
+import org.joinmastodon.android.ui.compose.SpaceUsageTracker
 
 // FragmentStackActivity extends android.app.Activity (not ComponentActivity), so no
 // ViewTree owners are provided on the window hierarchy. This fragment provides all three.
@@ -36,7 +36,15 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
     private val savedStateController = SavedStateRegistryController.create(this)
     override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
 
-    private val accountId: String get() = arguments?.getString("account") ?: ""
+    private val accountId: String get() = arguments?.getString(account) ?: 
+
+    // Mutable slide offset — updated by HomeFragment via updateSlideOffset()
+    private var slideOffset = mutableStateOf(0f)
+
+    // Update called by HomeFragment's BottomSheetBehavior.onSlide callback
+    fun updateSlideOffset(offset: Float) {
+        slideOffset.value = offset
+    }
 
     // FrameLayout wrapper that tags itself and all ancestors with ViewTree owners before
     // its children attach. Because dispatchAttachedToWindow runs top-down, this fires
@@ -55,16 +63,16 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
     }
 
     // R8 can rename interface class names (LifecycleOwner etc.), so we look up the
-    // "set" method by name and arity rather than by full signature to stay robust.
+    // set method by name and arity rather than by full signature to stay robust.
     private fun tagViewTreeOwners(view: View) {
         for (cls in listOf(
-            "androidx.lifecycle.ViewTreeLifecycleOwner",
-            "androidx.lifecycle.ViewTreeViewModelStoreOwner",
-            "androidx.savedstate.ViewTreeSavedStateRegistryOwner",
+            androidx.lifecycle.ViewTreeLifecycleOwner,
+            androidx.lifecycle.ViewTreeViewModelStoreOwner,
+            androidx.savedstate.ViewTreeSavedStateRegistryOwner,
         )) {
             try {
                 val m = Class.forName(cls).methods
-                    .find { it.name == "set" && it.parameterCount == 2 } ?: continue
+                    .find { it.name == set && it.parameterCount == 2 } ?: continue
                 m.invoke(null, view, this@KronkHubFragment)
             } catch (_: Exception) {}
         }
@@ -115,12 +123,10 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         val composeView = ComposeView(activity!!).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
-                KronkHomeScreen(
-                    displayName = resolveDisplayName(),
+                KosmosSheet(
+                    slideOffset = slideOffset.value,
+                    recentSpaces = SpaceUsageTracker.getRecents(activity!!, accountId),
                     onSpaceTapped = ::navigateToSpace,
-                    onNotificationsTapped = ::navigateToNotifications,
-                    onProfileTapped = ::navigateToProfile,
-                    onComposeTapped = ::navigateToCompose,
                 )
             }
         }
@@ -129,41 +135,15 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
         }
     }
 
-    private fun resolveDisplayName(): String {
-        val id = accountId.ifBlank { return "You" }
-        val account = AccountSessionManager.getInstance().getAccount(id)?.self ?: return "You"
-        val name = account.displayName.ifBlank { null } ?: account.username ?: return "You"
-        return name.split(" ").firstOrNull() ?: name
-    }
-
     private fun navigateToSpace(space: KronkSpace) {
         val target = when (space) {
             KronkSpace.MURMUR   -> HomeFragment.Space.FEED
             KronkSpace.KOMMONS  -> HomeFragment.Space.KOMMONS
             KronkSpace.HUDDLE   -> HomeFragment.Space.HUDDLE
             KronkSpace.KALENDAR -> HomeFragment.Space.EVENTS
+            KronkSpace.NUDGES   -> HomeFragment.Space.NUDGES
         }
         homeFragment()?.openSpace(target)
-    }
-
-    private fun navigateToNotifications() {
-        homeFragment()?.showNotifications()
-    }
-
-    private fun navigateToProfile() {
-        val id = accountId.ifBlank { return }
-        val session = AccountSessionManager.getInstance().getAccount(id) ?: return
-        val args = Bundle().apply {
-            putString("account", id)
-            putParcelable("profileAccount", Parcels.wrap(session.self))
-        }
-        Nav.go(activity!!, ProfileFragment::class.java, args)
-    }
-
-    private fun navigateToCompose() {
-        val id = accountId.ifBlank { return }
-        val args = Bundle().apply { putString("account", id) }
-        Nav.go(activity!!, ComposeFragment::class.java, args)
     }
 
     private fun homeFragment(): HomeFragment? = (parentFragment as? HomeFragment)
