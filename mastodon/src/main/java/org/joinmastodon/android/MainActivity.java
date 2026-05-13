@@ -180,7 +180,7 @@ public class MainActivity extends FragmentStackActivity{
 			HomeFragment hf=new HomeFragment();
 			hf.setArguments(args);
 			showFragmentClearingBackStack(hf);
-			getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_events));
+			getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_home));
 			return;
 		}
 

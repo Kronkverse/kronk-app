@@ -84,13 +84,13 @@
 		</FrameLayout>
 
 		<FrameLayout
-			android:id="@+id/tab_events"
+			android:id="@+id/tab_nudges"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/tab_events">
+			android:contentDescription="@string/tab_nudges">
 
 			<ImageView
 				android:layout_width="32dp"
@@ -100,7 +100,7 @@
 				android:scaleType="center"
 				android:importantForAccessibility="no"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_events"/>
+				android:src="@drawable/ic_tab_nudges"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -113,7 +113,7 @@
 				android:textColor="?colorM3OnSurfaceVariant"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_events"/>
+				android:text="@string/tab_nudges"/>
 
 		</FrameLayout>
 
