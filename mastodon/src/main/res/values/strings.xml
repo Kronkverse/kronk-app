@@ -726,6 +726,10 @@ End-to-end encrypted</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>
 	<string name="tab_events">₭alendar</string>
+	<string name="tab_hub">Hub</string>
+	<string name="tab_feed">Feed</string>
+	<string name="spaces">Spaces</string>
+	<string name="kommons_space">₭ommons</string>
 	<string name="pin_post">Pin on profile</string>
 	<string name="unpin_post">Unpin from profile</string>
 	<string name="post_pinned">Post has been pinned</string>
@@ -954,4 +958,34 @@ End-to-end encrypted</string>
 	<string name="orbit_info_banner">You\'re seeing your Orbit, what your friends are interacting with</string>
 	<string name="user_favourited">%s favourited</string>
 	<string name="user_replied">%s replied</string>
+
+    <string name="kommons_status_open">Open</string>
+    <string name="kommons_status_in_progress">In Progress</string>
+    <string name="kommons_status_vetoed">Vetoed</string>
+    <string name="kommons_status_delivered">Delivered</string>
+    <string name="kommons_your_vote">Your vote</string>
+    <string name="kommons_agree">Agree</string>
+    <string name="kommons_abstain">Abstain</string>
+    <string name="kommons_block">Block</string>
+    <string name="kommons_votes">Votes</string>
+    <string name="kommons_challenges">Challenges</string>
+    <string name="kommons_meta_by_date">by %1$s · %2$s</string>
+    <string name="kommons_empty_title">No open proposals</string>
+    <string name="kommons_empty_subtitle">Be the first to propose something for the community.</string>
+
+
+    <plurals name="kommons_agree_count">
+        <item quantity="one">%d agree</item>
+        <item quantity="other">%d agree</item>
+    </plurals>
+    <plurals name="kommons_abstain_count">
+        <item quantity="one">%d abstain</item>
+        <item quantity="other">%d abstain</item>
+    </plurals>
+    <plurals name="kommons_block_count">
+        <item quantity="one">%d block</item>
+        <item quantity="other">%d block</item>
+    </plurals>
+
+    <string name="error_loading">Failed to load</string>
 </resources>
