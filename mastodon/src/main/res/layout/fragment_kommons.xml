@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<FrameLayout
+		android:id="@+id/list_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:orientation="vertical">
+
+			<!-- Header actions -->
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:paddingHorizontal="16dp"
+				android:paddingVertical="10dp">
+
+				<Button
+					android:id="@+id/btn_plant_seed"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:layout_marginEnd="8dp"
+					android:text="@string/kommons_plant_seed"
+					android:textSize="13sp"
+					android:stateListAnimator="@null"
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+				<Button
+					android:id="@+id/btn_forest"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/kommons_the_forest"
+					android:textSize="13sp"
+					android:drawableStart="@drawable/ic_forest_24px"
+					android:drawablePadding="4dp"
+					android:stateListAnimator="@null"
+					style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+			</LinearLayout>
+
+			<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+				android:id="@+id/refresh_layout"
+				android:layout_width="match_parent"
+				android:layout_height="0dp"
+				android:layout_weight="1">
+
+				<androidx.recyclerview.widget.RecyclerView
+					android:id="@+id/proposal_list"
+					android:layout_width="match_parent"
+					android:layout_height="match_parent"
+					android:clipToPadding="false"/>
+
+			</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/empty_view"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:orientation="vertical"
+			android:gravity="center"
+			android:padding="32dp"
+			android:visibility="gone">
+
+			<TextView
+				android:id="@+id/empty_title"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textAppearance="@style/m3_title_medium"
+				android:textColor="?colorM3OnSurface"
+				android:gravity="center"/>
+
+			<TextView
+				android:id="@+id/empty_subtitle"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:textAppearance="@style/m3_body_medium"
+				android:textColor="?colorM3OnSurfaceVariant"
+				android:gravity="center"/>
+
+		</LinearLayout>
+
+	</FrameLayout>
+
+	<FrameLayout
+		android:id="@+id/detail_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"/>
+
+	<FrameLayout
+		android:id="@+id/forest_container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"/>
+
+</FrameLayout>
