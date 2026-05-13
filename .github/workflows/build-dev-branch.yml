@@ -1,29 +1,58 @@
 name: Build Dev Branch
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-      - 'fix/**'
-      - 'docs/**'
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: |
+      github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      trim(github.event.comment.body) == '/build-apk'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Get PR branch
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('branch', pr.data.head.ref);
+            core.setOutput('sha', pr.data.head.sha);
 
       - name: Get branch slug
         id: slug
         run: |
-          BRANCH="${{ github.ref_name }}"
+          BRANCH="${{ steps.pr.outputs.branch }}"
           SLUG=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
           echo "slug=$SLUG" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: React to comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -93,7 +122,6 @@ jobs:
             "echo '{\"version\":\"${VERSION}\",\"versionCode\":${VERSION_CODE},\"commit\":\"${COMMIT}\",\"branch\":\"${BRANCH}\",\"apkSize\":${APK_SIZE},\"apkUrl\":\"https://kronk.info/dev/${SLUG}/kronk.apk\",\"buildTime\":\"${BUILD_TIME}\"}' \
             > /var/www/kronk.info/dev/${SLUG}/version.json"
 
-          # Write generate script and run it
           scp -i ~/.ssh/deploy_key \
             <(cat << 'PYEOF'
 #!/usr/bin/env python3
@@ -193,5 +221,27 @@ with open(os.path.join(dev_dir, 'index.html'), 'w') as f:
 print(f"Generated index with {count} build(s)")
 PYEOF
           ) root@kronk.info:/usr/local/bin/generate-dev-index.py
-          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/generate-dev-index.py && python3 /usr/local/bin/generate-dev-index.py"
-          echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/"
+          ssh -i ~/.ssh/deploy_key root@kronk.info \
+            "chmod 755 /usr/local/bin/generate-dev-index.py && python3 /usr/local/bin/generate-dev-index.py"
+
+      - name: Comment result
+        uses: actions/github-script@v7
+        if: always()
+        env:
+          SLUG: ${{ steps.slug.outputs.slug }}
+          VERSION: ${{ steps.version.outputs.version }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const slug = process.env.SLUG;
+            const version = process.env.VERSION;
+            const success = process.env.JOB_STATUS === 'success';
+            const body = success
+              ? `APK built and deployed.\n\n**Install:** https://kronk.info/dev/${slug}/kronk.apk\n**All builds:** https://kronk.info/dev/\n\nVersion: \`${version}\``
+              : `Build failed. Check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
