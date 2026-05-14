@@ -27,7 +27,7 @@
 			android:layout_gravity="bottom|end"
 			android:scaleType="centerInside"
 			android:importantForAccessibility="no"
-			android:src="@drawable/ic_waving_hand_24px"
+			android:src="@drawable/ic_partner_exchange_24px"
 			android:background="@drawable/bg_nudge_wave_badge"
 			android:padding="3dp"/>
 

@@ -38,7 +38,7 @@
 			android:layout_height="72dp"
 			android:scaleType="centerInside"
 			android:importantForAccessibility="no"
-			android:src="@drawable/ic_waving_hand_24px"
+			android:src="@drawable/ic_partner_exchange_24px"
 			android:tint="?attr/colorM3Primary"
 			android:alpha="0.6"/>
 
