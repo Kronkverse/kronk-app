@@ -30,7 +30,9 @@ import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
@@ -119,6 +121,12 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					@Override
 					public void onSuccess(NudgePartnersResponse result) {
 						if (getActivity() == null) return;
+						// Build id→account map and populate each partner
+						if (result.accounts != null && result.partners != null) {
+							Map<String, Account> accountMap = new HashMap<>();
+							for (Account a : result.accounts) accountMap.put(a.id, a);
+							for (NudgePartner p : result.partners) p.account = accountMap.get(p.account_id);
+						}
 						data = result;
 						loaded = true;
 						loading = false;
@@ -225,23 +233,22 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 	}
 
 	private class HeaderViewHolder extends RecyclerView.ViewHolder {
-		private final TextView grandTotal;
+		private final TextView grandTotalNumber;
+		private final TextView grandTotalLabel;
 		private final TextView pendingHint;
-		private final ImageView waveIcon;
 
 		HeaderViewHolder(View view) {
 			super(view);
-			grandTotal = view.findViewById(R.id.grand_total);
+			grandTotalNumber = view.findViewById(R.id.grand_total_number);
+			grandTotalLabel = view.findViewById(R.id.grand_total_label);
 			pendingHint = view.findViewById(R.id.pending_hint);
-			waveIcon = view.findViewById(R.id.wave_icon);
-			waveIcon.setImageTintList(ColorStateList.valueOf(
-					UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary)));
 		}
 
 		void bind() {
 			if (data == null) return;
 			int total = data.grand_total;
-			grandTotal.setText(getResources().getQuantityString(R.plurals.nudge_grand_total, total, total));
+			grandTotalNumber.setText(String.valueOf(total));
+			grandTotalLabel.setText(getResources().getQuantityString(R.plurals.nudge_grand_total_label, total, total));
 			if (data.pending_count > 0) {
 				pendingHint.setText(getResources().getQuantityString(
 						R.plurals.nudge_pending_hint, data.pending_count, data.pending_count));

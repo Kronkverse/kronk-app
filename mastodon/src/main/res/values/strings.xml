@@ -741,6 +741,10 @@ End-to-end encrypted</string>
 		<item quantity="one">%d nudge exchanged</item>
 		<item quantity="other">%d nudges exchanged</item>
 	</plurals>
+	<plurals name="nudge_grand_total_label">
+		<item quantity="one">nudge exchanged</item>
+		<item quantity="other">nudges exchanged</item>
+	</plurals>
 	<plurals name="nudge_pending_hint">
 		<item quantity="one">%d waiting for you to nudge back</item>
 		<item quantity="other">%d waiting for you to nudge back</item>
