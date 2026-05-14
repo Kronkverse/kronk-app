@@ -206,7 +206,7 @@ public class NotificationHeaderStatusDisplayItem extends StatusDisplayItem{
 				case FOLLOW, FOLLOW_REQUEST -> R.drawable.ic_person_add_fill1_24px;
 				case POLL -> R.drawable.ic_insert_chart_fill1_24px;
 				case UPDATE, QUOTED_UPDATE -> R.drawable.ic_edit_24px;
-				case NUDGE -> R.drawable.ic_waving_hand_24px;
+				case NUDGE -> R.drawable.ic_partner_exchange_24px;
 				default -> throw new IllegalStateException("Unexpected value: "+item.notification.notification.type);
 			});
 			icon.setImageTintList(ColorStateList.valueOf(UiUtils.getThemeColor(item.context, switch(item.notification.notification.type){

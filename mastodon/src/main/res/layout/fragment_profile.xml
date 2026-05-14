@@ -393,7 +393,7 @@
 						android:contentDescription="@string/nudge"
 						android:scaleType="centerInside"
 						android:padding="9dp"
-						android:src="@drawable/ic_waving_hand_24px"
+						android:src="@drawable/ic_partner_exchange_24px"
 						android:visibility="gone" />
 
 					<ImageButton
