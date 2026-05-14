@@ -20,6 +20,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import org.joinmastodon.android.GlobalUserPreferences;
 import org.joinmastodon.android.R;
+import org.joinmastodon.android.api.requests.accounts.GetAccountByID;
 import org.joinmastodon.android.api.requests.accounts.GetNudgePartners;
 import org.joinmastodon.android.api.requests.accounts.SendNudge;
 import org.joinmastodon.android.model.Account;
@@ -30,9 +31,8 @@ import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
@@ -121,18 +121,35 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					@Override
 					public void onSuccess(NudgePartnersResponse result) {
 						if (getActivity() == null) return;
-						// Build id→account map and populate each partner
-						if (result.accounts != null && result.partners != null) {
-							Map<String, Account> accountMap = new HashMap<>();
-							for (Account a : result.accounts) accountMap.put(a.id, a);
-							for (NudgePartner p : result.partners) p.account = accountMap.get(p.account_id);
+						if (result.partners == null || result.partners.isEmpty()) {
+							finishLoad(result);
+							return;
 						}
-						data = result;
-						loaded = true;
-						loading = false;
-						refreshLayout.setRefreshing(false);
-						progress.setVisibility(View.GONE);
-						rebuildItems();
+						// Fetch each account by ID — simple, guaranteed to work
+						AtomicInteger remaining = new AtomicInteger(result.partners.size());
+						for (NudgePartner partner : result.partners) {
+							// Use inline account if server already embedded it
+							if (partner.account != null) {
+								try { partner.account.postprocess(); } catch (Exception ignored) {}
+								if (remaining.decrementAndGet() == 0) finishLoad(result);
+								continue;
+							}
+							new GetAccountByID(partner.account_id)
+									.setCallback(new Callback<Account>() {
+										@Override
+										public void onSuccess(Account account) {
+											partner.account = account;
+											if (remaining.decrementAndGet() == 0 && getActivity() != null)
+												finishLoad(result);
+										}
+										@Override
+										public void onError(ErrorResponse error) {
+											if (remaining.decrementAndGet() == 0 && getActivity() != null)
+												finishLoad(result);
+										}
+									})
+									.exec(accountID);
+						}
 					}
 
 					@Override
@@ -146,6 +163,15 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					}
 				})
 				.exec(accountID);
+	}
+
+	private void finishLoad(NudgePartnersResponse result) {
+		data = result;
+		loaded = true;
+		loading = false;
+		refreshLayout.setRefreshing(false);
+		progress.setVisibility(View.GONE);
+		rebuildItems();
 	}
 
 	private void showLoading() {
