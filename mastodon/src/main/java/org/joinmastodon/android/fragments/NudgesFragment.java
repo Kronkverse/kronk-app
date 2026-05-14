@@ -30,9 +30,7 @@ import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
@@ -121,11 +119,14 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					@Override
 					public void onSuccess(NudgePartnersResponse result) {
 						if (getActivity() == null) return;
-						// Build id→account map and populate each partner
-						if (result.accounts != null && result.partners != null) {
-							Map<String, Account> accountMap = new HashMap<>();
-							for (Account a : result.accounts) accountMap.put(a.id, a);
-							for (NudgePartner p : result.partners) p.account = accountMap.get(p.account_id);
+						// Call postprocess() on inline accounts so displayName falls back to username
+						if (result.partners != null) {
+							for (NudgePartner p : result.partners) {
+								if (p.account != null) {
+									try { p.account.postprocess(); }
+									catch (org.joinmastodon.android.api.ObjectValidationException ignored) {}
+								}
+							}
 						}
 						data = result;
 						loaded = true;
