@@ -129,7 +129,7 @@ public class NotificationNudgeDisplayItem extends StatusDisplayItem {
 			nudgeBackButton.setText(R.string.nudge_back);
 			nudgeBackButton.setEnabled(true);
 			nudgeBackButton.setVisibility(View.VISIBLE);
-			icon.setImageResource(R.drawable.ic_waving_hand_24px);
+			icon.setImageResource(R.drawable.ic_partner_exchange_24px);
 			icon.setImageTintList(ColorStateList.valueOf(
 					UiUtils.getThemeColor(item.context, R.attr.colorM3Primary)));
 		}
