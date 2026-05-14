@@ -195,21 +195,21 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 
 		items.add(new ListItem(TYPE_HEADER, null, null));
 
-		List<NudgePartner> waiting = new ArrayList<>();
-		List<NudgePartner> active = new ArrayList<>();
+		List<NudgePartner> sent = new ArrayList<>();
+		List<NudgePartner> received = new ArrayList<>();
 		for (NudgePartner p : data.partners) {
-			if (p.can_nudge_back) waiting.add(p);
-			else active.add(p);
+			if (p.can_nudge_back) received.add(p);
+			else sent.add(p);
 		}
 
-		if (!waiting.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_waiting), null));
-			for (NudgePartner p : waiting) items.add(new ListItem(TYPE_PARTNER, null, p));
+		if (!sent.isEmpty()) {
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null));
+			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p));
 		}
 
-		if (!active.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_partners), null));
-			for (NudgePartner p : active) items.add(new ListItem(TYPE_PARTNER, null, p));
+		if (!received.isEmpty()) {
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null));
+			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p));
 		}
 
 		adapter.notifyDataSetChanged();
@@ -343,8 +343,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 				avatar.setImageResource(R.drawable.image_placeholder);
 			}
 
-			int total = partner.sent_count + partner.received_count;
-			streakLabel.setText(getResources().getString(R.string.nudge_streak, total));
+			streakLabel.setText(getResources().getString(R.string.nudge_streak, partner.sent_count, partner.received_count));
 
 			updateButton();
 		}
@@ -381,8 +380,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 							if (result.streak > 0) currentPartner.streak = result.streak;
 							currentPartner.sent_count++;
 							updateButton();
-							int total = currentPartner.sent_count + currentPartner.received_count;
-							streakLabel.setText(getResources().getString(R.string.nudge_streak, total));
+							streakLabel.setText(getResources().getString(R.string.nudge_streak, currentPartner.sent_count, currentPartner.received_count));
 							if (data != null) {
 								data.grand_total++;
 								int hPos = -1;

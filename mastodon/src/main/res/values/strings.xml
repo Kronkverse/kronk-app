@@ -20,7 +20,7 @@
 	<string name="nudged">Nudged!</string>
 	<string name="nudge_waiting">Waiting…</string>
 	<string name="nudge_back">Nudge back</string>
-	<string name="nudge_streak">%d nudges exchanged</string>
+	<string name="nudge_streak">%1$d sent · %2$d received</string>
 	<string name="user_sent_follow_request">%s sent you a follow request</string>
 	<string name="user_favorited">%s frothed:</string>
 	<string name="notification_boosted">%s boosted:</string>
@@ -733,8 +733,8 @@ End-to-end encrypted</string>
 	<string name="tab_profile">Profile</string>
 	<string name="tab_events">₭alendar</string>
 	<string name="tab_nudges">Nudges</string>
-	<string name="nudge_section_waiting">NUDGE THEM BACK</string>
-	<string name="nudge_section_partners">ACTIVE STREAKS</string>
+	<string name="nudge_section_sent">NUDGES SENT</string>
+	<string name="nudge_section_received">NUDGES RECEIVED</string>
 	<string name="nudge_empty_title">No nudges yet</string>
 	<string name="nudge_empty_subtitle">Nudge someone from their profile to start a streak</string>
 	<plurals name="nudge_grand_total">
