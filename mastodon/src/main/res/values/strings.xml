@@ -735,7 +735,7 @@ End-to-end encrypted</string>
 	<string name="tab_nudges">Nudges</string>
 	<string name="nudge_section_sent">NUDGES SENT</string>
 	<string name="nudge_section_received">NUDGES RECEIVED</string>
-	<string name="nudge_empty_title">No nudges yet</string>
+	<string name="nudge_empty_title">No nudges yet!</string>
 	<string name="nudge_empty_subtitle">Nudge someone from their profile to start a streak</string>
 	<plurals name="nudge_grand_total">
 		<item quantity="one">%d nudge exchanged</item>
