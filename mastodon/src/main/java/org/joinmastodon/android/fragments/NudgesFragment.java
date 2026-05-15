@@ -376,19 +376,15 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 						public void onSuccess(NudgeResult result) {
 							if (getActivity() == null) return;
 							nudgeSent = true;
+							boolean wasReceived = currentPartner.can_nudge_back;
 							currentPartner.can_nudge_back = false;
 							if (result.streak > 0) currentPartner.streak = result.streak;
 							currentPartner.sent_count++;
-							updateButton();
-							streakLabel.setText(getResources().getString(R.string.nudge_streak, currentPartner.sent_count, currentPartner.received_count));
 							if (data != null) {
 								data.grand_total++;
-								int hPos = -1;
-								for (int i = 0; i < items.size(); i++) {
-									if (items.get(i).type == TYPE_HEADER) { hPos = i; break; }
-								}
-								if (hPos >= 0) adapter.notifyItemChanged(hPos);
+								if (wasReceived && data.pending_count > 0) data.pending_count--;
 							}
+							rebuildItems();
 						}
 
 						@Override
@@ -396,9 +392,10 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 							if (getActivity() == null) return;
 							if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr && mr.httpStatus == 422) {
 								nudgeSent = true;
-								nudgeBtn.setText(R.string.nudge_waiting);
-								nudgeBtn.setEnabled(false);
-								nudgeBtn.setAlpha(0.45f);
+								boolean wasReceived = currentPartner.can_nudge_back;
+								currentPartner.can_nudge_back = false;
+								if (data != null && wasReceived && data.pending_count > 0) data.pending_count--;
+								rebuildItems();
 							} else {
 								nudgeBtn.setEnabled(true);
 								error.showToast(getActivity());
