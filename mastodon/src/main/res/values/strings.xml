@@ -20,7 +20,10 @@
 	<string name="nudged">Nudged!</string>
 	<string name="nudge_waiting">Waiting…</string>
 	<string name="nudge_back">Nudge back</string>
-	<string name="nudge_streak">%1$d sent · %2$d received</string>
+	<string name="nudge_streak_sent">↑ %d</string>
+	<string name="nudge_streak_received">↓ %d</string>
+	<string name="nudge_total_sent">SENT</string>
+	<string name="nudge_total_received">RECEIVED</string>
 	<string name="user_sent_follow_request">%s sent you a follow request</string>
 	<string name="user_favorited">%s frothed:</string>
 	<string name="notification_boosted">%s boosted:</string>
