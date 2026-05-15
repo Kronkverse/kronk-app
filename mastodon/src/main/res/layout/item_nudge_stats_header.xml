@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingHorizontal="16dp"
+	android:paddingTop="16dp"
+	android:paddingBottom="8dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:padding="20dp"
+		android:background="@drawable/bg_nudge_stats_card">
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:orientation="vertical">
+
+			<TextView
+				android:id="@+id/grand_total_number"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="40sp"
+				android:textStyle="bold"
+				android:lineHeight="40sp"
+				android:textColor="?attr/colorM3Primary"/>
+
+			<TextView
+				android:id="@+id/grand_total_label"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="2dp"
+				android:textSize="13sp"
+				android:textColor="?colorM3OnSurfaceVariant"/>
+
+			<TextView
+				android:id="@+id/pending_hint"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:paddingHorizontal="10dp"
+				android:paddingVertical="4dp"
+				android:textSize="12sp"
+				android:textStyle="bold"
+				android:textColor="?attr/colorM3OnTertiaryContainer"
+				android:background="@drawable/bg_nudge_pending_badge"
+				android:visibility="gone"/>
+
+		</LinearLayout>
+
+		<ImageView
+			android:id="@+id/wave_icon"
+			android:layout_width="52dp"
+			android:layout_height="52dp"
+			android:layout_marginStart="16dp"
+			android:scaleType="centerInside"
+			android:importantForAccessibility="no"
+			android:src="@drawable/ic_partner_exchange_24px"
+			android:tint="?attr/colorM3OnSurfaceVariant"
+			android:alpha="0.25"/>
+
+	</LinearLayout>
+
+</LinearLayout>

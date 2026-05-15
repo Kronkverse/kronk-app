@@ -94,6 +94,7 @@ public abstract class StatusDisplayItem{
 			case INLINE_STATUS -> new InlineStatusStatusDisplayItem.Holder(activity, parent);
 			case NOTIFICATION_WITH_BUTTON -> new NotificationWithButtonStatusDisplayItem.Holder(activity, parent);
 			case FOLLOW_REQUEST_ACTIONS -> new FollowRequestActionsDisplayItem.Holder(activity, parent);
+			case NOTIFICATION_NUDGE -> new NotificationNudgeDisplayItem.Holder(activity, parent);
 			case QUOTE_ERROR -> new QuoteErrorStatusDisplayItem.Holder(activity, parent);
 			case NESTED_QUOTE -> new NestedQuoteStatusDisplayItem.Holder(activity, parent);
 			case EVENT_CARD -> new EventCardStatusDisplayItem.Holder(activity, parent);
@@ -282,7 +283,8 @@ public abstract class StatusDisplayItem{
 		HEADER_COMPACT,
 		QUOTE_ERROR,
 		NESTED_QUOTE,
-		EVENT_CARD
+		EVENT_CARD,
+		NOTIFICATION_NUDGE
 	}
 
 	public static abstract class Holder<T> extends BindableViewHolder<T> implements UsableRecyclerView.DisableableClickable{

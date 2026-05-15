@@ -11,7 +11,7 @@
 		android:title="@string/notifications" />
 	<item
 		android:id="@+id/invite"
-		android:icon="@drawable/ic_share_24px"
+		android:icon="@drawable/ic_qr_code_20px"
 		android:showAsAction="always"
 		android:title="@string/invite" />
 	<item

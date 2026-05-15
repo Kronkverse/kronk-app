@@ -264,7 +264,7 @@ public class AccountSwitcherSheet extends BottomSheet{
 			dismiss();
 			if(AccountSessionManager.getInstance().getLastActiveAccountID().equals(item.getID())){
 				if(fragment!=null){
-					fragment.setCurrentTab(R.id.tab_profile);
+					fragment.setCurrentTab(R.id.tab_home);
 				}
 				return;
 			}
