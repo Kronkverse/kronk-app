@@ -202,14 +202,14 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			else sent.add(p);
 		}
 
-		if (!sent.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null));
-			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p));
-		}
-
 		if (!received.isEmpty()) {
 			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null));
 			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p));
+		}
+
+		if (!sent.isEmpty()) {
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null));
+			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p));
 		}
 
 		adapter.notifyDataSetChanged();
