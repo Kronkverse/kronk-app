@@ -13,8 +13,8 @@ android {
 		applicationId "info.kronk.app"
 		minSdk 23
 		targetSdk 35
-		versionCode 160
-		versionName "2.12.0"
+		versionCode 21400
+		versionName "2.14.0"
 		testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 	}
 
