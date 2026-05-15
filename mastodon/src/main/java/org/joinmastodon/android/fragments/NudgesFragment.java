@@ -2,6 +2,8 @@ package org.joinmastodon.android.fragments;
 
 import android.app.Activity;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,6 +52,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 	private String accountID;
 	private NudgePartnersResponse data;
 	private boolean loaded, loading;
+	private int totalSent, totalReceived;
 
 	private ProgressBar progress;
 	private SwipeRefreshLayout refreshLayout;
@@ -125,10 +128,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 							finishLoad(result);
 							return;
 						}
-						// Fetch each account by ID — simple, guaranteed to work
 						AtomicInteger remaining = new AtomicInteger(result.partners.size());
 						for (NudgePartner partner : result.partners) {
-							// Use inline account if server already embedded it
 							if (partner.account != null) {
 								try { partner.account.postprocess(); } catch (Exception ignored) {}
 								if (remaining.decrementAndGet() == 0) finishLoad(result);
@@ -193,23 +194,30 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		emptyView.setVisibility(View.GONE);
 		refreshLayout.setVisibility(View.VISIBLE);
 
-		items.add(new ListItem(TYPE_HEADER, null, null));
+		totalSent = 0;
+		totalReceived = 0;
+		for (NudgePartner p : data.partners) {
+			totalSent += p.sent_count;
+			totalReceived += p.received_count;
+		}
 
-		List<NudgePartner> sent = new ArrayList<>();
+		items.add(new ListItem(TYPE_HEADER, null, null, false));
+
 		List<NudgePartner> received = new ArrayList<>();
+		List<NudgePartner> sent = new ArrayList<>();
 		for (NudgePartner p : data.partners) {
 			if (p.can_nudge_back) received.add(p);
 			else sent.add(p);
 		}
 
 		if (!received.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null));
-			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p));
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null, true));
+			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p, false));
 		}
 
 		if (!sent.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null));
-			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p));
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null, false));
+			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p, false));
 		}
 
 		adapter.notifyDataSetChanged();
@@ -219,10 +227,12 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		final int type;
 		final String label;
 		final NudgePartner partner;
-		ListItem(int type, String label, NudgePartner partner) {
+		final boolean isReceivedSection;
+		ListItem(int type, String label, NudgePartner partner, boolean isReceivedSection) {
 			this.type = type;
 			this.label = label;
 			this.partner = partner;
+			this.isReceivedSection = isReceivedSection;
 		}
 	}
 
@@ -248,7 +258,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 			ListItem item = items.get(position);
 			if (holder instanceof HeaderViewHolder h) h.bind();
-			else if (holder instanceof SectionViewHolder s) s.bind(item.label);
+			else if (holder instanceof SectionViewHolder s) s.bind(item.label, item.isReceivedSection);
 			else if (holder instanceof PartnerViewHolder p) p.bind(item.partner);
 		}
 
@@ -259,22 +269,21 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 	}
 
 	private class HeaderViewHolder extends RecyclerView.ViewHolder {
-		private final TextView grandTotalNumber;
-		private final TextView grandTotalLabel;
+		private final TextView sentNumber;
+		private final TextView receivedNumber;
 		private final TextView pendingHint;
 
 		HeaderViewHolder(View view) {
 			super(view);
-			grandTotalNumber = view.findViewById(R.id.grand_total_number);
-			grandTotalLabel = view.findViewById(R.id.grand_total_label);
+			sentNumber = view.findViewById(R.id.total_sent_number);
+			receivedNumber = view.findViewById(R.id.total_received_number);
 			pendingHint = view.findViewById(R.id.pending_hint);
 		}
 
 		void bind() {
 			if (data == null) return;
-			int total = data.grand_total;
-			grandTotalNumber.setText(String.valueOf(total));
-			grandTotalLabel.setText(getResources().getQuantityString(R.plurals.nudge_grand_total_label, total, total));
+			sentNumber.setText(String.valueOf(totalSent));
+			receivedNumber.setText(String.valueOf(totalReceived));
 			if (data.pending_count > 0) {
 				pendingHint.setText(getResources().getQuantityString(
 						R.plurals.nudge_pending_hint, data.pending_count, data.pending_count));
@@ -291,8 +300,17 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			super(view);
 			label = view.findViewById(R.id.section_label);
 		}
-		void bind(String text) {
+		void bind(String text, boolean isReceived) {
 			label.setText(text);
+			int dotColor = isReceived
+					? UiUtils.getThemeColor(label.getContext(), R.attr.colorM3Primary)
+					: applyAlpha(UiUtils.getThemeColor(label.getContext(), R.attr.colorM3OnSurfaceVariant), 120);
+			GradientDrawable dot = new GradientDrawable();
+			dot.setShape(GradientDrawable.OVAL);
+			dot.setBounds(0, 0, V.dp(7), V.dp(7));
+			dot.setColor(dotColor);
+			label.setCompoundDrawablePadding(V.dp(7));
+			label.setCompoundDrawablesRelative(dot, null, null, null);
 		}
 	}
 
@@ -301,7 +319,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		private final ImageView waveIcon;
 		private final TextView displayName;
 		private final TextView username;
-		private final TextView streakLabel;
+		private final TextView streakSent;
+		private final TextView streakReceived;
 		private final Button nudgeBtn;
 		private NudgePartner currentPartner;
 		private boolean nudgeSent;
@@ -312,7 +331,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			waveIcon = view.findViewById(R.id.wave_icon);
 			displayName = view.findViewById(R.id.display_name);
 			username = view.findViewById(R.id.username);
-			streakLabel = view.findViewById(R.id.streak_label);
+			streakSent = view.findViewById(R.id.streak_sent);
+			streakReceived = view.findViewById(R.id.streak_received);
 			nudgeBtn = view.findViewById(R.id.nudge_btn);
 
 			avatar.setOutlineProvider(OutlineProviders.roundedRect(8));
@@ -343,9 +363,23 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 				avatar.setImageResource(R.drawable.image_placeholder);
 			}
 
-			streakLabel.setText(getResources().getString(R.string.nudge_streak, partner.sent_count, partner.received_count));
-
+			updateStreakLabels(partner.sent_count, partner.received_count);
+			updateRowBackground(partner.can_nudge_back);
 			updateButton();
+		}
+
+		private void updateStreakLabels(int sent, int received) {
+			streakSent.setText(getResources().getString(R.string.nudge_streak_sent, sent));
+			streakReceived.setText(getResources().getString(R.string.nudge_streak_received, received));
+		}
+
+		private void updateRowBackground(boolean isReceived) {
+			if (isReceived) {
+				int primary = UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary);
+				itemView.setBackgroundColor(applyAlpha(primary, 22));
+			} else {
+				itemView.setBackgroundColor(Color.TRANSPARENT);
+			}
 		}
 
 		private void updateButton() {
@@ -353,14 +387,29 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 				nudgeBtn.setText(R.string.nudged);
 				nudgeBtn.setEnabled(false);
 				nudgeBtn.setAlpha(0.5f);
+				setButtonStyle(false);
 			} else if (currentPartner.can_nudge_back) {
 				nudgeBtn.setText(R.string.nudge_back);
 				nudgeBtn.setEnabled(true);
 				nudgeBtn.setAlpha(1f);
+				setButtonStyle(true);
 			} else {
 				nudgeBtn.setText(R.string.nudge_waiting);
 				nudgeBtn.setEnabled(false);
 				nudgeBtn.setAlpha(0.45f);
+				setButtonStyle(false);
+			}
+		}
+
+		private void setButtonStyle(boolean filled) {
+			if (filled) {
+				nudgeBtn.setBackgroundTintList(ColorStateList.valueOf(
+						UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3Primary)));
+				nudgeBtn.setTextColor(UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3OnPrimary));
+			} else {
+				nudgeBtn.setBackgroundTintList(ColorStateList.valueOf(
+						UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3SecondaryContainer)));
+				nudgeBtn.setTextColor(UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3OnSecondaryContainer));
 			}
 		}
 
@@ -412,5 +461,9 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			args.putParcelable("profileAccount", org.parceler.Parcels.wrap(currentPartner.account));
 			Nav.go(getActivity(), ProfileFragment.class, args);
 		}
+	}
+
+	private static int applyAlpha(int color, int alpha) {
+		return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color));
 	}
 }
