@@ -1,7 +1,5 @@
 package org.joinmastodon.android.fragments;
 
-import android.annotation.SuppressLint;
-import android.app.Fragment;
 import android.app.NotificationManager;
 import android.app.assist.AssistContent;
 import android.os.Build;
@@ -9,15 +7,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import com.squareup.otto.Subscribe;
 
-import org.joinmastodon.android.BuildConfig;
 import org.joinmastodon.android.E;
 import org.joinmastodon.android.PushNotificationReceiver;
 import org.joinmastodon.android.R;
@@ -27,23 +22,16 @@ import org.joinmastodon.android.api.session.AccountSession;
 import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.NotificationsMarkerUpdatedEvent;
 import org.joinmastodon.android.events.StatusDisplaySettingsChangedEvent;
-import org.joinmastodon.android.fragments.onboarding.OnboardingFollowSuggestionsFragment;
-import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
-import org.joinmastodon.android.ui.OutlineProviders;
-import org.joinmastodon.android.ui.sheets.AccountSwitcherSheet;
 import org.joinmastodon.android.ui.utils.UiUtils;
-import org.joinmastodon.android.ui.views.TabBar;
 import org.joinmastodon.android.utils.ObjectIdComparator;
 import org.parceler.Parcels;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import androidx.annotation.IdRes;
 import androidx.annotation.Nullable;
 import me.grishka.appkit.FragmentStackActivity;
 import me.grishka.appkit.Nav;
@@ -51,351 +39,388 @@ import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
 import me.grishka.appkit.fragments.LoaderFragment;
-import me.grishka.appkit.imageloader.ViewImageLoader;
-import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 import me.grishka.appkit.views.FragmentRootLinearLayout;
 
-public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment{
-	private FragmentRootLinearLayout content;
-	private HomeTimelineFragment homeTimelineFragment;
-	private NotificationsListFragment notificationsFragment;
-	private LiveFragment liveFragment;
-	private ProfileFragment profileFragment;
-	private NudgesFragment nudgesFragment;
-	private TabBar tabBar;
-	private View tabBarWrap;
-	private ImageView tabBarAvatar;
-	@IdRes
-	private int currentTab=R.id.tab_home;
-	private int previousTab=R.id.tab_home;
-	private boolean showingNotifications;
+public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment {
 
+	public enum Space { HUB, FEED, EVENTS, HUDDLE, KOMMONS }
+
+	private FragmentRootLinearLayout content;
+	private FrameLayout fragmentContainer;
+
+	private HubFragment hubFragment;
+	private HomeTimelineFragment feedFragment;
+	private EventsFragment eventsFragment;
+	private LiveFragment huddleFragment;
+	private KommonsFragment kommonsFragment;
+	private NotificationsListFragment notificationsFragment;
+
+	private View bottomNavWrap;
+	private View navProfile;
+	private View navHub;
+	private View navNotifications;
+
+	private Space currentSpace = Space.HUB;
+	private boolean showingNotifications;
 	private String accountID;
 
+	// Registered while any non-hub space is active so back press returns to hub.
+	private final Runnable spaceBackCallback = this::switchToHub;
+
 	@Override
-	public void onCreate(Bundle savedInstanceState){
+	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		accountID=getArguments().getString("account");
+		accountID = getArguments().getString("account");
 		setTitle(R.string.app_name);
 
-		if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.N)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
 			setRetainInstance(true);
 
-		if(savedInstanceState==null){
-			Bundle args=new Bundle();
+		if (savedInstanceState == null) {
+			Bundle args = new Bundle();
 			args.putString("account", accountID);
-			homeTimelineFragment=new HomeTimelineFragment();
-			homeTimelineFragment.setArguments(args);
-			args=new Bundle(args);
-			args.putBoolean("noAutoLoad", true);
-			liveFragment=new LiveFragment();
-			liveFragment.setArguments(args);
-			notificationsFragment=new NotificationsListFragment();
-			notificationsFragment.setArguments(args);
-			nudgesFragment=new NudgesFragment();
-			nudgesFragment.setArguments(new Bundle(args));
-			args=new Bundle(args);
-			args.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.getInstance().getAccount(accountID).self));
-			args.putBoolean("noAutoLoad", true);
-			profileFragment=new ProfileFragment();
-			profileFragment.setArguments(args);
+
+			hubFragment = new HubFragment();
+			hubFragment.setArguments(new Bundle(args));
+
+			feedFragment = new HomeTimelineFragment();
+			feedFragment.setArguments(new Bundle(args));
+
+			Bundle lazyArgs = new Bundle(args);
+			lazyArgs.putBoolean("noAutoLoad", true);
+
+			eventsFragment = new EventsFragment();
+			eventsFragment.setArguments(new Bundle(lazyArgs));
+
+			huddleFragment = new LiveFragment();
+			huddleFragment.setArguments(new Bundle(lazyArgs));
+
+			kommonsFragment = new KommonsFragment();
+			kommonsFragment.setArguments(new Bundle(lazyArgs));
+
+			notificationsFragment = new NotificationsListFragment();
+			notificationsFragment.setArguments(new Bundle(lazyArgs));
 		}
 
 		E.register(this);
 	}
 
 	@Override
-	public void onDestroy(){
+	public void onDestroy() {
 		super.onDestroy();
 		E.unregister(this);
 	}
 
 	@Nullable
 	@Override
-	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
-		content=new FragmentRootLinearLayout(getActivity());
+	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+		content = new FragmentRootLinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		FrameLayout fragmentContainer=new FrameLayout(getActivity());
+		fragmentContainer = new FrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
 		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-		inflater.inflate(R.layout.tab_bar, content);
-		tabBar=content.findViewById(R.id.tabbar);
-		tabBar.setListeners(this::onTabSelected, this::onTabLongClick);
-		tabBarWrap=content.findViewById(R.id.tabbar_wrap);
+		inflater.inflate(R.layout.bottom_nav_bar, content);
+		bottomNavWrap = content.findViewById(R.id.bottom_nav_wrap);
+		navProfile = content.findViewById(R.id.nav_profile);
+		navHub = content.findViewById(R.id.nav_hub);
+		navNotifications = content.findViewById(R.id.nav_notifications);
 
-		tabBarAvatar=tabBar.findViewById(R.id.tab_profile_ava);
-		tabBarAvatar.setOutlineProvider(OutlineProviders.OVAL);
-		tabBarAvatar.setClipToOutline(true);
-		Account self=AccountSessionManager.getInstance().getAccount(accountID).self;
-		ViewImageLoader.loadWithoutAnimation(tabBarAvatar, null, new UrlImageLoaderRequest(self.avatar, V.dp(24), V.dp(24)));
+		navProfile.setOnClickListener(v -> onProfileTapped());
+		navHub.setOnClickListener(v -> onHubTapped());
+		navNotifications.setOnClickListener(v -> onNotificationsTapped());
 
-		if(savedInstanceState==null){
+		if (savedInstanceState == null) {
 			getChildFragmentManager().beginTransaction()
-					.add(me.grishka.appkit.R.id.fragment_wrap, homeTimelineFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, liveFragment).hide(liveFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, hubFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, feedFragment).hide(feedFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, huddleFragment).hide(huddleFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, kommonsFragment).hide(kommonsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, nudgesFragment).hide(nudgesFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
 					.commit();
 
-			String defaultTab=getArguments().getString("tab");
-			if("notifications".equals(defaultTab)){
-				fragmentContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){
-					@Override
-					public boolean onPreDraw(){
-						fragmentContainer.getViewTreeObserver().removeOnPreDrawListener(this);
-						showNotifications();
-						return true;
-					}
-				});
+			String defaultTab = getArguments().getString("tab");
+			if ("notifications".equals(defaultTab)) {
+				fragmentContainer.post(this::switchToNotifications);
 			}
 		}
-		tabBar.selectTab(currentTab);
 
+		updateNavSelection();
 		return content;
 	}
 
-	@Override
-	public void onViewStateRestored(Bundle savedInstanceState){
-		super.onViewStateRestored(savedInstanceState);
-		if(savedInstanceState==null || homeTimelineFragment!=null)
-			return;
-		homeTimelineFragment=(HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "homeTimelineFragment");
-		liveFragment=(LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "liveFragment");
-		notificationsFragment=(NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
-		nudgesFragment=(NudgesFragment) getChildFragmentManager().getFragment(savedInstanceState, "nudgesFragment");
-		profileFragment=(ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
-		currentTab=savedInstanceState.getInt("selectedTab");
-		showingNotifications=savedInstanceState.getBoolean("showingNotifications");
-		tabBar.selectTab(currentTab);
-		Fragment current=fragmentForTab(currentTab);
+	// Called by HubFragment tiles
+	public void openSpace(Space space) {
+		if (showingNotifications) {
+			showingNotifications = false;
+			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(hubFragment).commitNow();
+		}
+		if (space == currentSpace && space != Space.HUB) return;
+		switchToSpace(space);
+	}
+
+	private void switchToSpace(Space space) {
+		android.app.Fragment outgoing = fragmentForSpace(currentSpace);
+		android.app.Fragment incoming = fragmentForSpace(space);
+
 		getChildFragmentManager().beginTransaction()
-				.hide(homeTimelineFragment)
-				.hide(liveFragment)
-				.hide(notificationsFragment)
-				.hide(nudgesFragment)
-				.hide(profileFragment)
-				.show(showingNotifications ? notificationsFragment : current)
+				.hide(outgoing)
+				.show(incoming)
 				.commit();
-		if(showingNotifications)
-			maybeTriggerLoading(notificationsFragment);
-		else
-			maybeTriggerLoading(current);
+
+		currentSpace = space;
+
+		if (space != Space.HUB) {
+			addBackCallback(spaceBackCallback);
+			maybeTriggerLoading(incoming);
+		} else {
+			removeBackCallback(spaceBackCallback);
+		}
+
+		updateNavSelection();
+		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
+	}
+
+	private void switchToHub() {
+		switchToSpace(Space.HUB);
+	}
+
+	private void switchToNotifications() {
+		if (currentSpace != Space.HUB) {
+			// Return to hub first so hub is restored when leaving notifications
+			getChildFragmentManager().beginTransaction()
+					.hide(fragmentForSpace(currentSpace))
+					.show(hubFragment)
+					.commitNow();
+			currentSpace = Space.HUB;
+			removeBackCallback(spaceBackCallback);
+		}
+		showingNotifications = true;
+		getChildFragmentManager().beginTransaction()
+				.hide(hubFragment)
+				.show(notificationsFragment)
+				.commit();
+		maybeTriggerLoading(notificationsFragment);
+		updateNavSelection();
+		NotificationManager nm = getActivity().getSystemService(NotificationManager.class);
+		nm.cancel(accountID, PushNotificationReceiver.NOTIFICATION_ID);
+		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
+	}
+
+	private android.app.Fragment fragmentForSpace(Space space) {
+		switch (space) {
+			case FEED: return feedFragment;
+			case EVENTS: return eventsFragment;
+			case HUDDLE: return huddleFragment;
+			case KOMMONS: return kommonsFragment;
+			default: return hubFragment;
+		}
+	}
+
+	private void onProfileTapped() {
+		AccountSession session = AccountSessionManager.get(accountID);
+		Bundle args = new Bundle();
+		args.putString("account", accountID);
+		args.putParcelable("profileAccount", Parcels.wrap(session.self));
+		Nav.go(getActivity(), ProfileFragment.class, args);
+	}
+
+	private void onHubTapped() {
+		if (showingNotifications) {
+			showingNotifications = false;
+			getChildFragmentManager().beginTransaction()
+					.hide(notificationsFragment)
+					.show(fragmentForSpace(currentSpace))
+					.commit();
+			updateNavSelection();
+			((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
+		} else if (currentSpace != Space.HUB) {
+			switchToHub();
+		}
+		// Already on hub: no-op
+	}
+
+	private void onNotificationsTapped() {
+		if (!showingNotifications) {
+			switchToNotifications();
+		}
+	}
+
+	private void updateNavSelection() {
+		if (navHub == null) return;
+		navHub.setSelected(!showingNotifications);
+		navNotifications.setSelected(showingNotifications);
+		navProfile.setSelected(false);
+	}
+
+	private void maybeTriggerLoading(android.app.Fragment fragment) {
+		if (fragment instanceof LoaderFragment lf) {
+			if (!lf.loaded && !lf.dataLoading)
+				lf.loadData();
+		} else if (fragment instanceof LiveFragment lf) {
+			lf.loadData();
+		} else if (fragment instanceof KommonsFragment kf) {
+			kf.loadData();
+		}
+	}
+
+	// Forward permission results to child fragments — the system only delivers
+	// them to the parent fragment; children need explicit forwarding.
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		for (android.app.Fragment child : getChildFragmentManager().getFragments()) {
+			if (child != null) {
+				child.onRequestPermissionsResult(requestCode, permissions, grantResults);
+			}
+		}
 	}
 
 	@Override
-	public void onHiddenChanged(boolean hidden){
+	public void onHiddenChanged(boolean hidden) {
 		super.onHiddenChanged(hidden);
-		if(showingNotifications)
-			notificationsFragment.onHiddenChanged(hidden);
-		else
-			fragmentForTab(currentTab).onHiddenChanged(hidden);
+		android.app.Fragment visible = showingNotifications ? notificationsFragment : fragmentForSpace(currentSpace);
+		visible.onHiddenChanged(hidden);
 	}
 
 	@Override
-	public boolean wantsLightStatusBar(){
+	public boolean wantsLightStatusBar() {
 		return !UiUtils.isDarkTheme();
 	}
 
 	@Override
-	public boolean wantsLightNavigationBar(){
+	public boolean wantsLightNavigationBar() {
 		return !UiUtils.isDarkTheme();
 	}
 
 	@Override
-	public void onApplyWindowInsets(WindowInsets insets){
-		if(Build.VERSION.SDK_INT>=27){
-			int inset=insets.getSystemWindowInsetBottom();
-			tabBarWrap.setPadding(0, 0, 0, inset>0 ? Math.max(inset, V.dp(24)) : 0);
+	public void onApplyWindowInsets(WindowInsets insets) {
+		if (Build.VERSION.SDK_INT >= 27) {
+			int inset = insets.getSystemWindowInsetBottom();
+			bottomNavWrap.setPadding(0, 0, 0, inset > 0 ? Math.max(inset, V.dp(24)) : 0);
 			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), 0));
-		}else{
+		} else {
 			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom()));
 		}
-		WindowInsets topOnlyInsets=insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
-		homeTimelineFragment.onApplyWindowInsets(topOnlyInsets);
-		notificationsFragment.onApplyWindowInsets(topOnlyInsets);
-		profileFragment.onApplyWindowInsets(topOnlyInsets);
-		nudgesFragment.onApplyWindowInsets(topOnlyInsets);
+		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
+		feedFragment.onApplyWindowInsets(topOnly);
+		notificationsFragment.onApplyWindowInsets(topOnly);
 	}
 
-	private Fragment fragmentForTab(@IdRes int tab){
-		if(tab==R.id.tab_live){
-			return liveFragment;
-		}else if(tab==R.id.tab_nudges){
-			return nudgesFragment;
-		}else if(tab==R.id.tab_profile){
-			return profileFragment;
+	// Public API used by HomeTimelineFragment and AccountSwitcherSheet
+	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
+	public void removeSpaceBackCallback(Runnable cb) { removeBackCallback(cb); }
+
+	public void showNotifications() {
+		if (!showingNotifications) switchToNotifications();
+	}
+
+	public void hideNotifications() {
+		if (showingNotifications) {
+			showingNotifications = false;
+			getChildFragmentManager().beginTransaction()
+					.hide(notificationsFragment)
+					.show(fragmentForSpace(currentSpace))
+					.commit();
+			updateNavSelection();
+			((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 		}
-		return homeTimelineFragment;
 	}
 
-	public void setCurrentTab(@IdRes int tab){
-		if(tab==currentTab)
-			return;
-		tabBar.selectTab(tab);
-		onTabSelected(tab);
-	}
-
-	public void showNotifications(){
-		if(showingNotifications)
-			return;
-		previousTab=currentTab;
-		showingNotifications=true;
-		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(notificationsFragment).commit();
-		maybeTriggerLoading(notificationsFragment);
-		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-	}
-
-	public void hideNotifications(){
-		if(!showingNotifications)
-			return;
-		showingNotifications=false;
-		Fragment target=fragmentForTab(previousTab);
-		getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(target).commit();
-		currentTab=previousTab;
-		tabBar.selectTab(currentTab);
-		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-	}
-
-	public boolean isShowingNotifications(){
+	public boolean isShowingNotifications() {
 		return showingNotifications;
 	}
 
-	private void onTabSelected(@IdRes int tab){
-		Fragment newFragment=fragmentForTab(tab);
-		if(showingNotifications){
-			// Leaving notifications overlay — hide notifications, show the new tab
-			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(newFragment).commit();
-			showingNotifications=false;
-			maybeTriggerLoading(newFragment);
-			currentTab=tab;
-			((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-			return;
+	public void setCurrentTab(@androidx.annotation.IdRes int tabId) {
+		if (tabId == R.id.tab_live) {
+			openSpace(Space.HUDDLE);
+		} else {
+			switchToHub();
 		}
-		if(tab==currentTab){
-			if(newFragment instanceof ScrollableToTop scrollable)
-				scrollable.scrollToTop();
-			return;
-		}
-		getChildFragmentManager().beginTransaction().hide(fragmentForTab(currentTab)).show(newFragment).commit();
-		maybeTriggerLoading(newFragment);
-		currentTab=tab;
-		((FragmentStackActivity)getActivity()).invalidateSystemBarColors(this);
-	}
-
-	private void maybeTriggerLoading(Fragment newFragment){
-		if(newFragment instanceof LoaderFragment lf){
-			if(!lf.loaded && !lf.dataLoading)
-				lf.loadData();
-		}else if(newFragment instanceof LiveFragment){
-			((LiveFragment) newFragment).loadData();
-		}
-		if(newFragment instanceof NotificationsListFragment){
-			NotificationManager nm=getActivity().getSystemService(NotificationManager.class);
-			nm.cancel(accountID, PushNotificationReceiver.NOTIFICATION_ID);
-		}
-	}
-
-	private boolean onTabLongClick(@IdRes int tab){
-		if(tab==R.id.tab_profile){
-			ArrayList<String> options=new ArrayList<>();
-			for(AccountSession session:AccountSessionManager.getInstance().getLoggedInAccounts()){
-				options.add(session.self.displayName+"\n("+session.self.username+"@"+session.domain+")");
-			}
-			new AccountSwitcherSheet(getActivity(), this).show();
-			return true;
-		}
-		if(tab==R.id.tab_home && BuildConfig.DEBUG){
-			Bundle args=new Bundle();
-			args.putString("account", accountID);
-			Nav.go(getActivity(), OnboardingFollowSuggestionsFragment.class, args);
-		}
-		return false;
 	}
 
 	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		// Forward to child fragments — Android does not do this for nested fragments automatically
-		if(liveFragment!=null) liveFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
-	}
-
-	@Override
-	public void onSaveInstanceState(Bundle outState){
+	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
-		outState.putInt("selectedTab", currentTab);
 		outState.putBoolean("showingNotifications", showingNotifications);
-		getChildFragmentManager().putFragment(outState, "homeTimelineFragment", homeTimelineFragment);
-		getChildFragmentManager().putFragment(outState, "liveFragment", liveFragment);
-		getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
-		getChildFragmentManager().putFragment(outState, "nudgesFragment", nudgesFragment);
-		getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
+		outState.putString("currentSpace", currentSpace.name());
+		if (hubFragment != null) getChildFragmentManager().putFragment(outState, "hubFragment", hubFragment);
+		if (feedFragment != null) getChildFragmentManager().putFragment(outState, "feedFragment", feedFragment);
+		if (eventsFragment != null) getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
+		if (huddleFragment != null) getChildFragmentManager().putFragment(outState, "huddleFragment", huddleFragment);
+		if (kommonsFragment != null) getChildFragmentManager().putFragment(outState, "kommonsFragment", kommonsFragment);
+		if (notificationsFragment != null) getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
 	}
 
 	@Override
-	protected void onShown(){
+	public void onViewStateRestored(Bundle savedInstanceState) {
+		super.onViewStateRestored(savedInstanceState);
+		if (savedInstanceState == null || hubFragment != null) return;
+		hubFragment = (HubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubFragment");
+		feedFragment = (HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "feedFragment");
+		eventsFragment = (EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
+		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
+		kommonsFragment = (KommonsFragment) getChildFragmentManager().getFragment(savedInstanceState, "kommonsFragment");
+		notificationsFragment = (NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
+		showingNotifications = savedInstanceState.getBoolean("showingNotifications");
+		currentSpace = Space.valueOf(savedInstanceState.getString("currentSpace", Space.HUB.name()));
+		if (currentSpace != Space.HUB) addBackCallback(spaceBackCallback);
+		updateNavSelection();
+	}
+
+	@Override
+	protected void onShown() {
 		super.onShown();
 		reloadNotificationsForUnreadCount();
 	}
 
-	private void reloadNotificationsForUnreadCount(){
-		Instance instance=AccountSessionManager.get(accountID).getInstanceInfo();
-		if(instance==null)
-			return;
-		if(instance.getApiVersion()>=2){
+	private void reloadNotificationsForUnreadCount() {
+		Instance instance = AccountSessionManager.get(accountID).getInstanceInfo();
+		if (instance == null) return;
+		if (instance.getApiVersion() >= 2) {
 			new GetUnreadNotificationsCount(EnumSet.allOf(NotificationType.class), NotificationType.getGroupableTypes())
-					.setCallback(new Callback<>(){
+					.setCallback(new Callback<>() {
 						@Override
-						public void onSuccess(GetUnreadNotificationsCount.Response result){
+						public void onSuccess(GetUnreadNotificationsCount.Response result) {
 							updateUnreadNotificationsBadge(result.count, false);
 						}
-
 						@Override
-						public void onError(ErrorResponse error){
-
-						}
+						public void onError(ErrorResponse error) {}
 					})
 					.exec(accountID);
-		}else{
-			List<Notification>[] notifications=new List[]{null};
-			String[] marker={null};
-			AccountSessionManager.get(accountID).reloadNotificationsMarker(m->{
-				marker[0]=m;
-				if(notifications[0]!=null){
-					updateUnreadCountV1(notifications[0], marker[0]);
-				}
+		} else {
+			List<Notification>[] notifications = new List[]{null};
+			String[] marker = {null};
+			AccountSessionManager.get(accountID).reloadNotificationsMarker(m -> {
+				marker[0] = m;
+				if (notifications[0] != null) updateUnreadCountV1(notifications[0], marker[0]);
 			});
-
 			new GetNotificationsV1(null, 40, EnumSet.allOf(NotificationType.class))
-					.setCallback(new Callback<>(){
+					.setCallback(new Callback<>() {
 						@Override
-						public void onSuccess(List<Notification> result){
-							notifications[0]=result;
-							if(marker[0]!=null)
-								updateUnreadCountV1(notifications[0], marker[0]);
+						public void onSuccess(List<Notification> result) {
+							notifications[0] = result;
+							if (marker[0] != null) updateUnreadCountV1(notifications[0], marker[0]);
 						}
-
 						@Override
-						public void onError(ErrorResponse error){}
+						public void onError(ErrorResponse error) {}
 					}).exec(accountID);
 		}
 	}
 
-	@SuppressLint("DefaultLocale")
-	private void updateUnreadCountV1(List<Notification> notifications, String marker){
-		if(notifications.isEmpty() || ObjectIdComparator.INSTANCE.compare(notifications.get(0).id, marker)<=0){
+	private void updateUnreadCountV1(List<Notification> notifications, String marker) {
+		if (notifications.isEmpty() || ObjectIdComparator.INSTANCE.compare(notifications.get(0).id, marker) <= 0) {
 			updateUnreadNotificationsBadge(0, false);
-		}else{
-			if(ObjectIdComparator.INSTANCE.compare(notifications.get(notifications.size()-1).id, marker)>0){
+		} else {
+			if (ObjectIdComparator.INSTANCE.compare(notifications.get(notifications.size() - 1).id, marker) > 0) {
 				updateUnreadNotificationsBadge(notifications.size(), true);
-			}else{
-				int count=0;
-				for(Notification n:notifications){
-					if(n.id.equals(marker))
-						break;
+			} else {
+				int count = 0;
+				for (Notification n : notifications) {
+					if (n.id.equals(marker)) break;
 					count++;
 				}
 				updateUnreadNotificationsBadge(count, false);
@@ -403,34 +428,21 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		}
 	}
 
-	private void updateUnreadNotificationsBadge(int count, boolean more){
-		if(homeTimelineFragment!=null){
-			homeTimelineFragment.updateNotificationsBadge(count, more);
-		}
+	private void updateUnreadNotificationsBadge(int count, boolean more) {}
+
+	@Subscribe
+	public void onNotificationsMarkerUpdated(NotificationsMarkerUpdatedEvent ev) {
+		if (!ev.accountID.equals(accountID)) return;
+		if (ev.clearUnread) updateUnreadNotificationsBadge(0, false);
 	}
 
 	@Subscribe
-	public void onNotificationsMarkerUpdated(NotificationsMarkerUpdatedEvent ev){
-		if(!ev.accountID.equals(accountID))
-			return;
-		if(ev.clearUnread)
-			updateUnreadNotificationsBadge(0, false);
-	}
-
-	@Subscribe
-	public void onStatusDisplaySettingsChanged(StatusDisplaySettingsChangedEvent ev){
-		if(!ev.accountID.equals(accountID))
-			return;
-		if(homeTimelineFragment.loaded)
-			homeTimelineFragment.rebuildAllDisplayItems();
-		if(notificationsFragment.loaded)
-			notificationsFragment.rebuildAllDisplayItems();
+	public void onStatusDisplaySettingsChanged(StatusDisplaySettingsChangedEvent ev) {
+		if (!ev.accountID.equals(accountID)) return;
+		if (feedFragment != null && feedFragment.loaded) feedFragment.rebuildAllDisplayItems();
+		if (notificationsFragment != null && notificationsFragment.loaded) notificationsFragment.rebuildAllDisplayItems();
 	}
 
 	@Override
-	public void onProvideAssistContent(AssistContent content){
-		if(fragmentForTab(currentTab) instanceof AssistContentProviderFragment provider){
-			provider.onProvideAssistContent(content);
-		}
-	}
+	public void onProvideAssistContent(AssistContent assistContent) {}
 }

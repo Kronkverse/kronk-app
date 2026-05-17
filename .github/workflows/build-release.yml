@@ -86,6 +86,11 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Deploy to website
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
           mkdir -p ~/.ssh
@@ -94,9 +99,17 @@ jobs:
           ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
 
           APK_SIZE=$(stat -c%s "kronk-${VERSION}.apk")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           scp -i ~/.ssh/deploy_key "kronk-${VERSION}.apk" root@kronk.info:/var/www/kronk.info/kronk.apk
 
           ssh -i ~/.ssh/deploy_key root@kronk.info "echo '{\"version\": \"'${VERSION}'\", \"versionCode\": '${VERSION_CODE}', \"apkSize\": '${APK_SIZE}', \"apkUrl\": \"https://kronk.info/kronk.apk\"}' > /var/www/kronk.info/version.json"
+
+          scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
+          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
+
+          ENTRY=$(printf '{"branch":"production","slug":"production","channel":"production","version":"%s","versionCode":%s,"apkUrl":"https://kronk.info/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":true}' \
+            "$VERSION" "$VERSION_CODE" "$APK_SIZE" "$BUILD_TIME")
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
 
           echo "Deployed version ${VERSION} to kronk.info"

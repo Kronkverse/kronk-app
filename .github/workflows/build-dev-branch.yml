@@ -1,58 +1,29 @@
 name: Build Dev Branch
 
 on:
-  issue_comment:
-    types: [created]
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'docs/**'
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: |
-      github.event.issue.pull_request &&
-      github.event.issue.state == 'open' &&
-      contains(github.event.comment.body, '/build-apk')
 
     steps:
-      - name: Get PR branch
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            core.setOutput('branch', pr.data.head.ref);
-            core.setOutput('sha', pr.data.head.sha);
+      - uses: actions/checkout@v4
 
       - name: Get branch slug
         id: slug
         run: |
-          BRANCH="${{ steps.pr.outputs.branch }}"
+          BRANCH="${{ github.ref_name }}"
           SLUG=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
           echo "slug=$SLUG" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-
-      - name: React to comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
-            });
-
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.pr.outputs.sha }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -122,126 +93,12 @@ jobs:
             "echo '{\"version\":\"${VERSION}\",\"versionCode\":${VERSION_CODE},\"commit\":\"${COMMIT}\",\"branch\":\"${BRANCH}\",\"apkSize\":${APK_SIZE},\"apkUrl\":\"https://kronk.info/dev/${SLUG}/kronk.apk\",\"buildTime\":\"${BUILD_TIME}\"}' \
             > /var/www/kronk.info/dev/${SLUG}/version.json"
 
-          scp -i ~/.ssh/deploy_key \
-            <(cat << 'PYEOF'
-#!/usr/bin/env python3
-import os, json
+          # Deploy update script and update builds registry
+          scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
+          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
 
-dev_dir = '/var/www/kronk.info/dev'
-builds = []
+          ENTRY=$(printf '{"branch":"%s","slug":"%s","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/%s/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \
+            "$BRANCH" "$SLUG" "$VERSION" "$VERSION_CODE" "$COMMIT" "$SLUG" "$APK_SIZE" "$BUILD_TIME")
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
 
-root_vpath = os.path.join(dev_dir, 'version.json')
-root_apk   = os.path.join(dev_dir, 'kronk.apk')
-if os.path.exists(root_vpath) and os.path.exists(root_apk):
-    with open(root_vpath) as f:
-        data = json.load(f)
-    builds.append({**data, 'displayBranch': 'development',
-                   'apkUrl': 'https://kronk.info/dev/kronk.apk',
-                   'isStable': True, 'mtime': os.path.getmtime(root_apk)})
-
-for entry in sorted(os.listdir(dev_dir)):
-    full = os.path.join(dev_dir, entry)
-    vpath = os.path.join(full, 'version.json')
-    apk   = os.path.join(full, 'kronk.apk')
-    if os.path.isdir(full) and os.path.exists(vpath) and os.path.exists(apk):
-        with open(vpath) as f:
-            data = json.load(f)
-        builds.append({**data, 'displayBranch': data.get('branch', entry),
-                       'apkUrl': f'https://kronk.info/dev/{entry}/kronk.apk',
-                       'isStable': False, 'mtime': os.path.getmtime(apk)})
-
-builds.sort(key=lambda b: (0 if b.get('isStable') else 1, -b.get('mtime', 0)))
-
-def fmt_size(n):
-    return f"{n/1024/1024:.1f} MB" if n else ''
-
-def card(b):
-    branch = b.get('displayBranch', 'unknown')
-    version = b.get('version', '')
-    btime = b.get('buildTime', '')
-    url = b.get('apkUrl', '')
-    size = fmt_size(b.get('apkSize', 0))
-    commit = b.get('commit', '')
-    stable = b.get('isStable', False)
-    badge = ('<span class="badge sb">development</span>' if stable
-             else '<span class="badge bb">branch</span>')
-    meta = ' &middot; '.join(v for v in [version, commit and f'#{commit}', size] if v)
-    return (f'  <div class="card {"s" if stable else "b"}">\n'
-            f'    <div class="ch"><span class="br">{branch}</span>{badge}</div>\n'
-            f'    <div class="meta">{meta}</div>\n'
-            + (f'    <div class="bt">{btime}</div>\n' if btime else '')
-            + f'    <a class="btn" href="{url}" download>Install APK</a>\n  </div>')
-
-cards = '\n'.join(card(b) for b in builds)
-count = len(builds)
-
-html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kronk Dev Builds</title>
-  <style>
-    *,*::before,*::after{{box-sizing:border-box}}
-    body{{margin:0;padding:24px 16px 48px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#0f0818;color:#e0d8f0;min-height:100vh}}
-    h1{{margin:0 0 4px;font-size:1.7rem;color:#b97fff;letter-spacing:-.02em}}
-    .sub{{margin:0 0 28px;color:#6a5888;font-size:.9rem}}
-    .count{{color:#4a3868;font-size:.82rem;margin-bottom:14px}}
-    .card{{background:#1a0f2a;border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid #2a1a42}}
-    .card.s{{background:#111828;border-color:#253060}}
-    .ch{{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}}
-    .br{{font-weight:600;font-size:.98rem;font-family:'SF Mono','Fira Code',monospace;word-break:break-all}}
-    .badge{{font-size:.68rem;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}}
-    .sb{{background:#1a2550;color:#6b8cff}}
-    .bb{{background:#241540;color:#b97fff}}
-    .meta{{color:#6a5888;font-size:.8rem;margin-bottom:4px}}
-    .bt{{color:#4a3868;font-size:.76rem;margin-bottom:14px}}
-    .btn{{display:block;background:#2e3d7a;color:#c8d4ff;text-align:center;padding:13px;border-radius:10px;text-decoration:none;font-weight:600;font-size:.95rem}}
-    .card.s .btn{{background:#243060;color:#b0c0ff}}
-    .note{{margin-top:32px;padding:14px 16px;background:#140d22;border-radius:10px;border:1px solid #221540;color:#5a4878;font-size:.8rem;line-height:1.6}}
-    .note strong{{color:#7a5898}}
-  </style>
-</head>
-<body>
-  <h1>Kronk Dev Builds</h1>
-  <p class="sub">Development APKs &mdash; contributors and testers only</p>
-  <div class="count">{count} build{{"s" if count != 1 else ""}} available</div>
-{cards}
-  <div class="note">
-    <strong>To install:</strong> open this page in your Android browser, tap Install APK,
-    then enable &ldquo;Install unknown apps&rdquo; for the browser if prompted.
-    These builds are signed with the same key as the production app.
-  </div>
-</body>
-</html>
-"""
-
-with open(os.path.join(dev_dir, 'index.html'), 'w') as f:
-    f.write(html)
-print(f"Generated index with {count} build(s)")
-PYEOF
-          ) root@kronk.info:/usr/local/bin/generate-dev-index.py
-          ssh -i ~/.ssh/deploy_key root@kronk.info \
-            "chmod 755 /usr/local/bin/generate-dev-index.py && python3 /usr/local/bin/generate-dev-index.py"
-
-      - name: Comment result
-        uses: actions/github-script@v7
-        if: always()
-        env:
-          SLUG: ${{ steps.slug.outputs.slug }}
-          VERSION: ${{ steps.version.outputs.version }}
-          JOB_STATUS: ${{ job.status }}
-        with:
-          script: |
-            const slug = process.env.SLUG;
-            const version = process.env.VERSION;
-            const success = process.env.JOB_STATUS === 'success';
-            const body = success
-              ? `APK built and deployed.\n\n**Install:** https://kronk.info/dev/${slug}/kronk.apk\n**All builds:** https://kronk.info/dev/\n\nVersion: \`${version}\``
-              : `Build failed. Check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
+          echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/"

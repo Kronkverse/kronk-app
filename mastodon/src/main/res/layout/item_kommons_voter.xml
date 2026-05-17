@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="horizontal"
+	android:gravity="center_vertical"
+	android:paddingVertical="8dp">
+
+	<ImageView
+		android:id="@+id/avatar"
+		android:layout_width="32dp"
+		android:layout_height="32dp"
+		android:scaleType="centerCrop"
+		android:layout_marginEnd="10dp"
+		android:importantForAccessibility="no"
+		tools:src="#888"/>
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical">
+
+			<TextView
+				android:id="@+id/username"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:textAppearance="@style/m3_body_medium"
+				android:textColor="?colorM3OnSurface"
+				android:textStyle="bold"
+				android:singleLine="true"
+				tools:text="@talita"/>
+
+			<TextView
+				android:id="@+id/position_badge"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:paddingHorizontal="8dp"
+				android:paddingVertical="2dp"
+				android:textSize="11sp"
+				android:textStyle="bold"
+				android:textAllCaps="true"
+				android:background="@drawable/bg_inline_status"
+				tools:text="AGREE"/>
+
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/statement"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="2dp"
+			android:textAppearance="@style/m3_body_small"
+			android:textColor="?colorM3OnSurfaceVariant"
+			android:visibility="gone"
+			tools:text="This would make Kronk much more engaging."/>
+
+	</LinearLayout>
+
+</LinearLayout>

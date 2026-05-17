@@ -92,6 +92,7 @@ public class LiveFragment extends Fragment{
 		return rootView;
 	}
 
+
 	@Override
 	public void onHiddenChanged(boolean hidden){
 		super.onHiddenChanged(hidden);
@@ -223,6 +224,22 @@ public class LiveFragment extends Fragment{
 				if(getActivity()!=null) request.grant(request.getResources());
 				else request.deny();
 			}
+
+			@Override
+			public boolean onConsoleMessage(android.webkit.ConsoleMessage cm){
+				android.util.Log.i("KronkHuddle/JS", cm.messageLevel()+" "+cm.sourceId()+":"+cm.lineNumber()+" "+cm.message());
+				String low=cm.message().toLowerCase();
+				if(cm.messageLevel()==android.webkit.ConsoleMessage.MessageLevel.ERROR
+						|| low.contains("microphone") || low.contains("camera")
+						|| low.contains("getusermedia") || low.contains("notallowed")
+						|| low.contains("notreadable") || low.contains("permission")
+						|| low.contains("gum")){
+					String msg=cm.message();
+					if(msg.length()>250) msg=msg.substring(0,250);
+					android.util.Log.e("KronkHuddle/JS", "MEDIA ERROR: "+msg);
+				}
+				return true;
+			}
 		});
 
 		webviewContainer.addView(webView, new ViewGroup.LayoutParams(
@@ -244,7 +261,6 @@ public class LiveFragment extends Fragment{
 			+"&config.hideConferenceTimer=true"
 			+"&config.disableInviteFunctions=true"
 			+"&config.enableClosePage=false"
-			+"&config.disableLobbyMode=true"
 			+"&userInfo.displayName="+encodedUsername;
 
 		webView.loadUrl(jitsiUrl);
