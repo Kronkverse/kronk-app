@@ -43,10 +43,11 @@ public class PushSubscription extends BaseModel implements Cloneable{
 		public boolean poll;
 		public boolean status;
 		public boolean quote;
+		public boolean nudge;
 
 		public static Alerts ofAll(){
 			Alerts alerts=new Alerts();
-			alerts.follow=alerts.favourite=alerts.reblog=alerts.mention=alerts.poll=alerts.status=alerts.quote=true;
+			alerts.follow=alerts.favourite=alerts.reblog=alerts.mention=alerts.poll=alerts.status=alerts.quote=alerts.nudge=true;
 			return alerts;
 		}
 
@@ -60,6 +61,7 @@ public class PushSubscription extends BaseModel implements Cloneable{
 					", poll="+poll+
 					", status="+status+
 					", quote="+quote+
+					", nudge="+nudge+
 					'}';
 		}
 

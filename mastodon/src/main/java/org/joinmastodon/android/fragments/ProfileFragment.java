@@ -55,7 +55,9 @@ import org.joinmastodon.android.api.MastodonAPIRequest;
 import org.joinmastodon.android.api.requests.accounts.GetAccountByID;
 import org.joinmastodon.android.api.requests.accounts.GetAccountFamiliarFollowers;
 import org.joinmastodon.android.api.requests.accounts.GetAccountRelationships;
+import org.joinmastodon.android.api.requests.accounts.GetNudgeStreak;
 import org.joinmastodon.android.api.requests.accounts.GetOwnAccount;
+import org.joinmastodon.android.api.requests.accounts.SendNudge;
 import org.joinmastodon.android.api.requests.accounts.SetAccountFollowed;
 import org.joinmastodon.android.api.requests.accounts.UpdateAccountCredentials;
 import org.joinmastodon.android.api.session.AccountSessionManager;
@@ -67,6 +69,8 @@ import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.AccountField;
 import org.joinmastodon.android.model.Attachment;
 import org.joinmastodon.android.model.FamiliarFollowers;
+import org.joinmastodon.android.api.MastodonErrorResponse;
+import org.joinmastodon.android.model.NudgeResult;
 import org.joinmastodon.android.model.Relationship;
 import org.joinmastodon.android.model.viewmodel.AccountViewModel;
 import org.joinmastodon.android.ui.M3AlertDialogBuilder;
@@ -148,6 +152,9 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 	private View actionButtonWrap;
 	private CustomDrawingOrderLinearLayout scrollableContent;
 	private ImageButton qrCodeButton;
+	private ImageButton nudgeButton;
+	private boolean canNudge = false;
+	private boolean nudgeSent = false;
 	private ProgressBar innerProgress;
 	private View actions;
 	private View familiarFollowersRow;
@@ -247,6 +254,8 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		actionButtonWrap=content.findViewById(R.id.profile_action_btn_wrap);
 		scrollableContent=content.findViewById(R.id.scrollable_content);
 		qrCodeButton=content.findViewById(R.id.qr_code);
+		nudgeButton=content.findViewById(R.id.nudge_btn);
+		nudgeButton.setOnClickListener(this::onNudgeClick);
 		innerProgress=content.findViewById(R.id.profile_progress);
 		actions=content.findViewById(R.id.profile_actions);
 		familiarFollowersRow=content.findViewById(R.id.familiar_followers);
@@ -662,6 +671,7 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 			ta.recycle();
 		}else{
 			actionButton.setVisibility(View.GONE);
+			loadNudgeStreak();
 		}
 
 		fields.clear();
@@ -995,6 +1005,55 @@ public class ProfileFragment extends LoaderFragment implements ScrollableToTop, 
 		if(visible)
 			actionProgress.setIndeterminateTintList(actionButton.getTextColors());
 		actionButton.setClickable(!visible);
+	}
+
+	private void loadNudgeStreak(){
+		new GetNudgeStreak(account.id)
+				.setCallback(new Callback<NudgeResult>(){
+					@Override
+					public void onSuccess(NudgeResult result){
+						canNudge=result.can_nudge;
+						nudgeSent=false;
+						updateNudgeButton();
+					}
+					@Override
+					public void onError(ErrorResponse error){ }
+				})
+				.exec(accountID);
+	}
+
+	private void updateNudgeButton(){
+		if(nudgeButton==null) return;
+		nudgeButton.setVisibility(View.VISIBLE);
+		nudgeButton.setEnabled(!nudgeSent && canNudge);
+		nudgeButton.setAlpha((!nudgeSent && canNudge) ? 1f : 0.4f);
+		nudgeButton.setContentDescription(getString(nudgeSent ? R.string.nudged : R.string.nudge));
+	}
+
+	private void onNudgeClick(View v){
+		if(nudgeSent || !canNudge || account==null) return;
+		nudgeButton.setEnabled(false);
+		new SendNudge(account.id)
+				.setCallback(new Callback<NudgeResult>(){
+					@Override
+					public void onSuccess(NudgeResult result){
+						nudgeSent=true;
+						canNudge=result.can_nudge;
+						updateNudgeButton();
+						android.widget.Toast.makeText(getActivity(), R.string.nudged, android.widget.Toast.LENGTH_SHORT).show();
+					}
+					@Override
+					public void onError(ErrorResponse error){
+						if(error instanceof MastodonErrorResponse mr && mr.httpStatus==422){
+							canNudge=false;
+							nudgeSent=true;
+						}else{
+							nudgeButton.setEnabled(canNudge);
+						}
+						updateNudgeButton();
+					}
+				})
+				.exec(accountID);
 	}
 
 	private void loadAccountInfoAndEnterEditMode(){

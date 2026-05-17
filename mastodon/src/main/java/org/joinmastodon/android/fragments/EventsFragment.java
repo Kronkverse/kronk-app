@@ -1,7 +1,11 @@
 package org.joinmastodon.android.fragments;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.graphics.Outline;
+import android.widget.EditText;
+import android.widget.Toast;
+import android.view.WindowInsets;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -13,7 +17,6 @@ import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -21,17 +24,17 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.viewpager2.widget.ViewPager2;
 
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.events.GetEvents;
 import org.joinmastodon.android.api.requests.events.RsvpEvent;
+import org.joinmastodon.android.api.requests.events.ShareEvent;
 import org.joinmastodon.android.model.Event;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.parceler.Parcels;
 
 import java.time.DayOfWeek;
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -47,801 +50,615 @@ import java.util.Map;
 import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
-import me.grishka.appkit.imageloader.ViewImageLoader;
-import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 
-public class EventsFragment extends Fragment implements ScrollableToTop{
+public class EventsFragment extends Fragment implements ScrollableToTop {
+	private LinearLayout content;
 	private RecyclerView list;
 	private SwipeRefreshLayout refreshLayout;
-	private LinearLayout emptyView;
-	private TextView emptyTitle;
-	private TextView emptySubtext;
+	private TextView emptyView;
 	private String accountID;
-	private List<Event> events=new ArrayList<>();
-	private List<Event> allCalendarEvents=new ArrayList<>();
-	private List<Event> selectedDayEvents=new ArrayList<>();
+	private List<Event> events = new ArrayList<>();
+	private List<Event> allCalendarEvents = new ArrayList<>();
 	private EventsAdapter adapter;
-	private EventsAdapter selectedDayAdapter;
 	public boolean loaded;
 	public boolean dataLoading;
+	private boolean calendarLoaded;
+	private boolean calendarLoading;
 
-	// Filter state
-	private String currentFilter="upcoming";
-	private static final String[] FILTERS={"upcoming", "past", "mine", "invited"};
-	private static final String[] FILTER_LABELS={"Upcoming", "Past", "My Events", "Invited"};
+	private String currentFilter = "upcoming";
+	private static final String[] FILTERS = {"upcoming", "past", "mine", "invited"};
+	private static final String[] FILTER_LABELS = {"Upcoming", "Past", "Mine", "Invited"};
 	private LinearLayout filterContainer;
 	private View[] filterChips;
 
-	// View mode
-	private boolean calendarMode=false;
+	private boolean calendarMode = false;
 	private View listToggle;
 	private View calendarToggle;
+	private ViewPager2 viewPager;
 	private LinearLayout calendarContainer;
 	private LinearLayout calendarGrid;
 	private TextView calendarMonthLabel;
 	private YearMonth displayedMonth;
-	private LocalDate selectedDate;
-	private RecyclerView selectedDayList;
-	private TextView selectedDayLabel;
-	private LinearLayout selectedDaySection;
 
-	// FAB
-	private View fab;
+	private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("MMM").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("d").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter WEEKDAY_SHORT = DateTimeFormatter.ofPattern("EEE").withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter MONTH_YEAR_FORMAT = DateTimeFormatter.ofPattern("MMMM yyyy");
 
-	private static final DateTimeFormatter MONTH_FORMAT=DateTimeFormatter.ofPattern("MMM").withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter DAY_FORMAT=DateTimeFormatter.ofPattern("d").withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter TIME_FORMAT=DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter WEEKDAY_FORMAT=DateTimeFormatter.ofPattern("EEE").withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter FULL_DATE_FORMAT=DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault());
-	private static final DateTimeFormatter MONTH_YEAR_FORMAT=DateTimeFormatter.ofPattern("MMMM yyyy");
-
-	// Colors matching the web frontend
-	private static final int COLOR_GOING=0xFF6a9f8a;
-	private static final int COLOR_INTERESTED=0xFFb8945f;
-	private static final int COLOR_CANCELLED=0xFFD32F2F;
+	private static final int COLOR_BLURPLE_MID   = 0xFF6364FF;
+	private static final int COLOR_BLURPLE_MUTED  = 0xFF858AFA;
+	private static final int COLOR_BLURPLE_FAINT  = 0x146364FF;
+	private static final int COLOR_CANCELLED      = 0xFFC75D6E;
 
 	@Override
-	public void onCreate(Bundle savedInstanceState){
+	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		accountID=getArguments().getString("account");
-		displayedMonth=YearMonth.now();
+		accountID = getArguments().getString("account");
+		displayedMonth = YearMonth.now();
+	}
+
+	@Override
+	public void onHiddenChanged(boolean hidden) {
+		super.onHiddenChanged(hidden);
+		if (!hidden && !loaded && !dataLoading)
+			loadData();
+	}
+
+	public void onApplyWindowInsets(WindowInsets insets) {
+		if (content != null)
+			content.setPadding(0, insets.getSystemWindowInsetTop(), 0, 0);
 	}
 
 	@Nullable
 	@Override
-	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
-		// Root is a FrameLayout to overlay the FAB
-		FrameLayout root=new FrameLayout(getActivity());
+	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+		FrameLayout root = new FrameLayout(getActivity());
 		root.setBackgroundColor(UiUtils.getThemeColor(getActivity(), android.R.attr.colorBackground));
 
-		LinearLayout content=new LinearLayout(getActivity());
+		content = new LinearLayout(getActivity());
 		content.setOrientation(LinearLayout.VERTICAL);
 
-		// === Top bar: filter chips + new event button + view mode toggle ===
-		LinearLayout topBar=new LinearLayout(getActivity());
+		// Top bar
+		LinearLayout topBar = new LinearLayout(getActivity());
 		topBar.setOrientation(LinearLayout.HORIZONTAL);
 		topBar.setGravity(Gravity.CENTER_VERTICAL);
-		topBar.setPadding(V.dp(12), V.dp(8), V.dp(12), V.dp(8));
+		topBar.setPadding(V.dp(20), V.dp(10), V.dp(12), V.dp(10));
 
-		// Filter chips in a horizontal scroll view
-		HorizontalScrollView filterScroll=new HorizontalScrollView(getActivity());
+		// Filter tabs
+		HorizontalScrollView filterScroll = new HorizontalScrollView(getActivity());
 		filterScroll.setHorizontalScrollBarEnabled(false);
 		filterScroll.setClipToPadding(false);
 
-		// Wrap filterContainer in a faint purple pill background
-		LinearLayout filterWrapper=new LinearLayout(getActivity());
-		filterWrapper.setOrientation(LinearLayout.HORIZONTAL);
-		filterWrapper.setGravity(Gravity.CENTER_VERTICAL);
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		GradientDrawable filterWrapperBg=new GradientDrawable();
-		filterWrapperBg.setShape(GradientDrawable.RECTANGLE);
-		filterWrapperBg.setCornerRadius(V.dp(10));
-		filterWrapperBg.setColor((primaryColor & 0x00FFFFFF) | 0x14000000); // 8% opacity primary
-		filterWrapper.setBackground(filterWrapperBg);
-		filterWrapper.setPadding(V.dp(3), V.dp(3), V.dp(3), V.dp(3));
-
-		filterContainer=new LinearLayout(getActivity());
+		filterContainer = new LinearLayout(getActivity());
 		filterContainer.setOrientation(LinearLayout.HORIZONTAL);
-		filterContainer.setGravity(Gravity.CENTER_VERTICAL);
+		filterContainer.setGravity(Gravity.BOTTOM);
 
-		filterChips=new View[FILTERS.length];
-		for(int i=0; i<FILTERS.length; i++){
-			filterChips[i]=createFilterChip(FILTER_LABELS[i], i);
-			LinearLayout.LayoutParams chipLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-			if(i>0) chipLp.leftMargin=V.dp(2);
+		filterChips = new View[FILTERS.length];
+		for (int i = 0; i < FILTERS.length; i++) {
+			filterChips[i] = createFilterChip(FILTER_LABELS[i], i);
+			LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+			if (i > 0) chipLp.leftMargin = V.dp(20);
 			filterContainer.addView(filterChips[i], chipLp);
 		}
 		updateFilterChipStyles();
 
-		filterWrapper.addView(filterContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-		filterScroll.addView(filterWrapper, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		filterScroll.addView(filterContainer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		topBar.addView(filterScroll, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-		// "New Event" button
-		TextView newEventBtn=new TextView(getActivity());
-		newEventBtn.setText("+ New Event");
+		// "+ Host" button
+		TextView newEventBtn = new TextView(getActivity());
+		newEventBtn.setText("+ Event");
 		newEventBtn.setTextSize(13);
-		newEventBtn.setTypeface(null, Typeface.BOLD);
-		newEventBtn.setTextColor(0xFFFFFFFF);
+		newEventBtn.setTextColor(COLOR_BLURPLE_MUTED);
+		newEventBtn.setLetterSpacing(0.02f);
 		newEventBtn.setGravity(Gravity.CENTER);
-		newEventBtn.setPadding(V.dp(14), V.dp(8), V.dp(14), V.dp(8));
-		GradientDrawable newEventBg=new GradientDrawable();
-		newEventBg.setShape(GradientDrawable.RECTANGLE);
-		newEventBg.setCornerRadius(V.dp(10));
-		newEventBg.setColor(primaryColor);
+		newEventBtn.setPadding(V.dp(12), V.dp(7), V.dp(12), V.dp(7));
+		GradientDrawable newEventBg = new GradientDrawable();
+		newEventBg.setCornerRadius(V.dp(8));
+		newEventBg.setColor(0x00000000);
+		newEventBg.setStroke(1, COLOR_BLURPLE_MUTED);
 		newEventBtn.setBackground(newEventBg);
-		newEventBtn.setOnClickListener(v->{
-			Bundle args=new Bundle();
+		newEventBtn.setOnClickListener(v -> {
+			Bundle args = new Bundle();
 			args.putString("account", accountID);
 			Nav.go(getActivity(), CreateEventFragment.class, args);
 		});
-		LinearLayout.LayoutParams neLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		neLp.leftMargin=V.dp(8);
+		LinearLayout.LayoutParams neLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		neLp.leftMargin = V.dp(8);
 		topBar.addView(newEventBtn, neLp);
 
-		// View mode toggle
-		LinearLayout viewToggle=new LinearLayout(getActivity());
+		// View toggle
+		LinearLayout viewToggle = new LinearLayout(getActivity());
 		viewToggle.setOrientation(LinearLayout.HORIZONTAL);
 		viewToggle.setGravity(Gravity.CENTER);
-		GradientDrawable toggleBg=new GradientDrawable();
-		toggleBg.setShape(GradientDrawable.RECTANGLE);
+		GradientDrawable toggleBg = new GradientDrawable();
 		toggleBg.setCornerRadius(V.dp(8));
-		toggleBg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		toggleBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 		viewToggle.setBackground(toggleBg);
-
-		listToggle=createViewToggleButton("List", true);
-		calendarToggle=createViewToggleButton("Cal", false);
-
-		listToggle.setOnClickListener(v->{
-			if(!calendarMode) return;
-			calendarMode=false;
-			updateViewToggleStyles();
-			showListView();
+		viewToggle.setClipToOutline(true);
+		viewToggle.setOutlineProvider(new ViewOutlineProvider() {
+			@Override public void getOutline(View v, Outline o) {
+				o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), V.dp(8));
+			}
 		});
-		calendarToggle.setOnClickListener(v->{
-			if(calendarMode) return;
-			calendarMode=true;
-			updateViewToggleStyles();
-			showCalendarView();
+
+		listToggle = createViewToggleButton("List");
+		calendarToggle = createViewToggleButton("Month");
+
+		listToggle.setOnClickListener(v -> {
+			if (!calendarMode) return;
+			viewPager.setCurrentItem(0, true);
+		});
+		calendarToggle.setOnClickListener(v -> {
+			if (calendarMode) return;
+			viewPager.setCurrentItem(1, true);
 		});
 
 		viewToggle.addView(listToggle);
 		viewToggle.addView(calendarToggle);
-		LinearLayout.LayoutParams vtLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		vtLp.leftMargin=V.dp(8);
+		updateViewToggleStyles();
+
+		LinearLayout.LayoutParams vtLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		vtLp.leftMargin = V.dp(8);
 		topBar.addView(viewToggle, vtLp);
 
 		content.addView(topBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// === SwipeRefreshLayout wrapping the list ===
-		refreshLayout=new SwipeRefreshLayout(getActivity());
-		int accentColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		refreshLayout.setColorSchemeColors(accentColor);
+		View topDivider = new View(getActivity());
+		topDivider.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		content.addView(topDivider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
-		list=new RecyclerView(getActivity());
+		// List page
+		refreshLayout = new SwipeRefreshLayout(getActivity());
+		refreshLayout.setColorSchemeColors(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
+
+		list = new RecyclerView(getActivity());
 		list.setId(R.id.list);
 		list.setLayoutManager(new LinearLayoutManager(getActivity()));
-		adapter=new EventsAdapter(events);
+		adapter = new EventsAdapter(events);
 		list.setAdapter(adapter);
 		list.setClipToPadding(false);
-		list.setPadding(V.dp(16), V.dp(8), V.dp(16), V.dp(72));
+		list.setPadding(0, 0, 0, V.dp(72));
 
 		refreshLayout.addView(list, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 		refreshLayout.setOnRefreshListener(this::loadData);
 
-		// === Calendar container (hidden initially) ===
-		calendarContainer=new LinearLayout(getActivity());
-		calendarContainer.setOrientation(LinearLayout.VERTICAL);
-		calendarContainer.setVisibility(View.GONE);
+		emptyView = new TextView(getActivity());
+		emptyView.setTextSize(14);
+		emptyView.setTextColor(COLOR_BLURPLE_MUTED);
+		emptyView.setTypeface(null, Typeface.ITALIC);
+		emptyView.setGravity(Gravity.CENTER);
+		emptyView.setPadding(V.dp(32), V.dp(60), V.dp(32), V.dp(60));
+		emptyView.setVisibility(View.GONE);
+		updateEmptyStateText();
 
+		FrameLayout listPage = new FrameLayout(getActivity());
+		listPage.addView(refreshLayout, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+		listPage.addView(emptyView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+
+		// Calendar page
+		calendarContainer = new LinearLayout(getActivity());
+		calendarContainer.setOrientation(LinearLayout.VERTICAL);
 		buildCalendarHeader();
 		buildCalendarGridContainer();
-		buildSelectedDaySection();
 
-		// === Empty state ===
-		emptyView=new LinearLayout(getActivity());
-		emptyView.setOrientation(LinearLayout.VERTICAL);
-		emptyView.setGravity(Gravity.CENTER);
-		emptyView.setVisibility(View.GONE);
-		emptyView.setPadding(V.dp(32), V.dp(64), V.dp(32), V.dp(64));
+		// ViewPager2 holding both pages
+		viewPager = new ViewPager2(getActivity());
+		viewPager.setAdapter(new TwoPageAdapter(listPage, calendarContainer));
+		viewPager.setOffscreenPageLimit(1);
+		viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+			@Override
+			public void onPageSelected(int position) {
+				calendarMode = position == 1;
+				updateViewToggleStyles();
+				if (calendarMode) {
+					if (!calendarLoaded && !calendarLoading) {
+						loadCalendarEvents();
+					} else if (calendarLoaded) {
+						rebuildCalendarGrid();
+					}
+					// if calendarLoading: callback will call rebuildCalendarGrid() when done
+				} else {
+					if (!loaded) loadData();
+				}
+			}
+		});
 
-		ImageView emptyIcon=new ImageView(getActivity());
-		emptyIcon.setImageResource(R.drawable.ic_tab_events);
-		emptyIcon.setColorFilter(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		LinearLayout.LayoutParams iconLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(48));
-		emptyView.addView(emptyIcon, iconLp);
-
-		emptyTitle=new TextView(getActivity());
-		emptyTitle.setText("No upcoming events");
-		emptyTitle.setTextSize(18);
-		emptyTitle.setTypeface(null, Typeface.BOLD);
-		emptyTitle.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-		emptyTitle.setGravity(Gravity.CENTER);
-		LinearLayout.LayoutParams etlp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		etlp.topMargin=V.dp(16);
-		emptyView.addView(emptyTitle, etlp);
-
-		emptySubtext=new TextView(getActivity());
-		emptySubtext.setText("Events will appear here when they are created");
-		emptySubtext.setTextSize(14);
-		emptySubtext.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		emptySubtext.setGravity(Gravity.CENTER);
-		LinearLayout.LayoutParams eslp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		eslp.topMargin=V.dp(8);
-		emptyView.addView(emptySubtext, eslp);
-
-		content.addView(refreshLayout, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-		content.addView(calendarContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-		content.addView(emptyView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+		content.addView(viewPager, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
 		root.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		// === FAB ===
-		fab=createFab();
-		FrameLayout.LayoutParams fabLp=new FrameLayout.LayoutParams(V.dp(56), V.dp(56));
-		fabLp.gravity=Gravity.BOTTOM|Gravity.END;
-		fabLp.rightMargin=V.dp(16);
-		fabLp.bottomMargin=V.dp(16);
-		root.addView(fab, fabLp);
-
 		return root;
 	}
 
 	// ==================== Filter Chips ====================
 
-	private View createFilterChip(String label, int index){
-		TextView chip=new TextView(getActivity());
+	private View createFilterChip(String label, int index) {
+		FrameLayout tab = new FrameLayout(getActivity());
+
+		TextView chip = new TextView(getActivity());
 		chip.setText(label);
-		chip.setTextSize(13);
-		chip.setTypeface(null, Typeface.BOLD);
+		chip.setTextSize(14);
 		chip.setGravity(Gravity.CENTER);
-		chip.setPadding(V.dp(14), V.dp(7), V.dp(14), V.dp(7));
-		chip.setOnClickListener(v->{
-			if(currentFilter.equals(FILTERS[index])) return;
-			currentFilter=FILTERS[index];
+		chip.setPadding(V.dp(2), V.dp(4), V.dp(2), V.dp(12));
+		tab.addView(chip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+		View indicator = new View(getActivity());
+		indicator.setTag("indicator");
+		indicator.setBackgroundColor(COLOR_BLURPLE_MID);
+		FrameLayout.LayoutParams indLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(2));
+		indLp.gravity = Gravity.BOTTOM;
+		tab.addView(indicator, indLp);
+
+		tab.setOnClickListener(v -> {
+			if (currentFilter.equals(FILTERS[index])) return;
+			currentFilter = FILTERS[index];
 			updateFilterChipStyles();
 			updateEmptyStateText();
-			if(calendarMode){
+			if (calendarMode) {
+				calendarLoaded = false;
 				loadCalendarEvents();
-			}else{
+			} else {
+				loaded = false;
 				loadData();
 			}
 		});
-		return chip;
+		return tab;
 	}
 
-	private void updateFilterChipStyles(){
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		for(int i=0; i<filterChips.length; i++){
-			TextView chip=(TextView)filterChips[i];
-			boolean selected=currentFilter.equals(FILTERS[i]);
-			GradientDrawable bg=new GradientDrawable();
-			bg.setShape(GradientDrawable.RECTANGLE);
-			bg.setCornerRadius(V.dp(20));
-			if(selected){
-				bg.setColor(primaryColor);
-				chip.setTextColor(0xFFFFFFFF);
-				chip.setElevation(V.dp(1));
-			}else{
-				bg.setColor(0x00000000);
-				// No border stroke for inactive chips
+	private void updateFilterChipStyles() {
+		for (int i = 0; i < filterChips.length; i++) {
+			FrameLayout tab = (FrameLayout) filterChips[i];
+			TextView chip = (TextView) tab.getChildAt(0);
+			View indicator = tab.findViewWithTag("indicator");
+			boolean selected = currentFilter.equals(FILTERS[i]);
+			if (selected) {
+				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+				chip.setTypeface(null, Typeface.BOLD);
+				indicator.setVisibility(View.VISIBLE);
+			} else {
 				chip.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-				chip.setElevation(0);
+				chip.setTypeface(null, Typeface.NORMAL);
+				indicator.setVisibility(View.INVISIBLE);
 			}
-			chip.setBackground(bg);
 		}
 	}
 
-	private void updateEmptyStateText(){
-		switch(currentFilter){
-			case "upcoming":
-				emptyTitle.setText("No upcoming events");
-				emptySubtext.setText("Events will appear here when they are created");
-				break;
-			case "past":
-				emptyTitle.setText("No past events");
-				emptySubtext.setText("Past events will appear here");
-				break;
-			case "mine":
-				emptyTitle.setText("No events created");
-				emptySubtext.setText("Events you create will appear here");
-				break;
-			case "invited":
-				emptyTitle.setText("No invitations");
-				emptySubtext.setText("Event invitations will appear here");
-				break;
+	private void updateEmptyStateText() {
+		if (emptyView == null) return;
+		switch (currentFilter) {
+			case "past":    emptyView.setText("No past events"); break;
+			case "mine":    emptyView.setText("No events hosted yet"); break;
+			case "invited": emptyView.setText("No event invitations"); break;
+			default:        emptyView.setText("No upcoming events");
 		}
 	}
 
-	// ==================== View Mode Toggle ====================
+	// ==================== View Toggle ====================
 
-	private View createViewToggleButton(String label, boolean isActive){
-		TextView btn=new TextView(getActivity());
+	private View createViewToggleButton(String label) {
+		TextView btn = new TextView(getActivity());
 		btn.setText(label);
 		btn.setTextSize(12);
-		btn.setTypeface(null, Typeface.BOLD);
 		btn.setGravity(Gravity.CENTER);
 		btn.setPadding(V.dp(12), V.dp(6), V.dp(12), V.dp(6));
 		return btn;
 	}
 
-	private void updateViewToggleStyles(){
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		// List button
-		{
-			TextView btn=(TextView)listToggle;
-			GradientDrawable bg=new GradientDrawable();
-			bg.setShape(GradientDrawable.RECTANGLE);
-			float[] radii={V.dp(7), V.dp(7), 0, 0, 0, 0, V.dp(7), V.dp(7)};
-			bg.setCornerRadii(radii);
-			if(!calendarMode){
-				bg.setColor(primaryColor);
-				btn.setTextColor(0xFFFFFFFF);
-			}else{
-				bg.setColor(0x00000000);
-				btn.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-			}
-			btn.setBackground(bg);
+	private void updateViewToggleStyles() {
+		int surfaceColor = UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface);
+		int secondaryText = UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary);
+		int primaryText = UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary);
+
+		TextView listBtn = (TextView) listToggle;
+		GradientDrawable listBg = new GradientDrawable();
+		listBg.setCornerRadii(new float[]{V.dp(7), V.dp(7), 0, 0, 0, 0, V.dp(7), V.dp(7)});
+		if (!calendarMode) {
+			listBg.setColor(surfaceColor);
+			listBtn.setTextColor(primaryText);
+			listBtn.setTypeface(null, Typeface.BOLD);
+		} else {
+			listBg.setColor(0x00000000);
+			listBtn.setTextColor(secondaryText);
+			listBtn.setTypeface(null, Typeface.NORMAL);
 		}
-		// Calendar button
-		{
-			TextView btn=(TextView)calendarToggle;
-			GradientDrawable bg=new GradientDrawable();
-			bg.setShape(GradientDrawable.RECTANGLE);
-			float[] radii={0, 0, V.dp(7), V.dp(7), V.dp(7), V.dp(7), 0, 0};
-			bg.setCornerRadii(radii);
-			if(calendarMode){
-				bg.setColor(primaryColor);
-				btn.setTextColor(0xFFFFFFFF);
-			}else{
-				bg.setColor(0x00000000);
-				btn.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-			}
-			btn.setBackground(bg);
+		listToggle.setBackground(listBg);
+
+		TextView calBtn = (TextView) calendarToggle;
+		GradientDrawable calBg = new GradientDrawable();
+		calBg.setCornerRadii(new float[]{0, 0, V.dp(7), V.dp(7), V.dp(7), V.dp(7), 0, 0});
+		if (calendarMode) {
+			calBg.setColor(surfaceColor);
+			calBtn.setTextColor(primaryText);
+			calBtn.setTypeface(null, Typeface.BOLD);
+		} else {
+			calBg.setColor(0x00000000);
+			calBtn.setTextColor(secondaryText);
+			calBtn.setTypeface(null, Typeface.NORMAL);
 		}
+		calendarToggle.setBackground(calBg);
 	}
 
-	private void showListView(){
-		calendarContainer.setVisibility(View.GONE);
-		refreshLayout.setVisibility(events.isEmpty() && loaded ? View.GONE : View.VISIBLE);
-		emptyView.setVisibility(events.isEmpty() && loaded ? View.VISIBLE : View.GONE);
-		if(!loaded){
-			loadData();
-		}
+	private void showListView() {
+		viewPager.setCurrentItem(0, true);
 	}
 
-	private void showCalendarView(){
-		refreshLayout.setVisibility(View.GONE);
-		emptyView.setVisibility(View.GONE);
-		calendarContainer.setVisibility(View.VISIBLE);
-		loadCalendarEvents();
+	private void showCalendarView() {
+		viewPager.setCurrentItem(1, true);
 	}
 
 	// ==================== Calendar Header ====================
 
-	private void buildCalendarHeader(){
-		LinearLayout header=new LinearLayout(getActivity());
+	private void buildCalendarHeader() {
+		LinearLayout header = new LinearLayout(getActivity());
 		header.setOrientation(LinearLayout.HORIZONTAL);
 		header.setGravity(Gravity.CENTER_VERTICAL);
 		header.setPadding(V.dp(16), V.dp(12), V.dp(16), V.dp(8));
 
-		// Previous month button
-		TextView prevBtn=new TextView(getActivity());
-		prevBtn.setText("<");
-		prevBtn.setTextSize(20);
-		prevBtn.setTypeface(null, Typeface.BOLD);
-		prevBtn.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
-		prevBtn.setGravity(Gravity.CENTER);
-		prevBtn.setPadding(V.dp(12), V.dp(4), V.dp(12), V.dp(4));
-		prevBtn.setOnClickListener(v->{
-			displayedMonth=displayedMonth.minusMonths(1);
+		header.addView(buildNavButton("←", v -> {
+			displayedMonth = displayedMonth.minusMonths(1);
 			updateCalendarMonthLabel();
 			rebuildCalendarGrid();
-			updateSelectedDayEvents();
-		});
-		header.addView(prevBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		}), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// Month label
-		calendarMonthLabel=new TextView(getActivity());
-		calendarMonthLabel.setTextSize(18);
+		calendarMonthLabel = new TextView(getActivity());
+		calendarMonthLabel.setTextSize(16);
 		calendarMonthLabel.setTypeface(null, Typeface.BOLD);
 		calendarMonthLabel.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 		calendarMonthLabel.setGravity(Gravity.CENTER);
 		updateCalendarMonthLabel();
 		header.addView(calendarMonthLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-		// Next month button
-		TextView nextBtn=new TextView(getActivity());
-		nextBtn.setText(">");
-		nextBtn.setTextSize(20);
-		nextBtn.setTypeface(null, Typeface.BOLD);
-		nextBtn.setTextColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary));
-		nextBtn.setGravity(Gravity.CENTER);
-		nextBtn.setPadding(V.dp(12), V.dp(4), V.dp(12), V.dp(4));
-		nextBtn.setOnClickListener(v->{
-			displayedMonth=displayedMonth.plusMonths(1);
+		header.addView(buildNavButton("→", v -> {
+			displayedMonth = displayedMonth.plusMonths(1);
 			updateCalendarMonthLabel();
 			rebuildCalendarGrid();
-			updateSelectedDayEvents();
-		});
-		header.addView(nextBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		}), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		calendarContainer.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 	}
 
-	private void updateCalendarMonthLabel(){
+	private TextView buildNavButton(String arrow, View.OnClickListener listener) {
+		TextView btn = new TextView(getActivity());
+		btn.setText(arrow);
+		btn.setTextSize(16);
+		btn.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		btn.setGravity(Gravity.CENTER);
+		btn.setPadding(V.dp(14), V.dp(7), V.dp(14), V.dp(7));
+		GradientDrawable bg = new GradientDrawable();
+		bg.setCornerRadius(V.dp(8));
+		bg.setColor(0x00000000);
+		bg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		btn.setBackground(bg);
+		btn.setOnClickListener(listener);
+		return btn;
+	}
+
+	private void updateCalendarMonthLabel() {
 		calendarMonthLabel.setText(displayedMonth.format(MONTH_YEAR_FORMAT));
 	}
 
 	// ==================== Calendar Grid ====================
 
-	private void buildCalendarGridContainer(){
-		// Weekday header row
-		LinearLayout weekdayRow=new LinearLayout(getActivity());
+	private void buildCalendarGridContainer() {
+		LinearLayout weekdayRow = new LinearLayout(getActivity());
 		weekdayRow.setOrientation(LinearLayout.HORIZONTAL);
 		weekdayRow.setPadding(V.dp(8), 0, V.dp(8), V.dp(4));
-		DayOfWeek[] days={DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY};
-		for(DayOfWeek dow : days){
-			TextView tv=new TextView(getActivity());
-			tv.setText(dow.getDisplayName(TextStyle.SHORT, Locale.getDefault()));
+		DayOfWeek[] days = {DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY};
+		for (DayOfWeek dow : days) {
+			TextView tv = new TextView(getActivity());
+			tv.setText(dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()).toUpperCase(Locale.ROOT));
 			tv.setTextSize(11);
 			tv.setTypeface(null, Typeface.BOLD);
-			tv.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+			tv.setTextColor(COLOR_BLURPLE_MUTED);
 			tv.setGravity(Gravity.CENTER);
+			tv.setLetterSpacing(0.06f);
 			weekdayRow.addView(tv, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 		}
 		calendarContainer.addView(weekdayRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// Grid container
-		calendarGrid=new LinearLayout(getActivity());
+		calendarGrid = new LinearLayout(getActivity());
 		calendarGrid.setOrientation(LinearLayout.VERTICAL);
 		calendarGrid.setPadding(V.dp(8), 0, V.dp(8), V.dp(8));
 		calendarContainer.addView(calendarGrid, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 	}
 
-	private void rebuildCalendarGrid(){
+	private void rebuildCalendarGrid() {
 		calendarGrid.removeAllViews();
-		LocalDate today=LocalDate.now();
-		LocalDate first=displayedMonth.atDay(1);
-		int startDow=first.getDayOfWeek().getValue(); // 1=Mon, 7=Sun
-		int daysInMonth=displayedMonth.lengthOfMonth();
+		LocalDate today = LocalDate.now();
+		LocalDate first = displayedMonth.atDay(1);
+		int startDow = first.getDayOfWeek().getValue();
+		int daysInMonth = displayedMonth.lengthOfMonth();
 
-		// Build event map for this month
-		Map<Integer, List<Event>> eventsByDay=new HashMap<>();
-		for(Event e : allCalendarEvents){
-			if(e.startTime==null) continue;
-			LocalDate ed=e.startTime.atZone(ZoneId.systemDefault()).toLocalDate();
-			if(ed.getYear()==displayedMonth.getYear() && ed.getMonthValue()==displayedMonth.getMonthValue()){
-				eventsByDay.computeIfAbsent(ed.getDayOfMonth(), k->new ArrayList<>()).add(e);
+		Map<Integer, List<Event>> eventsByDay = new HashMap<>();
+		for (Event e : allCalendarEvents) {
+			if (e.startTime == null) continue;
+			LocalDate ed = e.startTime.atZone(ZoneId.systemDefault()).toLocalDate();
+			if (ed.getYear() == displayedMonth.getYear() && ed.getMonthValue() == displayedMonth.getMonthValue()) {
+				eventsByDay.computeIfAbsent(ed.getDayOfMonth(), k -> new ArrayList<>()).add(e);
 			}
 		}
 
-		int dayCounter=1;
-		int cellIndex=0;
-		int totalCells=((startDow-1)+daysInMonth);
-		int rows=(int)Math.ceil(totalCells/7.0);
+		int dayCounter = 1;
+		int rows = (int) Math.ceil(((startDow - 1) + daysInMonth) / 7.0);
 
-		for(int row=0; row<rows; row++){
-			LinearLayout rowLayout=new LinearLayout(getActivity());
+		for (int row = 0; row < rows; row++) {
+			LinearLayout rowLayout = new LinearLayout(getActivity());
 			rowLayout.setOrientation(LinearLayout.HORIZONTAL);
 
-			for(int col=0; col<7; col++){
-				int globalIndex=row*7+col;
-				if(globalIndex<(startDow-1) || dayCounter>daysInMonth){
-					// Empty cell
-					View empty=new View(getActivity());
-					rowLayout.addView(empty, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
-				}else{
-					int day=dayCounter;
-					LocalDate cellDate=displayedMonth.atDay(day);
-					boolean isToday=cellDate.equals(today);
-					boolean isSelected=cellDate.equals(selectedDate);
-					List<Event> dayEvents=eventsByDay.get(day);
+			for (int col = 0; col < 7; col++) {
+				int globalIndex = row * 7 + col;
+				if (globalIndex < (startDow - 1) || dayCounter > daysInMonth) {
+					View empty = new View(getActivity());
+					GradientDrawable emptyBg = new GradientDrawable();
+					emptyBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+					empty.setBackground(emptyBg);
+					empty.setAlpha(0.3f);
+					LinearLayout.LayoutParams emptyLp = new LinearLayout.LayoutParams(0, V.dp(80), 1f);
+					emptyLp.setMargins(1, 1, 1, 1);
+					rowLayout.addView(empty, emptyLp);
+				} else {
+					int day = dayCounter;
+					LocalDate cellDate = displayedMonth.atDay(day);
+					boolean isToday = cellDate.equals(today);
+					List<Event> dayEvents = eventsByDay.get(day);
 
-					LinearLayout cell=new LinearLayout(getActivity());
+					LinearLayout cell = new LinearLayout(getActivity());
 					cell.setOrientation(LinearLayout.VERTICAL);
-					cell.setGravity(Gravity.CENTER_HORIZONTAL);
-					cell.setPadding(V.dp(2), V.dp(4), V.dp(2), V.dp(2));
+					cell.setPadding(V.dp(4), V.dp(4), V.dp(4), V.dp(4));
 
-					// Background for today/selected
-					GradientDrawable cellBg=new GradientDrawable();
-					cellBg.setShape(GradientDrawable.RECTANGLE);
-					cellBg.setCornerRadius(V.dp(8));
-					int cellPrimaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-					if(isSelected){
-						cellBg.setColor((cellPrimaryColor & 0x00FFFFFF) | 0x33000000);
-					}else if(isToday){
-						cellBg.setStroke(V.dp(2), cellPrimaryColor);
+					GradientDrawable cellBg = new GradientDrawable();
+					if (isToday) {
+						cellBg.setColor(COLOR_BLURPLE_FAINT);
+						cellBg.setStroke(V.dp(2), COLOR_BLURPLE_MID);
+					} else {
+						cellBg.setColor(0x00000000);
+						cellBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
 					}
 					cell.setBackground(cellBg);
 
-					// Day number
-					TextView dayTv=new TextView(getActivity());
+					TextView dayTv = new TextView(getActivity());
 					dayTv.setText(String.valueOf(day));
-					dayTv.setTextSize(13);
+					dayTv.setTextSize(12);
 					dayTv.setGravity(Gravity.CENTER);
-					if(isToday){
-						dayTv.setTypeface(null, Typeface.BOLD);
-						dayTv.setTextColor(cellPrimaryColor);
-					}else{
-						dayTv.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-					}
+					dayTv.setTextColor(isToday ? COLOR_BLURPLE_MID : UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+					if (isToday) dayTv.setTypeface(null, Typeface.BOLD);
 					cell.addView(dayTv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-					// Event title pills (instead of dots)
-					if(dayEvents!=null && !dayEvents.isEmpty()){
-						LinearLayout pillsContainer=new LinearLayout(getActivity());
-						pillsContainer.setOrientation(LinearLayout.VERTICAL);
-						pillsContainer.setGravity(Gravity.CENTER_HORIZONTAL);
-						int pillCount=Math.min(dayEvents.size(), 2);
-						for(int d=0; d<pillCount; d++){
-							Event evt=dayEvents.get(d);
-							TextView pill=new TextView(getActivity());
-							String pillTitle=evt.title!=null ? evt.title : "";
-							if(pillTitle.length()>6) pillTitle=pillTitle.substring(0, 6)+"\u2026";
+					if (dayEvents != null && !dayEvents.isEmpty()) {
+						int pillCount = Math.min(dayEvents.size(), 3);
+						for (int d = 0; d < pillCount; d++) {
+							Event evt = dayEvents.get(d);
+							TextView pill = new TextView(getActivity());
+							String pillTitle = evt.title != null ? evt.title : "";
+							if (pillTitle.length() > 10) pillTitle = pillTitle.substring(0, 10);
 							pill.setText(pillTitle);
-							pill.setTextSize(8);
+							pill.setTextSize(9);
 							pill.setTypeface(null, Typeface.BOLD);
-							int dotColor=getEventDotColor(evt);
-							pill.setTextColor(dotColor);
-							pill.setGravity(Gravity.CENTER);
-							pill.setPadding(V.dp(1), 0, V.dp(1), 0);
 							pill.setSingleLine(true);
-							GradientDrawable pillBg=new GradientDrawable();
-							pillBg.setShape(GradientDrawable.RECTANGLE);
-							pillBg.setCornerRadius(V.dp(3));
-							pillBg.setColor((dotColor & 0x00FFFFFF) | 0x33000000); // 20% opacity
+							pill.setTextColor(0xFFFFFFFF);
+							pill.setPadding(V.dp(4), V.dp(1), V.dp(4), V.dp(1));
+							GradientDrawable pillBg = new GradientDrawable();
+							pillBg.setCornerRadius(V.dp(4));
+							pillBg.setColor(COLOR_BLURPLE_MID);
 							pill.setBackground(pillBg);
-							LinearLayout.LayoutParams pillLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-							if(d>0) pillLp.topMargin=V.dp(1);
-							pillsContainer.addView(pill, pillLp);
+							LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+							pillLp.topMargin = V.dp(2);
+							cell.addView(pill, pillLp);
 						}
-						if(dayEvents.size()>2){
-							TextView moreText=new TextView(getActivity());
-							moreText.setText("+"+(dayEvents.size()-2));
-							moreText.setTextSize(7);
-							moreText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-							moreText.setGravity(Gravity.CENTER);
-							LinearLayout.LayoutParams moreLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-							moreLp.topMargin=V.dp(1);
-							pillsContainer.addView(moreText, moreLp);
+						if (dayEvents.size() > 3) {
+							TextView more = new TextView(getActivity());
+							more.setText("+" + (dayEvents.size() - 3));
+							more.setTextSize(8);
+							more.setTextColor(COLOR_BLURPLE_MUTED);
+							LinearLayout.LayoutParams moreLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+							moreLp.topMargin = V.dp(1);
+							cell.addView(more, moreLp);
 						}
-						LinearLayout.LayoutParams pillsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-						pillsLp.topMargin=V.dp(2);
-						cell.addView(pillsContainer, pillsLp);
 					}
 
-					cell.setOnClickListener(v->{
-						selectedDate=cellDate;
-						rebuildCalendarGrid();
-						updateSelectedDayEvents();
+					final List<Event> finalDayEvents = dayEvents;
+					cell.setOnClickListener(v -> {
+						if (finalDayEvents != null && !finalDayEvents.isEmpty())
+							openEventDetail(finalDayEvents.get(0));
 					});
 
-					rowLayout.addView(cell, new LinearLayout.LayoutParams(0, V.dp(64), 1f));
+					LinearLayout.LayoutParams cellLp = new LinearLayout.LayoutParams(0, V.dp(80), 1f);
+					cellLp.setMargins(1, 1, 1, 1);
+					rowLayout.addView(cell, cellLp);
 					dayCounter++;
 				}
 			}
-
 			calendarGrid.addView(rowLayout, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		}
 	}
 
-	private int getEventDotColor(Event event){
-		if("going".equals(event.rsvp)) return COLOR_GOING;
-		if("interested".equals(event.rsvp)) return COLOR_INTERESTED;
-		return UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-	}
+	// ==================== Calendar Data ====================
 
-	// ==================== Selected Day Section ====================
-
-	private void buildSelectedDaySection(){
-		selectedDaySection=new LinearLayout(getActivity());
-		selectedDaySection.setOrientation(LinearLayout.VERTICAL);
-
-		// Divider
-		View divider=new View(getActivity());
-		divider.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
-		selectedDaySection.addView(divider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(1)));
-
-		// Label
-		selectedDayLabel=new TextView(getActivity());
-		selectedDayLabel.setTextSize(15);
-		selectedDayLabel.setTypeface(null, Typeface.BOLD);
-		selectedDayLabel.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-		selectedDayLabel.setPadding(V.dp(16), V.dp(10), V.dp(16), V.dp(6));
-		selectedDaySection.addView(selectedDayLabel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-		// RecyclerView for selected day events
-		selectedDayList=new RecyclerView(getActivity());
-		selectedDayList.setLayoutManager(new LinearLayoutManager(getActivity()));
-		selectedDayAdapter=new EventsAdapter(selectedDayEvents);
-		selectedDayList.setAdapter(selectedDayAdapter);
-		selectedDayList.setClipToPadding(false);
-		selectedDayList.setPadding(V.dp(16), V.dp(4), V.dp(16), V.dp(72));
-
-		selectedDaySection.addView(selectedDayList, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-
-		// Empty day message
-		TextView noDayEvents=new TextView(getActivity());
-		noDayEvents.setTag("noDayEvents");
-		noDayEvents.setText("No events on this day");
-		noDayEvents.setTextSize(13);
-		noDayEvents.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		noDayEvents.setGravity(Gravity.CENTER);
-		noDayEvents.setPadding(V.dp(16), V.dp(16), V.dp(16), V.dp(16));
-		noDayEvents.setVisibility(View.GONE);
-		selectedDaySection.addView(noDayEvents, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-		calendarContainer.addView(selectedDaySection, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-	}
-
-	private void updateSelectedDayEvents(){
-		if(selectedDate==null){
-			selectedDayLabel.setText("Tap a day to see events");
-			selectedDayEvents.clear();
-			selectedDayAdapter.notifyDataSetChanged();
-			View noDayEvents=selectedDaySection.findViewWithTag("noDayEvents");
-			if(noDayEvents!=null) noDayEvents.setVisibility(View.GONE);
-			selectedDayList.setVisibility(View.GONE);
-			return;
-		}
-
-		selectedDayLabel.setText(FULL_DATE_FORMAT.format(selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-
-		selectedDayEvents.clear();
-		for(Event e : allCalendarEvents){
-			if(e.startTime==null) continue;
-			LocalDate ed=e.startTime.atZone(ZoneId.systemDefault()).toLocalDate();
-			if(ed.equals(selectedDate)){
-				selectedDayEvents.add(e);
-			}
-		}
-		selectedDayAdapter.notifyDataSetChanged();
-
-		View noDayEvents=selectedDaySection.findViewWithTag("noDayEvents");
-		if(selectedDayEvents.isEmpty()){
-			selectedDayList.setVisibility(View.GONE);
-			if(noDayEvents!=null) noDayEvents.setVisibility(View.VISIBLE);
-		}else{
-			selectedDayList.setVisibility(View.VISIBLE);
-			if(noDayEvents!=null) noDayEvents.setVisibility(View.GONE);
-		}
-	}
-
-	// ==================== Calendar Data Loading ====================
-
-	private void loadCalendarEvents(){
+	private void loadCalendarEvents() {
+		calendarLoading = true;
+		calendarLoaded = false;
 		allCalendarEvents.clear();
-		selectedDayEvents.clear();
-		if(selectedDayAdapter!=null) selectedDayAdapter.notifyDataSetChanged();
-
-		// Load upcoming events
 		new GetEvents(currentFilter.equals("upcoming") ? "upcoming" : currentFilter, null, 200)
-				.setCallback(new Callback<>(){
+				.setCallback(new Callback<>() {
 					@Override
-					public void onSuccess(List<Event> result){
-						if(getActivity()==null) return;
+					public void onSuccess(List<Event> result) {
+						if (getActivity() == null) return;
 						allCalendarEvents.addAll(result);
-						// If filter is upcoming, also load past to get full picture
-						if("upcoming".equals(currentFilter)){
-							loadPastForCalendar();
-						}else{
-							rebuildCalendarGrid();
-							updateSelectedDayEvents();
-						}
+						if ("upcoming".equals(currentFilter)) loadPastForCalendar();
+						else finishCalendarLoad();
 					}
 					@Override
-					public void onError(ErrorResponse error){
-						if(getActivity()==null) return;
+					public void onError(ErrorResponse error) {
+						if (getActivity() == null) return;
+						calendarLoading = false;
 						rebuildCalendarGrid();
-						updateSelectedDayEvents();
 					}
 				})
 				.exec(accountID);
 	}
 
-	private void loadPastForCalendar(){
+	private void loadPastForCalendar() {
 		new GetEvents("past", null, 200)
-				.setCallback(new Callback<>(){
+				.setCallback(new Callback<>() {
 					@Override
-					public void onSuccess(List<Event> result){
-						if(getActivity()==null) return;
-						// Add past events, avoiding duplicates
-						for(Event e : result){
-							boolean dup=false;
-							for(Event existing : allCalendarEvents){
-								if(existing.id.equals(e.id)){
-									dup=true;
-									break;
-								}
+					public void onSuccess(List<Event> result) {
+						if (getActivity() == null) return;
+						for (Event e : result) {
+							boolean dup = false;
+							for (Event ex : allCalendarEvents) {
+								if (ex.id.equals(e.id)) { dup = true; break; }
 							}
-							if(!dup) allCalendarEvents.add(e);
+							if (!dup) allCalendarEvents.add(e);
 						}
-						rebuildCalendarGrid();
-						updateSelectedDayEvents();
+						finishCalendarLoad();
 					}
 					@Override
-					public void onError(ErrorResponse error){
-						if(getActivity()==null) return;
+					public void onError(ErrorResponse error) {
+						if (getActivity() == null) return;
+						calendarLoading = false;
 						rebuildCalendarGrid();
-						updateSelectedDayEvents();
 					}
 				})
 				.exec(accountID);
 	}
 
-	// ==================== FAB ====================
-
-	private View createFab(){
-		FrameLayout fabView=new FrameLayout(getActivity());
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-
-		GradientDrawable fabBg=new GradientDrawable();
-		fabBg.setShape(GradientDrawable.OVAL);
-		fabBg.setColor(primaryColor);
-		fabView.setBackground(fabBg);
-		fabView.setElevation(V.dp(6));
-
-		// Plus icon as text
-		TextView plusIcon=new TextView(getActivity());
-		plusIcon.setText("+");
-		plusIcon.setTextSize(24);
-		plusIcon.setTypeface(null, Typeface.NORMAL);
-		plusIcon.setTextColor(0xFFFFFFFF);
-		plusIcon.setGravity(Gravity.CENTER);
-		fabView.addView(plusIcon, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		fabView.setOnClickListener(v->{
-			Bundle args=new Bundle();
-			args.putString("account", accountID);
-			Nav.go(getActivity(), CreateEventFragment.class, args);
-		});
-
-		// Outline for ripple/shadow
-		fabView.setOutlineProvider(new ViewOutlineProvider(){
-			@Override
-			public void getOutline(View view, Outline outline){
-				outline.setOval(0, 0, view.getWidth(), view.getHeight());
-			}
-		});
-		fabView.setClipToOutline(true);
-
-		return fabView;
+	private void finishCalendarLoad() {
+		calendarLoading = false;
+		calendarLoaded = true;
+		rebuildCalendarGrid();
 	}
 
-	// ==================== Data Loading (List Mode) ====================
+	// ==================== Data Loading ====================
 
-	public void loadData(){
-		if(dataLoading)
-			return;
-		dataLoading=true;
-		if(calendarMode){
-			dataLoading=false;
+	public void loadData() {
+		if (dataLoading) return;
+		dataLoading = true;
+		if (calendarMode) {
+			dataLoading = false;
 			loadCalendarEvents();
 			return;
 		}
 		new GetEvents(currentFilter, null, 40)
-				.setCallback(new Callback<>(){
+				.setCallback(new Callback<>() {
 					@Override
-					public void onSuccess(List<Event> result){
-						if(getActivity()==null)
-							return;
-						dataLoading=false;
-						loaded=true;
+					public void onSuccess(List<Event> result) {
+						if (getActivity() == null) return;
+						dataLoading = false;
+						loaded = true;
 						refreshLayout.setRefreshing(false);
 						events.clear();
 						events.addAll(result);
 						adapter.notifyDataSetChanged();
-						emptyView.setVisibility(events.isEmpty() ? View.VISIBLE : View.GONE);
-						refreshLayout.setVisibility(events.isEmpty() ? View.GONE : View.VISIBLE);
+						boolean empty = events.isEmpty();
+						emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+						refreshLayout.setVisibility(empty ? View.GONE : View.VISIBLE);
 					}
-
 					@Override
-					public void onError(ErrorResponse error){
-						if(getActivity()==null)
-							return;
-						dataLoading=false;
+					public void onError(ErrorResponse error) {
+						if (getActivity() == null) return;
+						dataLoading = false;
 						refreshLayout.setRefreshing(false);
 						emptyView.setVisibility(View.VISIBLE);
 						refreshLayout.setVisibility(View.GONE);
@@ -851,534 +668,370 @@ public class EventsFragment extends Fragment implements ScrollableToTop{
 	}
 
 	@Override
-	public void scrollToTop(){
-		if(list!=null && !calendarMode)
-			list.smoothScrollToPosition(0);
+	public void scrollToTop() {
+		if (list != null && !calendarMode) list.smoothScrollToPosition(0);
 	}
 
-	// ==================== Formatting Helpers ====================
+	// ==================== Helpers ====================
 
-	private String formatTimeRange(Event event){
-		if(event.startTime==null) return "";
-		StringBuilder sb=new StringBuilder();
-		sb.append(FULL_DATE_FORMAT.format(event.startTime));
-		sb.append(" \u00b7 ");
-		sb.append(TIME_FORMAT.format(event.startTime));
-		if(event.endTime!=null){
-			sb.append(" \u2013 ");
-			sb.append(TIME_FORMAT.format(event.endTime));
+	private String buildMetaLine(Event event) {
+		StringBuilder sb = new StringBuilder();
+		if (event.startTime != null) {
+			sb.append(WEEKDAY_SHORT.format(event.startTime));
+			sb.append(" ");
+			sb.append(TIME_FORMAT.format(event.startTime));
+			if (event.endTime != null) {
+				sb.append("–").append(TIME_FORMAT.format(event.endTime));
+			}
+		}
+		if (!TextUtils.isEmpty(event.locationName)) {
+			if (sb.length() > 0) sb.append(" · ");
+			sb.append(event.locationName);
+		}
+		if (event.goingCount > 0) {
+			if (sb.length() > 0) sb.append(" · ");
+			sb.append(event.goingCount).append(" going");
+		}
+		if (event.interestedCount > 0) {
+			if (sb.length() > 0) sb.append(" · ");
+			sb.append(event.interestedCount).append(" maybe");
 		}
 		return sb.toString();
 	}
 
-	private String formatRelativeTime(Event event){
-		if(event.startTime==null) return "";
-		Instant now=Instant.now();
-		if(event.startTime.isBefore(now)) return "Now";
-		Duration d=Duration.between(now, event.startTime);
-		long days=d.toDays();
-		if(days==0){
-			long hours=d.toHours();
-			if(hours<=1) return "Soon";
-			return "In "+hours+"h";
-		}else if(days==1){
-			return "Tomorrow";
-		}else if(days<7){
-			return "In "+days+"d";
-		}
-		return "";
+	private void showShareDialog(Event event) {
+		EditText input = new EditText(getActivity());
+		input.setHint("Add a comment (optional)");
+		input.setPadding(V.dp(20), V.dp(12), V.dp(20), V.dp(12));
+		new AlertDialog.Builder(getActivity())
+				.setTitle("Share event")
+				.setView(input)
+				.setPositiveButton("Share", (d, w) -> {
+					String comment = input.getText().toString().trim();
+					new ShareEvent(event.id, comment)
+							.setCallback(new Callback<>() {
+								@Override
+								public void onSuccess(Event result) {
+									if (getActivity() != null)
+										Toast.makeText(getActivity(), "Shared to timeline", Toast.LENGTH_SHORT).show();
+								}
+								@Override
+								public void onError(ErrorResponse error) {
+									if (getActivity() != null) error.showToast(getActivity());
+								}
+							})
+							.exec(accountID);
+				})
+				.setNegativeButton("Cancel", null)
+				.show();
 	}
 
-	private void openEventDetail(Event event){
-		Bundle args=new Bundle();
+	private void openEventDetail(Event event) {
+		Bundle args = new Bundle();
 		args.putString("account", accountID);
 		args.putParcelable("event", Parcels.wrap(event));
 		Nav.go(getActivity(), EventDetailFragment.class, args);
 	}
 
-	// ==================== RSVP ====================
-
-	private void doRsvp(Event event, String status){
+	private void doRsvp(Event event, String status) {
 		new RsvpEvent(event.id, status)
-				.setCallback(new Callback<>(){
+				.setCallback(new Callback<>() {
 					@Override
-					public void onSuccess(Event result){
-						if(getActivity()==null) return;
-						// Update in main list
-						int idx=events.indexOf(event);
-						if(idx>=0){
+					public void onSuccess(Event result) {
+						if (getActivity() == null) return;
+						int idx = events.indexOf(event);
+						if (idx >= 0) {
 							events.set(idx, result);
 							adapter.notifyItemChanged(idx);
 						}
-						// Update in calendar events
-						for(int i=0; i<allCalendarEvents.size(); i++){
-							if(allCalendarEvents.get(i).id.equals(event.id)){
+						for (int i = 0; i < allCalendarEvents.size(); i++) {
+							if (allCalendarEvents.get(i).id.equals(event.id)) {
 								allCalendarEvents.set(i, result);
 								break;
 							}
 						}
-						// Update in selected day events
-						int sdIdx=selectedDayEvents.indexOf(event);
-						if(sdIdx>=0){
-							selectedDayEvents.set(sdIdx, result);
-							selectedDayAdapter.notifyItemChanged(sdIdx);
-						}
-						if(calendarMode){
-							rebuildCalendarGrid();
-						}
+						if (calendarMode) rebuildCalendarGrid();
 					}
 					@Override
-					public void onError(ErrorResponse error){
-						if(getActivity()!=null) error.showToast(getActivity());
+					public void onError(ErrorResponse error) {
+						if (getActivity() != null) error.showToast(getActivity());
 					}
 				})
 				.exec(accountID);
 	}
 
-	// ==================== Chip Styling ====================
-
-	private void styleChip(View chip, TextView text, boolean active, int activeColor){
-		GradientDrawable bg=new GradientDrawable();
-		bg.setShape(GradientDrawable.RECTANGLE);
-		bg.setCornerRadius(V.dp(8));
-		if(active){
-			bg.setColor(activeColor);
-			text.setTextColor(0xFFFFFFFF);
-		}else{
-			bg.setColor(0x00000000);
-			bg.setStroke(V.dp(1), UiUtils.getThemeColor(chip.getContext(), R.attr.colorM3Outline));
-			text.setTextColor(UiUtils.getThemeColor(chip.getContext(), android.R.attr.textColorPrimary));
-		}
-		chip.setBackground(bg);
-	}
-
 	// ==================== Adapter ====================
 
-	private class EventsAdapter extends RecyclerView.Adapter<EventViewHolder>{
+	private class EventsAdapter extends RecyclerView.Adapter<EventViewHolder> {
 		private final List<Event> data;
-
-		EventsAdapter(List<Event> data){
-			this.data=data;
-		}
+		EventsAdapter(List<Event> data) { this.data = data; }
 
 		@Override
-		public EventViewHolder onCreateViewHolder(ViewGroup parent, int viewType){
+		public EventViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
 			return new EventViewHolder();
 		}
-
 		@Override
-		public void onBindViewHolder(EventViewHolder holder, int position){
+		public void onBindViewHolder(EventViewHolder holder, int position) {
 			holder.bind(data.get(position));
 		}
-
 		@Override
-		public int getItemCount(){
-			return data.size();
-		}
+		public int getItemCount() { return data.size(); }
 	}
 
 	// ==================== ViewHolder ====================
 
-	private class EventViewHolder extends RecyclerView.ViewHolder{
-		private final TextView dateBadgeMonth, dateBadgeDay;
-		private final TextView title, timeText, locationText, descriptionText, relativeTimeText;
-		private final TextView goingCountText, interestedCountText, hostText;
-		private final ImageView coverImage;
-		private final View dateBadge, goingChip, interestedChip, cancelledBadge;
-		private final TextView goingText, interestedText;
+	private class EventViewHolder extends RecyclerView.ViewHolder {
+		private final TextView monthText, dayText, titleText, metaText, cancelledBadge;
+		private final LinearLayout goingBtn, maybeBtn, skipBtn;
+		private final TextView goingBtnText, maybeBtnText, skipBtnText;
+		private final LinearLayout rsvpGroup;
+		private final View shareBtn;
 
-		EventViewHolder(){
+		EventViewHolder() {
 			super(createEventCardView());
-			dateBadge=itemView.findViewWithTag("dateBadge");
-			dateBadgeMonth=itemView.findViewWithTag("dateBadgeMonth");
-			dateBadgeDay=itemView.findViewWithTag("dateBadgeDay");
-			title=itemView.findViewById(android.R.id.title);
-			timeText=itemView.findViewById(android.R.id.text1);
-			locationText=itemView.findViewById(android.R.id.text2);
-			descriptionText=itemView.findViewById(android.R.id.message);
-			relativeTimeText=itemView.findViewById(android.R.id.hint);
-			goingChip=itemView.findViewWithTag("goingChip");
-			interestedChip=itemView.findViewWithTag("interestedChip");
-			goingText=(TextView)itemView.findViewWithTag("goingText");
-			interestedText=(TextView)itemView.findViewWithTag("interestedText");
-			cancelledBadge=itemView.findViewWithTag("cancelledBadge");
-			coverImage=(ImageView)itemView.findViewWithTag("coverImage");
-			goingCountText=(TextView)itemView.findViewWithTag("goingCount");
-			interestedCountText=(TextView)itemView.findViewWithTag("interestedCount");
-			hostText=(TextView)itemView.findViewWithTag("hostText");
+			monthText = itemView.findViewWithTag("monthText");
+			dayText = itemView.findViewWithTag("dayText");
+			titleText = itemView.findViewWithTag("titleText");
+			metaText = itemView.findViewWithTag("metaText");
+			cancelledBadge = itemView.findViewWithTag("cancelledBadge");
+			goingBtn = itemView.findViewWithTag("goingBtn");
+			maybeBtn = itemView.findViewWithTag("maybeBtn");
+			skipBtn = itemView.findViewWithTag("skipBtn");
+			goingBtnText = itemView.findViewWithTag("goingBtnText");
+			maybeBtnText = itemView.findViewWithTag("maybeBtnText");
+			skipBtnText = itemView.findViewWithTag("skipBtnText");
+			rsvpGroup = itemView.findViewWithTag("rsvpGroup");
+			shareBtn = itemView.findViewWithTag("shareBtn");
 		}
 
-		void bind(Event event){
-			// Cover image
-			if(coverImage!=null){
-				if(!TextUtils.isEmpty(event.imageUrl)){
-					coverImage.setVisibility(View.VISIBLE);
-					ViewImageLoader.load(coverImage, null, new UrlImageLoaderRequest(event.imageUrl, V.dp(400), V.dp(140)));
-				}else{
-					coverImage.setVisibility(View.GONE);
-				}
+		void bind(Event event) {
+			if (event.startTime != null) {
+				monthText.setText(MONTH_FORMAT.format(event.startTime).toUpperCase(Locale.ROOT));
+				dayText.setText(DAY_FORMAT.format(event.startTime));
+			} else {
+				monthText.setText("");
+				dayText.setText("");
 			}
 
-			// Date badge
-			if(event.startTime!=null){
-				dateBadgeMonth.setText(MONTH_FORMAT.format(event.startTime).toUpperCase(Locale.ROOT));
-				dateBadgeDay.setText(DAY_FORMAT.format(event.startTime));
-				dateBadge.setVisibility(View.VISIBLE);
-			}else{
-				dateBadge.setVisibility(View.INVISIBLE);
-			}
-
-			// Title
-			title.setText(event.title);
-			title.setAlpha(event.cancelled ? 0.5f : 1f);
-
-			// Relative time
-			String relative=formatRelativeTime(event);
-			if(!TextUtils.isEmpty(relative)){
-				relativeTimeText.setText(relative);
-				relativeTimeText.setVisibility(View.VISIBLE);
-				if("Now".equals(relative)){
-					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Primary));
-				}else{
-					relativeTimeText.setTextColor(UiUtils.getThemeColor(itemView.getContext(), android.R.attr.textColorSecondary));
-				}
-			}else{
-				relativeTimeText.setVisibility(View.GONE);
-			}
-
-			// Time
-			String time=formatTimeRange(event);
-			if(!TextUtils.isEmpty(time)){
-				timeText.setText(time);
-				timeText.setVisibility(View.VISIBLE);
-			}else{
-				timeText.setVisibility(View.GONE);
-			}
-
-			// Location
-			if(!TextUtils.isEmpty(event.locationName)){
-				locationText.setText(event.locationName);
-				locationText.setVisibility(View.VISIBLE);
-			}else{
-				locationText.setVisibility(View.GONE);
-			}
-
-			// Description preview
-			if(!TextUtils.isEmpty(event.description)){
-				String desc=event.description.length()>140 ? event.description.substring(0, 140)+"\u2026" : event.description;
-				descriptionText.setText(desc);
-				descriptionText.setVisibility(View.VISIBLE);
-			}else{
-				descriptionText.setVisibility(View.GONE);
-			}
-
-			// Going / Interested counts
-			if(goingCountText!=null){
-				if(event.goingCount>0){
-					goingCountText.setText(event.goingCount+" going");
-					goingCountText.setVisibility(View.VISIBLE);
-				}else{
-					goingCountText.setVisibility(View.GONE);
-				}
-			}
-			if(interestedCountText!=null){
-				if(event.interestedCount>0){
-					interestedCountText.setText(event.interestedCount+" interested");
-					interestedCountText.setVisibility(View.VISIBLE);
-				}else{
-					interestedCountText.setVisibility(View.GONE);
-				}
-			}
-
-			// Host info
-			if(hostText!=null){
-				if(event.account!=null && !TextUtils.isEmpty(event.account.displayName)){
-					hostText.setText("Hosted by "+event.account.displayName);
-					hostText.setVisibility(View.VISIBLE);
-				}else{
-					hostText.setVisibility(View.GONE);
-				}
-			}
-
-			// RSVP chips
 			cancelledBadge.setVisibility(event.cancelled ? View.VISIBLE : View.GONE);
+			titleText.setText(event.title);
+			titleText.setAlpha(event.cancelled ? 0.5f : 1f);
 
-			if(!event.cancelled){
-				// Going chip
-				boolean isGoing="going".equals(event.rsvp);
-				goingChip.setVisibility(View.VISIBLE);
-				goingText.setText(isGoing ? "Going \u2713" : "Going");
-				styleChip(goingChip, goingText, isGoing, COLOR_GOING);
+			String meta = buildMetaLine(event);
+			metaText.setText(meta);
+			metaText.setVisibility(TextUtils.isEmpty(meta) ? View.GONE : View.VISIBLE);
 
-				// Interested chip
-				boolean isInterested="interested".equals(event.rsvp);
-				interestedChip.setVisibility(View.VISIBLE);
-				interestedText.setText(isInterested ? "Interested \u2713" : "Interested");
-				styleChip(interestedChip, interestedText, isInterested, COLOR_INTERESTED);
+			if (!event.cancelled) {
+				rsvpGroup.setVisibility(View.VISIBLE);
+				boolean isGoing = "going".equals(event.rsvp);
+				boolean isMaybe = "interested".equals(event.rsvp);
 
-				goingChip.setOnClickListener(v->{
-					String newStatus=isGoing ? "remove" : "going";
-					doRsvp(event, newStatus);
-				});
-				interestedChip.setOnClickListener(v->{
-					String newStatus=isInterested ? "remove" : "interested";
-					doRsvp(event, newStatus);
-				});
-			}else{
-				goingChip.setVisibility(View.GONE);
-				interestedChip.setVisibility(View.GONE);
+				applyRsvpStyle(goingBtnText, isGoing);
+				applyRsvpStyle(maybeBtnText, isMaybe);
+				applyRsvpStyle(skipBtnText, false);
+
+				goingBtn.setOnClickListener(v -> doRsvp(event, isGoing ? "remove" : "going"));
+				maybeBtn.setOnClickListener(v -> doRsvp(event, isMaybe ? "remove" : "interested"));
+				skipBtn.setOnClickListener(v -> doRsvp(event, "remove"));
+			} else {
+				rsvpGroup.setVisibility(View.GONE);
 			}
 
-			// Click to open detail
-			itemView.setOnClickListener(v->openEventDetail(event));
+			shareBtn.setOnClickListener(v -> showShareDialog(event));
+			itemView.setOnClickListener(v -> openEventDetail(event));
+		}
+
+		private void applyRsvpStyle(TextView label, boolean active) {
+			label.setTextColor(active
+					? UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary)
+					: UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+			label.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
 		}
 	}
 
 	// ==================== Card View Builder ====================
 
-	private View createEventCardView(){
-		// Card container
-		LinearLayout card=new LinearLayout(getActivity());
-		card.setOrientation(LinearLayout.VERTICAL);
-		RecyclerView.LayoutParams cardLp=new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		cardLp.bottomMargin=V.dp(12);
-		card.setLayoutParams(cardLp);
+	private View createEventCardView() {
+		// Wrapper: row + bottom divider
+		LinearLayout wrapper = new LinearLayout(getActivity());
+		wrapper.setOrientation(LinearLayout.VERTICAL);
 
-		GradientDrawable cardBg=new GradientDrawable();
-		cardBg.setShape(GradientDrawable.RECTANGLE);
-		cardBg.setCornerRadius(V.dp(12));
-		cardBg.setColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3Surface));
-		cardBg.setStroke(V.dp(1), UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
-		card.setBackground(cardBg);
-		card.setElevation(V.dp(1));
-		card.setClipToOutline(true);
-		card.setOutlineProvider(new ViewOutlineProvider(){
-			@Override
-			public void getOutline(View view, Outline outline){
-				outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), V.dp(12));
-			}
-		});
+		// Row
+		LinearLayout row = new LinearLayout(getActivity());
+		row.setOrientation(LinearLayout.HORIZONTAL);
+		row.setGravity(Gravity.CENTER_VERTICAL);
+		row.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
 
-		// Cover image at the top of the card (before topRow)
-		ImageView coverImage=new ImageView(getActivity());
-		coverImage.setTag("coverImage");
-		coverImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-		coverImage.setVisibility(View.GONE);
-		card.addView(coverImage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, V.dp(140)));
+		// Date column
+		LinearLayout dateCol = new LinearLayout(getActivity());
+		dateCol.setOrientation(LinearLayout.VERTICAL);
+		dateCol.setGravity(Gravity.CENTER_HORIZONTAL);
+		LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(V.dp(44), ViewGroup.LayoutParams.WRAP_CONTENT);
+		dateLp.gravity = Gravity.TOP;
+		dateLp.topMargin = V.dp(2);
 
-		// Content area with padding (below cover image)
-		LinearLayout contentArea=new LinearLayout(getActivity());
-		contentArea.setOrientation(LinearLayout.VERTICAL);
-		contentArea.setPadding(V.dp(16), V.dp(14), V.dp(16), V.dp(14));
-
-		// Top row: date badge + title/meta
-		LinearLayout topRow=new LinearLayout(getActivity());
-		topRow.setOrientation(LinearLayout.HORIZONTAL);
-
-		// Date badge
-		LinearLayout dateBadge=new LinearLayout(getActivity());
-		dateBadge.setTag("dateBadge");
-		dateBadge.setOrientation(LinearLayout.VERTICAL);
-		dateBadge.setGravity(Gravity.CENTER);
-		int primaryColor=UiUtils.getThemeColor(getActivity(), R.attr.colorM3Primary);
-		GradientDrawable dateBg=new GradientDrawable();
-		dateBg.setShape(GradientDrawable.RECTANGLE);
-		dateBg.setCornerRadius(V.dp(10));
-		dateBg.setColor((primaryColor & 0x00FFFFFF) | 0x1A000000); // 10% opacity of primary
-		dateBadge.setBackground(dateBg);
-		dateBadge.setPadding(V.dp(2), V.dp(6), V.dp(2), V.dp(6));
-		LinearLayout.LayoutParams dateLp=new LinearLayout.LayoutParams(V.dp(48), V.dp(48));
-		dateLp.rightMargin=V.dp(14);
-
-		TextView monthText=new TextView(getActivity());
-		monthText.setTag("dateBadgeMonth");
+		TextView monthText = new TextView(getActivity());
+		monthText.setTag("monthText");
 		monthText.setTextSize(10);
-		monthText.setTypeface(null, Typeface.BOLD);
-		monthText.setTextColor(primaryColor);
+		monthText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		monthText.setLetterSpacing(0.10f);
 		monthText.setGravity(Gravity.CENTER);
-		monthText.setLetterSpacing(0.06f);
-		dateBadge.addView(monthText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		dateCol.addView(monthText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		TextView dayText=new TextView(getActivity());
-		dayText.setTag("dateBadgeDay");
-		dayText.setTextSize(18);
-		dayText.setTypeface(null, Typeface.BOLD);
-		dayText.setTextColor(primaryColor);
+		TextView dayText = new TextView(getActivity());
+		dayText.setTag("dayText");
+		dayText.setTextSize(28);
+		dayText.setTypeface(Typeface.SERIF, Typeface.NORMAL);
+		dayText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
 		dayText.setGravity(Gravity.CENTER);
 		dayText.setIncludeFontPadding(false);
-		dateBadge.addView(dayText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		dateCol.addView(dayText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		topRow.addView(dateBadge, dateLp);
+		row.addView(dateCol, dateLp);
 
-		// Right side: title + relative time
-		LinearLayout titleCol=new LinearLayout(getActivity());
-		titleCol.setOrientation(LinearLayout.VERTICAL);
-		LinearLayout.LayoutParams titleColLp=new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-		titleCol.setGravity(Gravity.CENTER_VERTICAL);
+		// Content column
+		LinearLayout contentCol = new LinearLayout(getActivity());
+		contentCol.setOrientation(LinearLayout.VERTICAL);
+		contentCol.setGravity(Gravity.CENTER_VERTICAL);
+		LinearLayout.LayoutParams contentLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+		contentLp.leftMargin = V.dp(14);
 
-		// Cancelled badge
-		TextView cancelledBadge=new TextView(getActivity());
+		TextView cancelledBadge = new TextView(getActivity());
 		cancelledBadge.setTag("cancelledBadge");
 		cancelledBadge.setText("CANCELLED");
-		cancelledBadge.setTextSize(10);
+		cancelledBadge.setTextSize(9);
 		cancelledBadge.setTypeface(null, Typeface.BOLD);
 		cancelledBadge.setTextColor(0xFFFFFFFF);
-		cancelledBadge.setLetterSpacing(0.04f);
-		cancelledBadge.setPadding(V.dp(6), V.dp(2), V.dp(6), V.dp(2));
-		GradientDrawable cancelBg=new GradientDrawable();
-		cancelBg.setShape(GradientDrawable.RECTANGLE);
+		cancelledBadge.setLetterSpacing(0.06f);
+		cancelledBadge.setPadding(V.dp(5), V.dp(2), V.dp(5), V.dp(2));
+		GradientDrawable cancelBg = new GradientDrawable();
 		cancelBg.setCornerRadius(V.dp(4));
 		cancelBg.setColor(COLOR_CANCELLED);
 		cancelledBadge.setBackground(cancelBg);
 		cancelledBadge.setVisibility(View.GONE);
-		LinearLayout.LayoutParams cbLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		cbLp.bottomMargin=V.dp(4);
-		titleCol.addView(cancelledBadge, cbLp);
+		LinearLayout.LayoutParams cbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		cbLp.bottomMargin = V.dp(3);
+		contentCol.addView(cancelledBadge, cbLp);
 
-		TextView title=new TextView(getActivity());
-		title.setId(android.R.id.title);
-		title.setTextSize(16);
-		title.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
-		title.setTypeface(null, Typeface.BOLD);
-		title.setMaxLines(2);
-		title.setEllipsize(TextUtils.TruncateAt.END);
-		titleCol.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		TextView titleText = new TextView(getActivity());
+		titleText.setTag("titleText");
+		titleText.setTextSize(16);
+		titleText.setTypeface(Typeface.SERIF, Typeface.NORMAL);
+		titleText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorPrimary));
+		titleText.setSingleLine(true);
+		titleText.setEllipsize(TextUtils.TruncateAt.END);
+		contentCol.addView(titleText, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		// Relative time label
-		TextView relativeTime=new TextView(getActivity());
-		relativeTime.setId(android.R.id.hint);
-		relativeTime.setTextSize(12);
-		relativeTime.setTypeface(null, Typeface.BOLD);
-		relativeTime.setVisibility(View.GONE);
-		LinearLayout.LayoutParams rtLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		rtLp.topMargin=V.dp(2);
-		titleCol.addView(relativeTime, rtLp);
+		TextView metaText = new TextView(getActivity());
+		metaText.setTag("metaText");
+		metaText.setTextSize(12);
+		metaText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		metaText.setSingleLine(true);
+		metaText.setEllipsize(TextUtils.TruncateAt.END);
+		LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		metaLp.topMargin = V.dp(3);
+		contentCol.addView(metaText, metaLp);
 
-		topRow.addView(titleCol, titleColLp);
-		contentArea.addView(topRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		TextView shareBtn = new TextView(getActivity());
+		shareBtn.setTag("shareBtn");
+		shareBtn.setText("Share");
+		shareBtn.setTextSize(11);
+		shareBtn.setTextColor(COLOR_BLURPLE_MUTED);
+		shareBtn.setLetterSpacing(0.02f);
+		LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		shareLp.topMargin = V.dp(6);
+		contentCol.addView(shareBtn, shareLp);
 
-		// Time row
-		TextView timeText=new TextView(getActivity());
-		timeText.setId(android.R.id.text1);
-		timeText.setTextSize(13);
-		timeText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		timeText.setCompoundDrawablePadding(V.dp(6));
-		LinearLayout.LayoutParams timeLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		timeLp.topMargin=V.dp(10);
-		timeLp.leftMargin=V.dp(62); // align with title (48 badge + 14 margin)
-		contentArea.addView(timeText, timeLp);
+		row.addView(contentCol, contentLp);
 
-		// Location row
-		TextView locationText=new TextView(getActivity());
-		locationText.setId(android.R.id.text2);
-		locationText.setTextSize(13);
-		locationText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		locationText.setCompoundDrawablePadding(V.dp(6));
-		LinearLayout.LayoutParams locLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		locLp.topMargin=V.dp(4);
-		locLp.leftMargin=V.dp(62);
-		contentArea.addView(locationText, locLp);
+		// RSVP segmented control
+		LinearLayout rsvpGroup = new LinearLayout(getActivity());
+		rsvpGroup.setTag("rsvpGroup");
+		rsvpGroup.setOrientation(LinearLayout.HORIZONTAL);
+		rsvpGroup.setGravity(Gravity.CENTER_VERTICAL);
+		rsvpGroup.setClipToOutline(true);
+		rsvpGroup.setOutlineProvider(new ViewOutlineProvider() {
+			@Override public void getOutline(View v, Outline o) {
+				o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), V.dp(8));
+			}
+		});
+		GradientDrawable rsvpBg = new GradientDrawable();
+		rsvpBg.setCornerRadius(V.dp(8));
+		rsvpBg.setStroke(1, UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		rsvpGroup.setBackground(rsvpBg);
 
-		// Description
-		TextView descriptionText=new TextView(getActivity());
-		descriptionText.setId(android.R.id.message);
-		descriptionText.setTextSize(13);
-		descriptionText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		descriptionText.setMaxLines(2);
-		descriptionText.setEllipsize(TextUtils.TruncateAt.END);
-		descriptionText.setLineSpacing(V.dp(1), 1f);
-		descriptionText.setVisibility(View.GONE);
-		LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		descLp.topMargin=V.dp(8);
-		descLp.leftMargin=V.dp(62);
-		contentArea.addView(descriptionText, descLp);
+		rsvpGroup.addView(buildRsvpSegment("Going", "goingBtn", "goingBtnText"));
+		rsvpGroup.addView(buildRsvpSeparator(), new LinearLayout.LayoutParams(1, ViewGroup.LayoutParams.MATCH_PARENT));
+		rsvpGroup.addView(buildRsvpSegment("Maybe", "maybeBtn", "maybeBtnText"));
+		rsvpGroup.addView(buildRsvpSeparator(), new LinearLayout.LayoutParams(1, ViewGroup.LayoutParams.MATCH_PARENT));
+		rsvpGroup.addView(buildRsvpSegment("Skip", "skipBtn", "skipBtnText"));
 
-		// Host info row
-		TextView hostText=new TextView(getActivity());
-		hostText.setTag("hostText");
-		hostText.setTextSize(12);
-		hostText.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		hostText.setVisibility(View.GONE);
-		LinearLayout.LayoutParams hostLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		hostLp.topMargin=V.dp(6);
-		hostLp.leftMargin=V.dp(62);
-		contentArea.addView(hostText, hostLp);
+		LinearLayout.LayoutParams rsvpLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		rsvpLp.leftMargin = V.dp(10);
+		rsvpLp.gravity = Gravity.CENTER_VERTICAL;
+		row.addView(rsvpGroup, rsvpLp);
 
-		// Counts row: "X going · Y interested"
-		LinearLayout countsRow=new LinearLayout(getActivity());
-		countsRow.setOrientation(LinearLayout.HORIZONTAL);
-		countsRow.setGravity(Gravity.CENTER_VERTICAL);
-		LinearLayout.LayoutParams countsLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		countsLp.topMargin=V.dp(4);
-		countsLp.leftMargin=V.dp(62);
+		wrapper.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-		TextView goingCount=new TextView(getActivity());
-		goingCount.setTag("goingCount");
-		goingCount.setTextSize(12);
-		goingCount.setTextColor(COLOR_GOING);
-		goingCount.setTypeface(null, Typeface.BOLD);
-		goingCount.setVisibility(View.GONE);
-		countsRow.addView(goingCount, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		View divider = new View(getActivity());
+		divider.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		wrapper.addView(divider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
-		TextView countSeparator=new TextView(getActivity());
-		countSeparator.setTag("countSeparator");
-		countSeparator.setText(" \u00b7 ");
-		countSeparator.setTextSize(12);
-		countSeparator.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
-		countsRow.addView(countSeparator, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		RecyclerView.LayoutParams wrapLp = new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		wrapper.setLayoutParams(wrapLp);
 
-		TextView interestedCount=new TextView(getActivity());
-		interestedCount.setTag("interestedCount");
-		interestedCount.setTextSize(12);
-		interestedCount.setTextColor(COLOR_INTERESTED);
-		interestedCount.setTypeface(null, Typeface.BOLD);
-		interestedCount.setVisibility(View.GONE);
-		countsRow.addView(interestedCount, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		return wrapper;
+	}
 
-		contentArea.addView(countsRow, countsLp);
+	private LinearLayout buildRsvpSegment(String label, String btnTag, String textTag) {
+		LinearLayout seg = new LinearLayout(getActivity());
+		seg.setTag(btnTag);
+		seg.setGravity(Gravity.CENTER);
+		seg.setPadding(V.dp(11), V.dp(5), V.dp(11), V.dp(5));
 
-		// Bottom row: RSVP chips
-		LinearLayout bottomRow=new LinearLayout(getActivity());
-		bottomRow.setOrientation(LinearLayout.HORIZONTAL);
-		bottomRow.setGravity(Gravity.CENTER_VERTICAL);
-		LinearLayout.LayoutParams brLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		brLp.topMargin=V.dp(12);
-		brLp.leftMargin=V.dp(62);
+		TextView text = new TextView(getActivity());
+		text.setTag(textTag);
+		text.setText(label);
+		text.setTextSize(11);
+		text.setTextColor(UiUtils.getThemeColor(getActivity(), android.R.attr.textColorSecondary));
+		text.setSingleLine(true);
+		seg.addView(text);
+		return seg;
+	}
 
-		// Spacer to push chips right
-		View spacer=new View(getActivity());
-		bottomRow.addView(spacer, new LinearLayout.LayoutParams(0, 0, 1f));
+	private View buildRsvpSeparator() {
+		View sep = new View(getActivity());
+		sep.setBackgroundColor(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OutlineVariant));
+		return sep;
+	}
 
-		// Going chip
-		LinearLayout goingChip=new LinearLayout(getActivity());
-		goingChip.setTag("goingChip");
-		goingChip.setGravity(Gravity.CENTER);
-		goingChip.setPadding(V.dp(10), V.dp(5), V.dp(10), V.dp(5));
-		TextView goingText=new TextView(getActivity());
-		goingText.setTag("goingText");
-		goingText.setTextSize(12);
-		goingText.setText("Going");
-		goingChip.addView(goingText);
-		LinearLayout.LayoutParams gcLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		gcLp.rightMargin=V.dp(8);
-		bottomRow.addView(goingChip, gcLp);
+	// ==================== ViewPager2 Adapter ====================
 
-		// Interested chip
-		LinearLayout interestedChip=new LinearLayout(getActivity());
-		interestedChip.setTag("interestedChip");
-		interestedChip.setGravity(Gravity.CENTER);
-		interestedChip.setPadding(V.dp(10), V.dp(5), V.dp(10), V.dp(5));
-		TextView interestedText=new TextView(getActivity());
-		interestedText.setTag("interestedText");
-		interestedText.setTextSize(12);
-		interestedText.setText("Interested");
-		interestedChip.addView(interestedText);
-		bottomRow.addView(interestedChip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+	private static class TwoPageAdapter extends RecyclerView.Adapter<TwoPageAdapter.PageHolder> {
+		private final View[] pages;
 
-		contentArea.addView(bottomRow, brLp);
+		TwoPageAdapter(View... pages) { this.pages = pages; }
 
-		card.addView(contentArea, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		@Override
+		public PageHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+			View page = pages[viewType];
+			page.setLayoutParams(new RecyclerView.LayoutParams(
+					ViewGroup.LayoutParams.MATCH_PARENT,
+					ViewGroup.LayoutParams.MATCH_PARENT));
+			return new PageHolder(page);
+		}
 
-		return card;
+		@Override
+		public void onBindViewHolder(PageHolder holder, int position) {}
+
+		@Override
+		public int getItemCount() { return pages.length; }
+
+		@Override
+		public int getItemViewType(int position) { return position; }
+
+		static class PageHolder extends RecyclerView.ViewHolder {
+			PageHolder(View v) { super(v); }
+		}
 	}
 }

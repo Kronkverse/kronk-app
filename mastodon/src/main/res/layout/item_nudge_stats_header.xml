@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingHorizontal="16dp"
+	android:paddingTop="16dp"
+	android:paddingBottom="8dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:padding="20dp"
+		android:background="@drawable/bg_nudge_stats_card">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical">
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:orientation="vertical"
+				android:gravity="center_horizontal">
+
+				<TextView
+					android:id="@+id/total_sent_number"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="36sp"
+					android:textStyle="bold"
+					android:lineHeight="36sp"
+					android:textColor="?attr/colorM3Primary"/>
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:textSize="11sp"
+					android:letterSpacing="0.08"
+					android:textStyle="bold"
+					android:textColor="?colorM3OnSurfaceVariant"
+					android:text="@string/nudge_total_sent"/>
+
+			</LinearLayout>
+
+			<View
+				android:layout_width="1dp"
+				android:layout_height="48dp"
+				android:background="?attr/colorM3OutlineVariant"
+				android:layout_marginHorizontal="8dp"/>
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:orientation="vertical"
+				android:gravity="center_horizontal">
+
+				<TextView
+					android:id="@+id/total_received_number"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="36sp"
+					android:textStyle="bold"
+					android:lineHeight="36sp"
+					android:textColor="?attr/colorM3Primary"/>
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:textSize="11sp"
+					android:letterSpacing="0.08"
+					android:textStyle="bold"
+					android:textColor="?colorM3OnSurfaceVariant"
+					android:text="@string/nudge_total_received"/>
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/pending_hint"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="12dp"
+			android:paddingHorizontal="10dp"
+			android:paddingVertical="4dp"
+			android:textSize="12sp"
+			android:textStyle="bold"
+			android:textColor="?attr/colorM3OnTertiaryContainer"
+			android:background="@drawable/bg_nudge_pending_badge"
+			android:visibility="gone"/>
+
+	</LinearLayout>
+
+</LinearLayout>

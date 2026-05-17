@@ -167,6 +167,56 @@ public class MainActivity extends FragmentStackActivity{
 			}
 		}
 
+		if(path != null && path.startsWith("/kalendar")){
+			AccountSession kalSession;
+			if(accountID==null)
+				kalSession=AccountSessionManager.getInstance().getLastActiveAccount();
+			else
+				kalSession=AccountSessionManager.get(accountID);
+			if(kalSession==null || !kalSession.activated)
+				return;
+			Bundle args=new Bundle();
+			args.putString("account", kalSession.getID());
+			HomeFragment hf=new HomeFragment();
+			hf.setArguments(args);
+			showFragmentClearingBackStack(hf);
+			getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_home));
+			return;
+		}
+
+		if(path != null && path.equals("/home")){
+			AccountSession homeSession;
+			if(accountID==null)
+				homeSession=AccountSessionManager.getInstance().getLastActiveAccount();
+			else
+				homeSession=AccountSessionManager.get(accountID);
+			if(homeSession==null || !homeSession.activated)
+				return;
+			Bundle args=new Bundle();
+			args.putString("account", homeSession.getID());
+			HomeFragment hf=new HomeFragment();
+			hf.setArguments(args);
+			showFragmentClearingBackStack(hf);
+			return;
+		}
+
+		if(path != null && path.equals("/huddle")){
+			AccountSession huddleSession;
+			if(accountID==null)
+				huddleSession=AccountSessionManager.getInstance().getLastActiveAccount();
+			else
+				huddleSession=AccountSessionManager.get(accountID);
+			if(huddleSession==null || !huddleSession.activated)
+				return;
+			Bundle args=new Bundle();
+			args.putString("account", huddleSession.getID());
+			HomeFragment hf=new HomeFragment();
+			hf.setArguments(args);
+			showFragmentClearingBackStack(hf);
+			getWindow().getDecorView().post(()->hf.setCurrentTab(R.id.tab_live));
+			return;
+		}
+
 		AccountSession session;
 		if(accountID==null)
 			session=AccountSessionManager.getInstance().getLastActiveAccount();

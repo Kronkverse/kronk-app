@@ -15,9 +15,11 @@ import org.joinmastodon.android.model.NotificationType;
 import org.joinmastodon.android.model.Status;
 import org.joinmastodon.android.model.StatusPrivacy;
 import org.joinmastodon.android.model.viewmodel.NotificationViewModel;
+import org.joinmastodon.android.api.requests.accounts.SendNudge;
 import org.joinmastodon.android.ui.displayitems.FollowRequestActionsDisplayItem;
 import org.joinmastodon.android.ui.displayitems.InlineStatusStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.NotificationHeaderStatusDisplayItem;
+import org.joinmastodon.android.ui.displayitems.NotificationNudgeDisplayItem;
 import org.joinmastodon.android.ui.displayitems.NotificationWithButtonStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.ReblogOrReplyLineStatusDisplayItem;
 import org.joinmastodon.android.ui.displayitems.StatusDisplayItem;
@@ -70,6 +72,8 @@ public abstract class BaseNotificationsListFragment extends BaseStatusListFragme
 				titleItem=new ReblogOrReplyLineStatusDisplayItem(n.getID(), this, getActivity(), getString(R.string.user_quoted_post), n.status.account, R.drawable.ic_format_quote_wght700fill1_20px, accountID);
 			else
 				titleItem=null;
+		}else if(n.notification.type==NotificationType.NUDGE){
+			return List.of(new NotificationNudgeDisplayItem(n.getID(), this, getActivity(), n, accountID));
 		}else{
 			if(n.notification.type==NotificationType.SEVERED_RELATIONSHIPS || n.notification.type==NotificationType.MODERATION_WARNING)
 				titleItem=new NotificationWithButtonStatusDisplayItem(n.getID(), this, getActivity(), n, accountID);

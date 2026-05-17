@@ -46,7 +46,7 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 	private String accountID;
 	private Event event;
 
-	private TextView titleText, dateTimeText, locationText, descriptionText, hostText;
+	private TextView titleText, dateTimeText, locationText, descriptionText;
 	private TextView goingCountText, interestedCountText;
 	private View goingBtn, interestedBtn, cantGoBtn;
 	private TextView goingBtnText, interestedBtnText, cantGoBtnText;
@@ -255,27 +255,6 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 		locRowLp.topMargin=V.dp(12);
 		content.addView(locRow, locRowLp);
 
-		// Divider
-		content.addView(createDivider(), createDividerLp(16));
-
-		// Host info
-		LinearLayout hostRow=new LinearLayout(getActivity());
-		hostRow.setOrientation(LinearLayout.HORIZONTAL);
-		hostRow.setGravity(Gravity.CENTER_VERTICAL);
-		TextView hostedBy=new TextView(getActivity());
-		hostedBy.setText("Hosted by ");
-		hostedBy.setTextSize(14);
-		hostedBy.setTextColor(textSecondary);
-		hostRow.addView(hostedBy);
-		hostText=new TextView(getActivity());
-		hostText.setTextSize(14);
-		hostText.setTypeface(null, Typeface.BOLD);
-		hostText.setTextColor(textPrimary);
-		hostRow.addView(hostText);
-		LinearLayout.LayoutParams hostLp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		hostLp.topMargin=V.dp(4);
-		content.addView(hostRow, hostLp);
-
 		// RSVP section
 		content.addView(createDivider(), createDividerLp(16));
 
@@ -392,16 +371,15 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 
 		TextView inviteBtn=new TextView(getActivity());
 		inviteBtn.setText("Invite");
-		inviteBtn.setTextSize(15);
+		inviteBtn.setTextSize(14);
 		inviteBtn.setTypeface(null, Typeface.BOLD);
-		inviteBtn.setTextColor(0xFFFFFFFF);
+		inviteBtn.setTextColor(primaryColor);
 		inviteBtn.setGravity(Gravity.CENTER);
-		inviteBtn.setPadding(V.dp(16), V.dp(12), V.dp(16), V.dp(12));
+		inviteBtn.setPadding(V.dp(16), V.dp(10), V.dp(16), V.dp(10));
 		GradientDrawable inviteBg=new GradientDrawable();
 		inviteBg.setCornerRadius(V.dp(10));
-		inviteBg.setColor(primaryColor);
+		inviteBg.setStroke(V.dp(1), primaryColor);
 		inviteBtn.setBackground(inviteBg);
-		inviteBtn.setElevation(V.dp(2));
 		inviteBtn.setOnClickListener(v->{
 			// Placeholder for future invite screen
 		});
@@ -457,11 +435,55 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			content.addView(ownerRow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		}
 
+		// Share button — available to everyone
+		content.addView(createDivider(), createDividerLp(20));
+
+		TextView shareBtn=new TextView(getActivity());
+		shareBtn.setText("Share to timeline");
+		shareBtn.setTextSize(14);
+		shareBtn.setTypeface(null, Typeface.BOLD);
+		shareBtn.setTextColor(primaryColor);
+		shareBtn.setGravity(Gravity.CENTER);
+		shareBtn.setPadding(V.dp(16), V.dp(10), V.dp(16), V.dp(10));
+		GradientDrawable shareBtnBg=new GradientDrawable();
+		shareBtnBg.setCornerRadius(V.dp(10));
+		shareBtnBg.setStroke(V.dp(1), primaryColor);
+		shareBtn.setBackground(shareBtnBg);
+		shareBtn.setOnClickListener(v->showShareDialog());
+		content.addView(shareBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
 		scrollView.addView(contentLayout, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
 		bindData();
 		loadAttendees();
 		return scrollView;
+	}
+
+	private void showShareDialog(){
+		android.widget.EditText input=new android.widget.EditText(getActivity());
+		input.setHint("Add a comment (optional)");
+		input.setPadding(V.dp(20), V.dp(12), V.dp(20), V.dp(12));
+		new android.app.AlertDialog.Builder(getActivity())
+				.setTitle("Share event")
+				.setView(input)
+				.setPositiveButton("Share", (d, w)->{
+					String comment=input.getText().toString().trim();
+					new org.joinmastodon.android.api.requests.events.ShareEvent(event.id, comment)
+							.setCallback(new Callback<>(){
+								@Override
+								public void onSuccess(Event result){
+									if(getActivity()!=null)
+										android.widget.Toast.makeText(getActivity(), "Shared to timeline", android.widget.Toast.LENGTH_SHORT).show();
+								}
+								@Override
+								public void onError(ErrorResponse error){
+									if(getActivity()!=null) error.showToast(getActivity());
+								}
+							})
+							.exec(accountID);
+				})
+				.setNegativeButton("Cancel", null)
+				.show();
 	}
 
 	private boolean isHuddleLive(){
@@ -513,13 +535,6 @@ public class EventDetailFragment extends MastodonToolbarFragment{
 			}
 		}else{
 			((View)locationText.getParent().getParent()).setVisibility(View.GONE);
-		}
-
-		// Host
-		if(event.account!=null){
-			String displayName=event.account.displayName;
-			if(TextUtils.isEmpty(displayName)) displayName=event.account.acct;
-			hostText.setText(displayName);
 		}
 
 		// Counts

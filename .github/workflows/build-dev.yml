@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - development
+      - feature/kalendar
+  workflow_dispatch:
 
 permissions:
   contents: write

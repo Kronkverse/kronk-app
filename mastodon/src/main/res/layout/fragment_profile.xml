@@ -383,6 +383,20 @@
 					</FrameLayout>
 					
 					<ImageButton
+						android:id="@+id/nudge_btn"
+						android:layout_width="36.67dp"
+						android:layout_height="36.67dp"
+						android:layout_gravity="center_vertical"
+						style="@style/Widget.Mastodon.M3.Button.Outlined"
+						android:tint="?colorM3OnSurfaceVariant"
+						android:layout_marginStart="8dp"
+						android:contentDescription="@string/nudge"
+						android:scaleType="centerInside"
+						android:padding="9dp"
+						android:src="@drawable/ic_partner_exchange_24px"
+						android:visibility="gone" />
+
+					<ImageButton
 						android:id="@+id/qr_code"
 						android:layout_width="36.67dp"
 						android:layout_height="36.67dp"
