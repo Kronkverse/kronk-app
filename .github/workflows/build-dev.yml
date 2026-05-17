@@ -81,9 +81,18 @@ jobs:
           ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
 
           APK_SIZE=$(stat -c%s "kronk-dev.apk")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           scp -i ~/.ssh/deploy_key kronk-dev.apk root@kronk.info:/var/www/kronk.info/dev/kronk.apk
 
-          ssh -i ~/.ssh/deploy_key root@kronk.info "echo '{\"version\": \"'${VERSION}'\", \"versionCode\": '${VERSION_CODE}', \"commit\": \"'${COMMIT}'\", \"apkSize\": '${APK_SIZE}', \"apkUrl\": \"https://kronk.info/dev/kronk.apk\", \"buildTime\": \"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'\"}' > /var/www/kronk.info/dev/version.json"
+          ssh -i ~/.ssh/deploy_key root@kronk.info "echo '{\"version\": \"'${VERSION}'\", \"versionCode\": '${VERSION_CODE}', \"commit\": \"'${COMMIT}'\", \"apkSize\": '${APK_SIZE}', \"apkUrl\": \"https://kronk.info/dev/kronk.apk\", \"buildTime\": \"'${BUILD_TIME}'\"}' > /var/www/kronk.info/dev/version.json"
+
+          # Deploy update script and update builds registry
+          scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
+          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
+
+          ENTRY=$(printf '{"branch":"development","slug":"development","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":true}' \
+            "$VERSION" "$VERSION_CODE" "$COMMIT" "$APK_SIZE" "$BUILD_TIME")
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
 
           echo "Deployed dev build ${VERSION} to kronk.info/dev/"

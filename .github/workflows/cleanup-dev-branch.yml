@@ -9,6 +9,8 @@ jobs:
     if: github.event.ref_type == 'branch'
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Get branch slug
         id: slug
         run: |
@@ -16,12 +18,11 @@ jobs:
           SLUG=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
           echo "slug=$SLUG" >> $GITHUB_OUTPUT
 
-      - name: Remove build and regenerate index
+      - name: Remove build and update registry
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           SLUG: ${{ steps.slug.outputs.slug }}
         run: |
-          # Guard against empty or dangerous slugs
           if [ -z "$SLUG" ] || [ "$SLUG" = "." ] || [ "$SLUG" = ".." ] || [ "$SLUG" = "dev" ]; then
             echo "Skipping — slug '$SLUG' is not a valid branch build directory"
             exit 0
@@ -35,5 +36,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key root@kronk.info \
             "rm -rf /var/www/kronk.info/dev/${SLUG} && echo 'Removed /dev/${SLUG}'"
 
-          ssh -i ~/.ssh/deploy_key root@kronk.info \
-            "python3 /usr/local/bin/generate-dev-index.py 2>/dev/null || echo 'index regeneration skipped (no script yet)'"
+          # Deploy update script and remove from registry
+          scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
+          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py remove '${SLUG}'"
