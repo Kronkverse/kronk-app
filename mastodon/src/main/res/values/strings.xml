@@ -988,4 +988,32 @@ End-to-end encrypted</string>
     </plurals>
 
     <string name="error_loading">Failed to load</string>
+
+    <string name="user_nudged_you">%s nudged you</string>
+    <string name="nudge">Nudge</string>
+    <string name="nudged">Nudged!</string>
+    <string name="nudge_waiting">Waiting…</string>
+    <string name="nudge_back">Nudge back</string>
+    <string name="nudge_streak_sent">↑ %d</string>
+    <string name="nudge_streak_received">↓ %d</string>
+    <string name="nudge_total_sent">SENT</string>
+    <string name="nudge_total_received">RECEIVED</string>
+    <string name="tab_nudges">Nudges</string>
+    <string name="nudge_section_sent">NUDGES SENT</string>
+    <string name="nudge_section_received">NUDGES RECEIVED</string>
+    <string name="nudge_empty_title">No nudges yet!</string>
+    <string name="nudge_empty_subtitle">Nudge someone from their profile to start a streak</string>
+    <plurals name="nudge_grand_total">
+        <item quantity="one">%d nudge exchanged</item>
+        <item quantity="other">%d nudges exchanged</item>
+    </plurals>
+    <plurals name="nudge_grand_total_label">
+        <item quantity="one">nudge exchanged</item>
+        <item quantity="other">nudges exchanged</item>
+    </plurals>
+    <plurals name="nudge_pending_hint">
+        <item quantity="one">%d waiting for you to nudge back</item>
+        <item quantity="other">%d waiting for you to nudge back</item>
+    </plurals>
+    <string name="notification_type_nudge">Nudges</string>
 </resources>
