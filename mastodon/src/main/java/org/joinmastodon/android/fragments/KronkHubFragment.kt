@@ -36,7 +36,7 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
     private val savedStateController = SavedStateRegistryController.create(this)
     override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
 
-    private val accountId: String get() = arguments?.getString(account) ?: 
+    private val accountId: String get() = arguments?.getString("account") ?: ""
 
     // Mutable slide offset — updated by HomeFragment via updateSlideOffset()
     private var slideOffset = mutableStateOf(0f)
@@ -66,13 +66,13 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
     // set method by name and arity rather than by full signature to stay robust.
     private fun tagViewTreeOwners(view: View) {
         for (cls in listOf(
-            androidx.lifecycle.ViewTreeLifecycleOwner,
-            androidx.lifecycle.ViewTreeViewModelStoreOwner,
-            androidx.savedstate.ViewTreeSavedStateRegistryOwner,
+            "androidx.lifecycle.ViewTreeLifecycleOwner",
+            "androidx.lifecycle.ViewTreeViewModelStoreOwner",
+            "androidx.savedstate.ViewTreeSavedStateRegistryOwner",
         )) {
             try {
                 val m = Class.forName(cls).methods
-                    .find { it.name == set && it.parameterCount == 2 } ?: continue
+                    .find { it.name == "set" && it.parameterCount == 2 } ?: continue
                 m.invoke(null, view, this@KronkHubFragment)
             } catch (_: Exception) {}
         }

@@ -106,7 +106,7 @@ private fun KosmosFullGrid(
             .padding(horizontal = 16.dp),
     ) {
         Text(
-            text = Kosmos,
+            text = "Kosmos",
             color = KronkColors.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
