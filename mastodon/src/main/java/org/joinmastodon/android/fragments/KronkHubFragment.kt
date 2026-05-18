@@ -14,12 +14,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import me.grishka.appkit.fragments.AppKitFragment
 import org.joinmastodon.android.api.session.AccountSessionManager
 import org.joinmastodon.android.ui.compose.KosmosSheet
@@ -66,9 +63,17 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
     }
 
     private fun tagViewTreeOwners(view: View) {
-        ViewTreeLifecycleOwner.set(view, this)
-        ViewTreeViewModelStoreOwner.set(view, this)
-        ViewTreeSavedStateRegistryOwner.set(view, this)
+        for (cls in listOf(
+            "androidx.lifecycle.ViewTreeLifecycleOwner",
+            "androidx.lifecycle.ViewTreeViewModelStoreOwner",
+            "androidx.savedstate.ViewTreeSavedStateRegistryOwner",
+        )) {
+            try {
+                val m = Class.forName(cls).methods
+                    .find { it.name == "set" && it.parameterCount == 2 } ?: continue
+                m.invoke(null, view, this@KronkHubFragment)
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

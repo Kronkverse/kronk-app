@@ -62,3 +62,10 @@
 -keep class * extends org.microg.safeparcel.AutoSafeParcelable{
 	*;
 }
+
+# ViewTree owner classes are accessed via reflection in KronkHubFragment to wire
+# Compose lifecycle owners in a non-ComponentActivity host. R8 would otherwise
+# remove or rename them since the only references are string literals.
+-keep class androidx.lifecycle.ViewTreeLifecycleOwner { *; }
+-keep class androidx.lifecycle.ViewTreeViewModelStoreOwner { *; }
+-keep class androidx.savedstate.ViewTreeSavedStateRegistryOwner { *; }
