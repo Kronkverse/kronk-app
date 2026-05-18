@@ -90,8 +90,13 @@ android {
 
 configurations.all {
 	// litex forks replace these; exclude the real ones to prevent duplicate class errors
+	exclude group: 'androidx.recyclerview', module: 'recyclerview'
+	exclude group: 'androidx.swiperefreshlayout', module: 'swiperefreshlayout'
 	exclude group: 'androidx.viewpager', module: 'viewpager'
 	exclude group: 'androidx.viewpager2', module: 'viewpager2'
+	exclude group: 'androidx.browser', module: 'browser'
+	exclude group: 'androidx.dynamicanimation', module: 'dynamicanimation'
+	exclude group: 'androidx.palette', module: 'palette'
 	exclude group: 'com.google.guava', module: 'listenablefuture'
 }
 
