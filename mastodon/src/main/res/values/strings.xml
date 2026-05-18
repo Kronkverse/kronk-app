@@ -1016,4 +1016,6 @@ End-to-end encrypted</string>
         <item quantity="other">%d waiting for you to nudge back</item>
     </plurals>
     <string name="notification_type_nudge">Nudges</string>
+    <string name="kommons_the_forest">The Forest</string>
+    <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
 </resources>
