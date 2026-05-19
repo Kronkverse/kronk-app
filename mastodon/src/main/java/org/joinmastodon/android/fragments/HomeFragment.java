@@ -333,6 +333,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	@Override
 	public void onApplyWindowInsets(WindowInsets insets) {
+		int topInset = insets.getSystemWindowInsetTop();
 		if (Build.VERSION.SDK_INT >= 27) {
 			int inset = insets.getSystemWindowInsetBottom();
 			bottomNavWrap.setPadding(0, 0, 0, inset > 0 ? Math.max(inset, V.dp(24)) : 0);
@@ -340,9 +341,14 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		} else {
 			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom()));
 		}
-		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
+		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, topInset, 0, 0);
 		feedFragment.onApplyWindowInsets(topOnly);
 		notificationsFragment.onApplyWindowInsets(topOnly);
+		eventsFragment.onApplyWindowInsets(topOnly);
+		huddleFragment.onApplyWindowInsets(topOnly);
+		kommonsFragment.onApplyWindowInsets(topOnly);
+		// Stop the hub sheet from sliding behind the status bar when fully expanded
+		sheetBehavior.setExpandedOffset(topInset);
 	}
 
 	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
