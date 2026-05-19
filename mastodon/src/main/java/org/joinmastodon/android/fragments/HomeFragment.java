@@ -334,17 +334,21 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	@Override
 	public void onApplyWindowInsets(WindowInsets insets) {
 		int topInset = insets.getSystemWindowInsetTop();
+		int systemNavInset = insets.getSystemWindowInsetBottom();
+		int navBarPadding = systemNavInset > 0 ? Math.max(systemNavInset, V.dp(24)) : 0;
+		// Nav bar is 80dp fixed + system nav inset padding
+		int totalNavHeight = V.dp(80) + navBarPadding;
 		if (Build.VERSION.SDK_INT >= 27) {
-			int inset = insets.getSystemWindowInsetBottom();
-			bottomNavWrap.setPadding(0, 0, 0, inset > 0 ? Math.max(inset, V.dp(24)) : 0);
+			bottomNavWrap.setPadding(0, 0, 0, navBarPadding);
 			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), 0));
 		} else {
-			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom()));
+			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), systemNavInset));
 		}
-		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, topInset, 0, 0);
-		feedFragment.onApplyWindowInsets(topOnly);
-		notificationsFragment.onApplyWindowInsets(topOnly);
-		eventsFragment.onApplyWindowInsets(topOnly);
+		// Pass top + full nav height as bottom so fragments pad their scroll content correctly
+		WindowInsets topAndBottom = insets.replaceSystemWindowInsets(0, topInset, 0, totalNavHeight);
+		feedFragment.onApplyWindowInsets(topAndBottom);
+		notificationsFragment.onApplyWindowInsets(topAndBottom);
+		eventsFragment.onApplyWindowInsets(topAndBottom);
 		// Stop the hub sheet from sliding behind the status bar when fully expanded
 		sheetBehavior.setExpandedOffset(topInset);
 	}
