@@ -345,8 +345,6 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		feedFragment.onApplyWindowInsets(topOnly);
 		notificationsFragment.onApplyWindowInsets(topOnly);
 		eventsFragment.onApplyWindowInsets(topOnly);
-		huddleFragment.onApplyWindowInsets(topOnly);
-		kommonsFragment.onApplyWindowInsets(topOnly);
 		// Stop the hub sheet from sliding behind the status bar when fully expanded
 		sheetBehavior.setExpandedOffset(topInset);
 	}
