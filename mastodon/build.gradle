@@ -101,12 +101,13 @@ configurations.all {
 	// Exclude OLD litex forks of collection/concurrent so Compose gets the real newer versions
 	exclude group: 'me.grishka.litex', module: 'collection'
 	exclude group: 'me.grishka.litex', module: 'concurrent'
+	// profileinstaller crashes due to R8 renaming concurrent-futures internals; it's
+	// a background perf optimiser with no functional impact when absent
+	exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
 
 dependencies {
 	api 'androidx.annotation:annotation:1.3.0'
-	// Real concurrent-futures to replace the excluded me.grishka.litex:concurrent fork
-	implementation 'androidx.concurrent:concurrent-futures:1.1.0'
 	implementation 'com.squareup.okhttp3:okhttp:3.14.9'
 	implementation 'me.grishka.litex:recyclerview:1.2.1.1'
 	implementation 'me.grishka.litex:swiperefreshlayout:1.2.0-beta01'
