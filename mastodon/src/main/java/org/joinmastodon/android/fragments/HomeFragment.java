@@ -20,7 +20,6 @@ import org.joinmastodon.android.PushNotificationReceiver;
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.notifications.GetNotificationsV1;
 import org.joinmastodon.android.api.requests.notifications.GetUnreadNotificationsCount;
-import org.joinmastodon.android.api.session.AccountSession;
 import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.NotificationsMarkerUpdatedEvent;
 import org.joinmastodon.android.events.StatusDisplaySettingsChangedEvent;
@@ -38,7 +37,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 import me.grishka.appkit.FragmentStackActivity;
-import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
@@ -52,6 +50,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private FrameLayout fragmentContainer;
 
 	private HubFragment hubTabFragment;
+	private ProfileFragment profileFragment;
 	private HomeTimelineFragment feedFragment;
 	private EventsFragment eventsFragment;
 	private LiveFragment huddleFragment;
@@ -67,6 +66,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private Space currentSpace = Space.FEED;
 	private boolean showingNotifications;
 	private boolean showingHub;
+	private boolean showingProfile;
 	private String accountID;
 
 	private final Runnable spaceBackCallback = () -> switchToSpace(Space.FEED);
@@ -86,6 +86,11 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 			hubTabFragment = new HubFragment();
 			hubTabFragment.setArguments(new Bundle(args));
+
+			Bundle profileArgs = new Bundle(args);
+			profileArgs.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.get(accountID).self));
+			profileFragment = new ProfileFragment();
+			profileFragment.setArguments(profileArgs);
 
 			feedFragment = new HomeTimelineFragment();
 			feedFragment.setArguments(new Bundle(args));
@@ -143,6 +148,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			getChildFragmentManager().beginTransaction()
 					.add(me.grishka.appkit.R.id.fragment_wrap, feedFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, hubTabFragment).hide(hubTabFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, huddleFragment).hide(huddleFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, kommonsFragment).hide(kommonsFragment)
@@ -161,11 +167,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	public void openSpace(Space space) {
-		android.app.Fragment current = showingNotifications ? notificationsFragment
-				: showingHub ? hubTabFragment
-				: fragmentForSpace(currentSpace);
+		android.app.Fragment current = activeFragment();
 		showingNotifications = false;
 		showingHub = false;
+		showingProfile = false;
 		if (space == currentSpace) {
 			getChildFragmentManager().beginTransaction().hide(current).show(fragmentForSpace(currentSpace)).commitNow();
 			updateNavSelection();
@@ -199,9 +204,12 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void switchToNotifications() {
+		android.app.Fragment current = activeFragment();
+		showingHub = false;
+		showingProfile = false;
 		showingNotifications = true;
 		getChildFragmentManager().beginTransaction()
-				.hide(fragmentForSpace(currentSpace))
+				.hide(current)
 				.show(notificationsFragment)
 				.commit();
 		maybeTriggerLoading(notificationsFragment);
@@ -209,6 +217,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		NotificationManager nm = getActivity().getSystemService(NotificationManager.class);
 		nm.cancel(accountID, PushNotificationReceiver.NOTIFICATION_ID);
 		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
+	}
+
+	private android.app.Fragment activeFragment() {
+		if (showingNotifications) return notificationsFragment;
+		if (showingHub) return hubTabFragment;
+		if (showingProfile) return profileFragment;
+		return fragmentForSpace(currentSpace);
 	}
 
 	private android.app.Fragment fragmentForSpace(Space space) {
@@ -232,17 +247,25 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	}
 
 	private void onProfileTapped() {
-		AccountSession session = AccountSessionManager.get(accountID);
-		Bundle args = new Bundle();
-		args.putString("account", accountID);
-		args.putParcelable("profileAccount", Parcels.wrap(session.self));
-		Nav.go(getActivity(), ProfileFragment.class, args);
+		if (showingProfile) return;
+		android.app.Fragment current = activeFragment();
+		showingNotifications = false;
+		showingHub = false;
+		showingProfile = true;
+		getChildFragmentManager().beginTransaction()
+				.hide(current)
+				.show(profileFragment)
+				.commit();
+		maybeTriggerLoading(profileFragment);
+		updateNavSelection();
+		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
 	private void onHubTapped() {
 		if (showingHub) return;
-		android.app.Fragment current = showingNotifications ? notificationsFragment : fragmentForSpace(currentSpace);
+		android.app.Fragment current = activeFragment();
 		showingNotifications = false;
+		showingProfile = false;
 		showingHub = true;
 		getChildFragmentManager().beginTransaction()
 				.hide(current)
@@ -260,9 +283,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	private void updateNavSelection() {
 		if (navHub == null) return;
+		navProfile.setSelected(showingProfile);
 		navHub.setSelected(showingHub);
 		navNotifications.setSelected(showingNotifications);
-		navProfile.setSelected(false);
 	}
 
 	private void maybeTriggerLoading(android.app.Fragment fragment) {
@@ -323,6 +346,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		feedFragment.onApplyWindowInsets(topAndBottom);
 		notificationsFragment.onApplyWindowInsets(topAndBottom);
 		eventsFragment.onApplyWindowInsets(topAndBottom);
+		profileFragment.onApplyWindowInsets(topAndBottom);
 	}
 
 	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
@@ -361,8 +385,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		super.onSaveInstanceState(outState);
 		outState.putBoolean("showingNotifications", showingNotifications);
 		outState.putBoolean("showingHub", showingHub);
+		outState.putBoolean("showingProfile", showingProfile);
 		outState.putString("currentSpace", currentSpace.name());
 		if (hubTabFragment != null) getChildFragmentManager().putFragment(outState, "hubTabFragment", hubTabFragment);
+		if (profileFragment != null) getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
 		if (feedFragment != null) getChildFragmentManager().putFragment(outState, "feedFragment", feedFragment);
 		if (eventsFragment != null) getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
 		if (huddleFragment != null) getChildFragmentManager().putFragment(outState, "huddleFragment", huddleFragment);
@@ -376,6 +402,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		super.onViewStateRestored(savedInstanceState);
 		if (savedInstanceState == null || hubTabFragment != null) return;
 		hubTabFragment = (HubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubTabFragment");
+		profileFragment = (ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
 		feedFragment = (HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "feedFragment");
 		eventsFragment = (EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
@@ -383,6 +410,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		nudgesFragment = (NudgesFragment) getChildFragmentManager().getFragment(savedInstanceState, "nudgesFragment");
 		notificationsFragment = (NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
 		showingHub = savedInstanceState.getBoolean("showingHub");
+		showingProfile = savedInstanceState.getBoolean("showingProfile");
 		showingNotifications = savedInstanceState.getBoolean("showingNotifications");
 		currentSpace = Space.valueOf(savedInstanceState.getString("currentSpace", Space.FEED.name()));
 		if (currentSpace != Space.FEED) addBackCallback(spaceBackCallback);
