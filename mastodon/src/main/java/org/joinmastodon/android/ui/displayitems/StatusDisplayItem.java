@@ -200,7 +200,8 @@ public abstract class StatusDisplayItem{
 			contentItems.add(new EventCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
 		}
 		if(statusForContent.postType!=null &&
-				(statusForContent.postType.equals("question") || statusForContent.postType.equals("answer"))){
+				(statusForContent.postType.equals("question") || statusForContent.postType.equals("answer")
+						|| statusForContent.postType.equals("proposal"))){
 			contentItems.add(new QuestionCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
 		}
 		if(statusForContent.quote!=null){

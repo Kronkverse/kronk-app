@@ -140,9 +140,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		navHub = root.findViewById(R.id.nav_hub);
 		navNotifications = root.findViewById(R.id.nav_notifications);
 
-		navProfile.setOnClickListener(v -> onProfileTapped());
+		navProfile.setOnClickListener(v -> onHomeTapped());
 		navHub.setOnClickListener(v -> onHubTapped());
-		navNotifications.setOnClickListener(v -> onNotificationsTapped());
+		navNotifications.setOnClickListener(v -> onHuddleTapped());
 
 		if (savedInstanceState == null) {
 			getChildFragmentManager().beginTransaction()
@@ -246,6 +246,15 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		}
 	}
 
+	private void onHomeTapped() {
+		boolean alreadyOnFeed = !showingHub && !showingProfile && !showingNotifications && currentSpace == Space.FEED;
+		if (alreadyOnFeed) {
+			if (feedFragment instanceof ScrollableToTop s) s.scrollToTop();
+			return;
+		}
+		openSpace(Space.FEED);
+	}
+
 	private void onProfileTapped() {
 		if (showingProfile) return;
 		android.app.Fragment current = activeFragment();
@@ -275,6 +284,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
+	private void onHuddleTapped() {
+		openSpace(Space.HUDDLE);
+	}
+
 	private void onNotificationsTapped() {
 		if (!showingNotifications) {
 			switchToNotifications();
@@ -283,9 +296,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	private void updateNavSelection() {
 		if (navHub == null) return;
-		navProfile.setSelected(showingProfile);
+		boolean neutral = !showingHub && !showingProfile && !showingNotifications;
+		navProfile.setSelected(neutral && currentSpace == Space.FEED);
 		navHub.setSelected(showingHub);
-		navNotifications.setSelected(showingNotifications);
+		navNotifications.setSelected(neutral && currentSpace == Space.HUDDLE);
 	}
 
 	private void maybeTriggerLoading(android.app.Fragment fragment) {

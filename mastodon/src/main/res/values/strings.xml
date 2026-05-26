@@ -1021,9 +1021,10 @@ End-to-end encrypted</string>
     <string name="space_bar_asked_question">asked a question</string>
     <string name="space_bar_answered_question">answered a question</string>
     <string name="space_bar_created_event">created an event</string>
-    <string name="space_bar_made_proposal">made a proposal</string>
+    <string name="space_bar_made_proposal">planted a seed</string>
     <string name="question_label">Question</string>
     <string name="answer_label">Answer</string>
+    <string name="seed_label">Seed</string>
     <plurals name="answers_count">
         <item quantity="one">%d answer</item>
         <item quantity="other">%d answers</item>

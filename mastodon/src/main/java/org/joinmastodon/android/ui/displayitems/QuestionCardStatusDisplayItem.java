@@ -45,11 +45,16 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 
 		@Override
 		public void onBind(QuestionCardStatusDisplayItem item) {
-			boolean isQuestion = "question".equals(item.status.postType);
+			String pt = item.status.postType;
+			boolean isQuestion = "question".equals(pt);
+			boolean isProposal = "proposal".equals(pt);
 
 			if (isQuestion) {
 				badgeLabel.setText(R.string.question_label);
 				badgeIcon.setImageResource(R.drawable.ic_help_24px);
+			} else if (isProposal) {
+				badgeLabel.setText(R.string.seed_label);
+				badgeIcon.setImageResource(R.drawable.ic_gavel_24px);
 			} else {
 				badgeLabel.setText(R.string.answer_label);
 				badgeIcon.setImageResource(R.drawable.ic_reply_24px);
