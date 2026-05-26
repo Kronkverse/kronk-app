@@ -249,7 +249,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private void onHomeTapped() {
 		boolean alreadyOnFeed = !showingHub && !showingProfile && !showingNotifications && currentSpace == Space.FEED;
 		if (alreadyOnFeed) {
-			if (feedFragment instanceof ScrollableToTop s) s.scrollToTop();
+			feedFragment.scrollToTop();
 			return;
 		}
 		openSpace(Space.FEED);
