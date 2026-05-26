@@ -36,6 +36,7 @@ Android SDK is pre-installed on the dev server at `/opt/android-sdk/` with `ANDR
 
 ## CI/CD (GitHub Actions)
 
+- **`build-dev-branch.yml`** — Triggers on every push to `feature/**`, `fix/**`, `docs/**`. Builds signed APK, deploys to `kronk.info/dev/<branch-slug>/kronk.apk`. Use this to test your branch before merging.
 - **`build-dev.yml`** — Triggers on push to `development`. Builds signed APK, deploys to `kronk.info/dev/kronk.apk`.
 - **`build-release.yml`** — Triggers on push of `v*` tag. Creates GitHub Release, deploys to `kronk.info/kronk.apk`.
 
@@ -43,19 +44,19 @@ Server-side cron polls GitHub releases every 5 minutes and updates the productio
 
 ## Release Process
 
-1. Develop on `development` branch (auto-deploys dev build)
-2. Test via `kronk.info/dev/kronk.apk`
-3. Merge `development` into `main`
-4. Tag: `git tag vX.Y.Z && git push --tags`
-5. GitHub Actions builds release, server picks it up automatically
+1. Branch off `development` (e.g. `feature/my-thing`)
+2. Push commits — APK auto-builds at `kronk.info/dev/feature-my-thing/kronk.apk`
+3. Test via the branch APK — **do this before opening a PR**
+4. When satisfied, open PR to `development` and merge
+5. Merge to `main` + tag `vX.Y.Z` to cut a release
 
 ## Contributing
 
 1. Fork `Kronkverse/kronk-app` on GitHub
-2. Branch off `development`
+2. Branch off `development` using `feature/`, `fix/`, or `docs/` prefix
 3. Make changes, commit, push to your fork
-4. Open a PR to `development` on `Kronkverse/kronk-app`
-5. After merge, dev build deploys automatically for testing
+4. **Test via the auto-built branch APK** at `kronk.info/dev/<branch-slug>/` — no merging needed
+5. Open a PR to `development` once you're happy with it
 
 ## Important Rules
 
