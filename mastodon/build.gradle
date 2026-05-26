@@ -1,6 +1,7 @@
 plugins {
 	id 'com.android.application'
 	id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
+	id 'kotlin-android'
 }
 
 android {
@@ -49,6 +50,9 @@ android {
 		targetCompatibility JavaVersion.VERSION_17
 		coreLibraryDesugaringEnabled true
 	}
+	kotlinOptions {
+		jvmTarget = '17'
+	}
 	sourceSets{
 		appcenterPrivateBeta{
 			setRoot "src/appcenter"
@@ -70,6 +74,10 @@ android {
 	buildFeatures{
 		aidl true
 		buildConfig true
+		compose true
+	}
+	composeOptions {
+		kotlinCompilerExtensionVersion '1.5.8'
 	}
 	dependenciesInfo{
 		// Disables dependency metadata when building APKs.
@@ -78,6 +86,24 @@ android {
 		includeInBundle false
 	}
 	namespace 'org.joinmastodon.android'
+}
+
+configurations.all {
+	// Exclude real androidx versions that litex forks replace
+	exclude group: 'androidx.recyclerview', module: 'recyclerview'
+	exclude group: 'androidx.swiperefreshlayout', module: 'swiperefreshlayout'
+	exclude group: 'androidx.viewpager', module: 'viewpager'
+	exclude group: 'androidx.viewpager2', module: 'viewpager2'
+	exclude group: 'androidx.browser', module: 'browser'
+	exclude group: 'androidx.dynamicanimation', module: 'dynamicanimation'
+	exclude group: 'androidx.palette', module: 'palette'
+	exclude group: 'com.google.guava', module: 'listenablefuture'
+	// Exclude OLD litex forks of collection/concurrent so Compose gets the real newer versions
+	exclude group: 'me.grishka.litex', module: 'collection'
+	exclude group: 'me.grishka.litex', module: 'concurrent'
+	// profileinstaller crashes due to R8 renaming concurrent-futures internals; it's
+	// a background perf optimiser with no functional impact when absent
+	exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
 
 dependencies {
@@ -100,12 +126,27 @@ dependencies {
 	implementation 'org.parceler:parceler-api:1.1.12'
 	annotationProcessor 'org.parceler:parceler:1.1.12'
 	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+	implementation 'com.google.android.flexbox:flexbox:3.0.0'
 
 	def appCenterSdkVersion = "5.0.4"
 	appcenterPrivateBetaImplementation "com.microsoft.appcenter:appcenter-crashes:${appCenterSdkVersion}"
 	appcenterPrivateBetaImplementation "com.microsoft.appcenter:appcenter-distribute:${appCenterSdkVersion}"
 	appcenterPublicBetaImplementation "com.microsoft.appcenter:appcenter-crashes:${appCenterSdkVersion}"
 	appcenterPublicBetaImplementation "com.microsoft.appcenter:appcenter-distribute:${appCenterSdkVersion}"
+
+	// Compose
+	implementation platform('androidx.compose:compose-bom:2024.02.00')
+	implementation 'androidx.compose.ui:ui'
+	implementation 'androidx.compose.ui:ui-graphics'
+	implementation 'androidx.compose.material3:material3'
+	implementation 'androidx.compose.animation:animation'
+	implementation 'androidx.compose.foundation:foundation'
+	implementation 'androidx.compose.material:material-icons-extended'
+	implementation 'androidx.activity:activity-compose:1.8.2'
+
+	// CoordinatorLayout + Material (for BottomSheetBehavior)
+	implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
+	implementation 'com.google.android.material:material:1.12.0'
 
 	androidTestImplementation 'androidx.test:core:1.5.0'
 	androidTestImplementation 'androidx.test.ext:junit:1.1.5'
