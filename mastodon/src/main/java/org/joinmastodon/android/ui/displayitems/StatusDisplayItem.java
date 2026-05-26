@@ -98,6 +98,7 @@ public abstract class StatusDisplayItem{
 			case QUOTE_ERROR -> new QuoteErrorStatusDisplayItem.Holder(activity, parent);
 			case NESTED_QUOTE -> new NestedQuoteStatusDisplayItem.Holder(activity, parent);
 			case EVENT_CARD -> new EventCardStatusDisplayItem.Holder(activity, parent);
+			case QUESTION_CARD -> new QuestionCardStatusDisplayItem.Holder(activity, parent);
 		};
 	}
 
@@ -123,12 +124,13 @@ public abstract class StatusDisplayItem{
 				Account account=Objects.requireNonNull(knownAccounts.get(status.inReplyToAccountId));
 				items.add(new ReblogOrReplyLineStatusDisplayItem(parentID, callbacks, context, context.getString(R.string.in_reply_to), account, R.drawable.ic_reply_wght700_20px, accountID));
 			}
+			String spaceBarText=buildSpaceBarText(context, statusForContent);
 			if((flags & FLAG_CHECKABLE)!=0)
 				items.add(header=new CheckableHeaderStatusDisplayItem(parentID, statusForContent.account, statusForContent.createdAt, callbacks, context, accountID, statusForContent, null));
 			else if((flags &FLAG_IS_QUOTE)!=0)
 				items.add(header=new CompactHeaderStatusDisplayItem(parentID, statusForContent.account, statusForContent.createdAt, callbacks, context, accountID, statusForContent));
 			else
-				items.add(header=new HeaderStatusDisplayItem(parentID, statusForContent.account, statusForContent.createdAt, callbacks, context, accountID, statusForContent, null));
+				items.add(header=new HeaderStatusDisplayItem(parentID, statusForContent.account, statusForContent.createdAt, callbacks, context, accountID, statusForContent, spaceBarText));
 		}
 
 		boolean filtered=false;
@@ -197,6 +199,10 @@ public abstract class StatusDisplayItem{
 		if(statusForContent.event!=null){
 			contentItems.add(new EventCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
 		}
+		if(statusForContent.postType!=null &&
+				(statusForContent.postType.equals("question") || statusForContent.postType.equals("answer"))){
+			contentItems.add(new QuestionCardStatusDisplayItem(parentID, callbacks, context, statusForContent, accountID));
+		}
 		if(statusForContent.quote!=null){
 			if(statusForContent.quote.state==Quote.State.ACCEPTED){
 				if(statusForContent.quote.quotedStatus!=null && (flags & FLAG_IS_QUOTE)==0){
@@ -248,6 +254,19 @@ public abstract class StatusDisplayItem{
 		return items;
 	}
 
+	private static String buildSpaceBarText(Context context, Status status){
+		if(status.postType!=null){
+			return switch(status.postType){
+				case "question" -> context.getString(R.string.space_bar_asked_question);
+				case "answer" -> context.getString(R.string.space_bar_answered_question);
+				case "proposal" -> context.getString(R.string.space_bar_made_proposal);
+				default -> null;
+			};
+		}
+		if(status.event!=null) return context.getString(R.string.space_bar_created_event);
+		return null;
+	}
+
 	public static void buildPollItems(String parentID, Callbacks callbacks, Context context, Poll poll, Status status, List<StatusDisplayItem> items){
 		int i=0;
 		for(Poll.Option opt:poll.options){
@@ -284,7 +303,8 @@ public abstract class StatusDisplayItem{
 		QUOTE_ERROR,
 		NESTED_QUOTE,
 		EVENT_CARD,
-		NOTIFICATION_NUDGE
+		NOTIFICATION_NUDGE,
+		QUESTION_CARD
 	}
 
 	public static abstract class Holder<T> extends BindableViewHolder<T> implements UsableRecyclerView.DisableableClickable{

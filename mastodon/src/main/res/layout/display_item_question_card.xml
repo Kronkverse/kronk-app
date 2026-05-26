@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:paddingHorizontal="16dp"
+	android:paddingBottom="8dp">
+
+	<LinearLayout
+		android:id="@+id/inner"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center_horizontal"
+		android:orientation="vertical"
+		android:foreground="@drawable/fg_link_card"
+		android:paddingHorizontal="16dp"
+		android:paddingVertical="12dp"
+		android:maxWidth="400dp"
+		android:clickable="true"
+		android:focusable="true">
+
+		<LinearLayout
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical">
+
+			<ImageView
+				android:id="@+id/badge_icon"
+				android:layout_width="14dp"
+				android:layout_height="14dp"
+				android:layout_marginEnd="6dp"
+				android:importantForAccessibility="no"
+				tools:src="@drawable/ic_help_24px"/>
+
+			<TextView
+				android:id="@+id/badge_label"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textAppearance="@style/m3_label_medium"
+				android:textColor="?colorM3Primary"
+				android:textAllCaps="true"
+				android:letterSpacing="0.05"
+				tools:text="QUESTION"/>
+
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/answers_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="6dp"
+			android:textAppearance="@style/m3_body_small"
+			android:textColor="?colorM3OnSurfaceVariant"
+			android:visibility="gone"
+			tools:text="3 answers"/>
+
+	</LinearLayout>
+
+</FrameLayout>
