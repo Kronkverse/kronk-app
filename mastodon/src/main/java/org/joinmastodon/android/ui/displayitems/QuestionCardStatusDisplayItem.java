@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -56,6 +57,7 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 		private final View badgeHeader;
 		private final ImageView badgeIcon;
 		private final TextView badgeLabel;
+		private final TextView cardBody;
 		private final View cardFooter;
 		private final LinearLayout avatarsRow;
 		private final ImageView[] avatarViews = new ImageView[4];
@@ -68,6 +70,7 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			badgeHeader = findViewById(R.id.badge_header);
 			badgeIcon = findViewById(R.id.badge_icon);
 			badgeLabel = findViewById(R.id.badge_label);
+			cardBody = findViewById(R.id.card_body);
 			cardFooter = findViewById(R.id.card_footer);
 			avatarsRow = findViewById(R.id.avatars_row);
 			countText = findViewById(R.id.count_text);
@@ -125,6 +128,16 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 				badgeIcon.setImageResource(R.drawable.ic_reply_24px);
 			}
 			badgeIcon.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+
+			// Body text (the question / answer / seed content)
+			String rawContent = item.status.content;
+			if (!TextUtils.isEmpty(rawContent)) {
+				CharSequence parsed = android.text.Html.fromHtml(rawContent, android.text.Html.FROM_HTML_MODE_COMPACT);
+				cardBody.setText(parsed.toString().trim());
+				cardBody.setVisibility(View.VISIBLE);
+			} else {
+				cardBody.setVisibility(View.GONE);
+			}
 
 			// Answerer avatars
 			List<Account> answerers = item.status.answerers;

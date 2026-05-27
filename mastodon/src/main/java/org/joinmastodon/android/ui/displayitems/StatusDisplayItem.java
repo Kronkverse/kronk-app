@@ -162,8 +162,12 @@ public abstract class StatusDisplayItem{
 			needAddCWItems=status.revealedSpoilers.contains(Status.SpoilerType.CONTENT_WARNING);
 		}
 
-		// Events embed their title in the card; don't show redundant post text above it
-		boolean suppressText=statusForContent.event!=null;
+		// Cards embed content; don't show redundant post text above them
+		boolean suppressText = statusForContent.event != null
+				|| (statusForContent.postType != null
+						&& (statusForContent.postType.equals("question")
+								|| statusForContent.postType.equals("answer")
+								|| statusForContent.postType.equals("proposal")));
 		if(!suppressText && !TextUtils.isEmpty(statusForContent.content)){
 			SpannableStringBuilder parsedText=HtmlParser.parse(statusForContent.content, statusForContent.emojis, statusForContent.mentions, statusForContent.tags, accountID, statusForContent, context);
 			if(filtered){
