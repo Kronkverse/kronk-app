@@ -40,12 +40,11 @@ import java.util.UUID;
 
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
-import me.grishka.appkit.fragments.AppKitFragment;
 import me.grishka.appkit.imageloader.ViewImageLoader;
 import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 
-public class QuestionDetailFragment extends AppKitFragment {
+public class QuestionDetailFragment extends MastodonToolbarFragment {
 	private static final int MAX_ANSWER_LENGTH = 500;
 	private static final DateTimeFormatter TIME_FMT =
 			DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
@@ -81,9 +80,8 @@ public class QuestionDetailFragment extends AppKitFragment {
 		setTitle(R.string.tab_kuestions);
 	}
 
-	@Nullable
 	@Override
-	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+	public View onCreateContentView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View view = inflater.inflate(R.layout.fragment_question_detail, container, false);
 
 		authorAvatar = view.findViewById(R.id.author_avatar);

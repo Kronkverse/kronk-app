@@ -13,8 +13,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.statuses.CreateStatus;
 import org.joinmastodon.android.model.Status;
@@ -24,9 +22,8 @@ import java.util.UUID;
 
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
-import me.grishka.appkit.fragments.AppKitFragment;
 
-public class AskQuestionFragment extends AppKitFragment {
+public class AskQuestionFragment extends MastodonToolbarFragment {
 	private static final int MAX_LENGTH = 140;
 
 	private String accountID;
@@ -42,9 +39,8 @@ public class AskQuestionFragment extends AppKitFragment {
 		setTitle(R.string.ask_a_question);
 	}
 
-	@Nullable
 	@Override
-	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+	public View onCreateContentView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View view = inflater.inflate(R.layout.fragment_ask_question, container, false);
 
 		questionInput = view.findViewById(R.id.question_input);

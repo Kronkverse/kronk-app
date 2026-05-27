@@ -136,9 +136,9 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			String rawBody = null;
 			if (isProposal && item.status.proposal != null) {
 				rawTitle = item.status.proposal.title;
-				rawBody = !TextUtils.isEmpty(item.status.proposal.body)
-						? item.status.proposal.body
-						: item.status.proposal.summary;
+				rawBody = !TextUtils.isEmpty(item.status.proposal.body) ? item.status.proposal.body
+						: !TextUtils.isEmpty(item.status.proposal.summary) ? item.status.proposal.summary
+						: item.status.content; // API uses ProposalSummarySerializer which omits body; fall back to status content
 			} else if (isProposal) {
 				rawTitle = item.status.spoilerText;
 				rawBody = item.status.content;
@@ -186,7 +186,8 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			seeAnswersText.setTextColor(spaceColor);
 			if (isProposal) {
 				countText.setVisibility(View.GONE);
-				seeAnswersText.setVisibility(View.GONE);
+				seeAnswersText.setText(R.string.see_kommons);
+				seeAnswersText.setVisibility(View.VISIBLE);
 			} else if (isQuestion) {
 				int count = item.status.answersCount;
 				if (item.status.hasAnswered) {
