@@ -29,9 +29,7 @@ public class HubFragment extends AppKitFragment {
 	) {}
 
 	private static final List<SpaceEntry> SPACES = List.of(
-		new SpaceEntry(HomeFragment.Space.FEED,        R.drawable.ic_feed_24px,    R.string.tab_feed),
 		new SpaceEntry(HomeFragment.Space.KOMMONS,     R.drawable.ic_gavel_24px,   R.string.kommons_space),
-		new SpaceEntry(HomeFragment.Space.HUDDLE,      R.drawable.ic_tab_live,     R.string.tab_live),
 		new SpaceEntry(HomeFragment.Space.EVENTS,      R.drawable.ic_tab_events,   R.string.tab_events),
 		new SpaceEntry(HomeFragment.Space.NUDGES,      R.drawable.ic_tab_nudges,   R.string.tab_nudges)
 	);
