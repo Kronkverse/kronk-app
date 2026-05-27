@@ -1,8 +1,11 @@
 package org.joinmastodon.android.fragments;
 
 import android.app.Activity;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
@@ -11,10 +14,11 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,12 +52,17 @@ import me.grishka.appkit.utils.V;
 public class KuestionsFragment extends AppKitFragment {
 	private static final int MAX_QUESTION_LENGTH = 140;
 	private static final int COLOR_ACTIVE = Color.parseColor("#4844C0");
-	private static final int COLOR_INACTIVE = Color.parseColor("#888888");
+	// 50% opacity of space color for pill border
+	private static final int COLOR_PILL_BORDER = Color.argb(128, 0x48, 0x44, 0xC0);
+	// 40% opacity of space color for composer card border
+	private static final int COLOR_CARD_BORDER = Color.argb(102, 0x48, 0x44, 0xC0);
 
 	private String accountID;
 
+	private View root;
 	private TextView tabAsk, tabBrowse;
 	private View askSection, browseSection;
+	private LinearLayout composerCard;
 	private EditText questionInput;
 	private TextView charCounter;
 	private Button btnAsk;
@@ -77,21 +86,24 @@ public class KuestionsFragment extends AppKitFragment {
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-		View view = inflater.inflate(R.layout.fragment_kuestions, container, false);
+		root = inflater.inflate(R.layout.fragment_kuestions, container, false);
 
-		tabAsk = view.findViewById(R.id.tab_ask);
-		tabBrowse = view.findViewById(R.id.tab_browse);
-		askSection = view.findViewById(R.id.ask_section);
-		browseSection = view.findViewById(R.id.browse_section);
-		questionInput = view.findViewById(R.id.question_input);
-		charCounter = view.findViewById(R.id.char_counter);
-		btnAsk = view.findViewById(R.id.btn_ask);
-		questionsList = view.findViewById(R.id.questions_list);
-		questionsProgress = view.findViewById(R.id.questions_progress);
-		questionsEmpty = view.findViewById(R.id.questions_empty);
+		tabAsk = root.findViewById(R.id.tab_ask);
+		tabBrowse = root.findViewById(R.id.tab_browse);
+		askSection = root.findViewById(R.id.ask_section);
+		browseSection = root.findViewById(R.id.browse_section);
+		composerCard = root.findViewById(R.id.composer_card);
+		questionInput = root.findViewById(R.id.question_input);
+		charCounter = root.findViewById(R.id.char_counter);
+		btnAsk = root.findViewById(R.id.btn_ask);
+		questionsList = root.findViewById(R.id.questions_list);
+		questionsProgress = root.findViewById(R.id.questions_progress);
+		questionsEmpty = root.findViewById(R.id.questions_empty);
 
 		tabAsk.setOnClickListener(v -> showTab(true));
 		tabBrowse.setOnClickListener(v -> showTab(false));
+
+		styleComposerCard();
 
 		questionInput.addTextChangedListener(new TextWatcher() {
 			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -111,7 +123,44 @@ public class KuestionsFragment extends AppKitFragment {
 		questionsList.setAdapter(adapter);
 
 		updateTabVisuals();
-		return view;
+		return root;
+	}
+
+	@Override
+	public void onApplyWindowInsets(WindowInsets insets) {
+		if (root != null) {
+			root.setPadding(0, insets.getSystemWindowInsetTop(), 0, 0);
+		}
+	}
+
+	private void styleComposerCard() {
+		GradientDrawable bg = new GradientDrawable();
+		bg.setShape(GradientDrawable.RECTANGLE);
+		bg.setCornerRadius(V.dp(16));
+		bg.setColor(Color.TRANSPARENT);
+		bg.setStroke(V.dp(1), COLOR_CARD_BORDER);
+		composerCard.setBackground(bg);
+	}
+
+	private void setTabStyle(TextView tab, boolean active) {
+		GradientDrawable shape = new GradientDrawable();
+		shape.setShape(GradientDrawable.RECTANGLE);
+		shape.setCornerRadius(V.dp(20));
+		if (active) {
+			shape.setColor(COLOR_ACTIVE);
+		} else {
+			shape.setColor(Color.TRANSPARENT);
+			shape.setStroke(V.dp(1), COLOR_PILL_BORDER);
+		}
+		GradientDrawable mask = new GradientDrawable();
+		mask.setShape(GradientDrawable.RECTANGLE);
+		mask.setCornerRadius(V.dp(20));
+		mask.setColor(Color.WHITE);
+		tab.setBackground(new RippleDrawable(
+				ColorStateList.valueOf(Color.argb(40, 0x48, 0x44, 0xC0)), shape, mask));
+		tab.setTextColor(active ? Color.WHITE : COLOR_ACTIVE);
+		tab.setTypeface(null, Typeface.BOLD);
+		tab.setPadding(V.dp(24), V.dp(8), V.dp(24), V.dp(8));
 	}
 
 	private void showTab(boolean askTab) {
@@ -125,10 +174,8 @@ public class KuestionsFragment extends AppKitFragment {
 	private void updateTabVisuals() {
 		askSection.setVisibility(onAskTab ? View.VISIBLE : View.GONE);
 		browseSection.setVisibility(onAskTab ? View.GONE : View.VISIBLE);
-		tabAsk.setTextColor(onAskTab ? COLOR_ACTIVE : COLOR_INACTIVE);
-		tabBrowse.setTextColor(onAskTab ? COLOR_INACTIVE : COLOR_ACTIVE);
-		tabAsk.setTypeface(null, onAskTab ? Typeface.BOLD : Typeface.NORMAL);
-		tabBrowse.setTypeface(null, onAskTab ? Typeface.NORMAL : Typeface.BOLD);
+		setTabStyle(tabAsk, onAskTab);
+		setTabStyle(tabBrowse, !onAskTab);
 	}
 
 	private void postQuestion() {
