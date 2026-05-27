@@ -3,27 +3,30 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:paddingHorizontal="16dp"
 	android:paddingBottom="8dp">
 
 	<LinearLayout
-		android:id="@+id/inner"
+		android:id="@+id/card_root"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_gravity="center_horizontal"
-		android:orientation="vertical"
-		android:foreground="@drawable/fg_link_card"
-		android:paddingHorizontal="16dp"
-		android:paddingVertical="12dp"
 		android:maxWidth="400dp"
+		android:orientation="vertical"
+		android:elevation="3dp"
 		android:clickable="true"
 		android:focusable="true">
 
+		<!-- Badge header: solid space-color background -->
 		<LinearLayout
-			android:layout_width="wrap_content"
+			android:id="@+id/badge_header"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal"
-			android:gravity="center_vertical">
+			android:gravity="center_vertical"
+			android:paddingStart="14dp"
+			android:paddingEnd="14dp"
+			android:paddingTop="8dp"
+			android:paddingBottom="8dp">
 
 			<ImageView
 				android:id="@+id/badge_icon"
@@ -37,23 +40,76 @@
 				android:id="@+id/badge_label"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_label_medium"
-				android:textColor="?colorM3Primary"
+				android:textSize="12sp"
+				android:textColor="#FFFFFF"
+				android:textStyle="bold"
+				android:letterSpacing="0.07"
 				android:textAllCaps="true"
-				android:letterSpacing="0.05"
 				tools:text="QUESTION"/>
 
 		</LinearLayout>
 
-		<TextView
-			android:id="@+id/answers_text"
-			android:layout_width="wrap_content"
+		<!-- Footer: lock icon + answerer avatars + count + action -->
+		<LinearLayout
+			android:id="@+id/card_footer"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="6dp"
-			android:textAppearance="@style/m3_body_small"
-			android:textColor="?colorM3OnSurfaceVariant"
-			android:visibility="gone"
-			tools:text="3 answers"/>
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingStart="14dp"
+			android:paddingEnd="14dp"
+			android:paddingTop="10dp"
+			android:paddingBottom="10dp"
+			android:minHeight="44dp">
+
+			<!-- Answerer avatars: up to 4, loaded dynamically with overlap -->
+			<LinearLayout
+				android:id="@+id/avatars_row"
+				android:layout_width="wrap_content"
+				android:layout_height="22dp"
+				android:orientation="horizontal"
+				android:clipChildren="false"
+				android:clipToPadding="false"
+				android:layout_marginEnd="8dp"
+				android:visibility="gone">
+
+				<ImageView android:id="@+id/avatar_0"
+					android:layout_width="22dp" android:layout_height="22dp"
+					android:importantForAccessibility="no"/>
+				<ImageView android:id="@+id/avatar_1"
+					android:layout_width="22dp" android:layout_height="22dp"
+					android:layout_marginStart="-6dp"
+					android:importantForAccessibility="no"/>
+				<ImageView android:id="@+id/avatar_2"
+					android:layout_width="22dp" android:layout_height="22dp"
+					android:layout_marginStart="-6dp"
+					android:importantForAccessibility="no"/>
+				<ImageView android:id="@+id/avatar_3"
+					android:layout_width="22dp" android:layout_height="22dp"
+					android:layout_marginStart="-6dp"
+					android:importantForAccessibility="no"/>
+
+			</LinearLayout>
+
+			<TextView
+				android:id="@+id/count_text"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:textSize="13sp"
+				android:textColor="?colorM3OnSurfaceVariant"
+				tools:text="3 answers"/>
+
+			<TextView
+				android:id="@+id/see_answers_text"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="13sp"
+				android:textStyle="bold"
+				android:visibility="gone"
+				tools:text="See all answers →"/>
+
+		</LinearLayout>
 
 	</LinearLayout>
 

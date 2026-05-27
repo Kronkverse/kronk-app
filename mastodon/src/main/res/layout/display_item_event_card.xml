@@ -3,122 +3,105 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:paddingHorizontal="16dp"
 	android:paddingBottom="8dp">
 
 	<LinearLayout
-		android:id="@+id/inner"
+		android:id="@+id/card_root"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_gravity="center_horizontal"
+		android:maxWidth="400dp"
 		android:orientation="vertical"
-		android:foreground="@drawable/fg_link_card"
-		android:paddingHorizontal="1dp"
-		android:paddingTop="1dp"
-		android:paddingBottom="16dp"
-		android:clipToPadding="false"
-		android:maxWidth="400dp">
+		android:elevation="3dp"
+		android:clickable="true"
+		android:focusable="true">
 
+		<!-- Optional cover image -->
 		<ImageView
 			android:id="@+id/event_cover_image"
 			android:layout_width="match_parent"
-			android:layout_height="160dp"
+			android:layout_height="120dp"
 			android:scaleType="centerCrop"
 			android:visibility="gone"
 			android:importantForAccessibility="no"
-			tools:src="#0f0"/>
+			tools:src="#1A343070"/>
 
+		<!-- Horizontal body: date badge + content -->
 		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal"
-			android:layout_marginHorizontal="16dp"
-			android:layout_marginTop="12dp"
-			android:gravity="center_vertical">
-
-			<ImageView
-				android:layout_width="18dp"
-				android:layout_height="18dp"
-				android:src="@drawable/ic_calendar_month_24px"
-				android:importantForAccessibility="no"
-				android:layout_marginEnd="8dp" />
-
-			<TextView
-				android:id="@+id/event_date"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3Primary"
-				android:singleLine="true"
-				tools:text="Saturday, March 29, 2026 · 7:00 PM"/>
-		</LinearLayout>
-
-		<TextView
-			android:id="@+id/event_title"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginHorizontal="16dp"
-			android:layout_marginTop="4dp"
-			android:textAppearance="@style/m3_title_medium"
-			android:maxLines="2"
-			android:ellipsize="end"
-			android:textColor="?colorM3OnSurface"
-			android:textStyle="bold"
-			tools:text="MAYHEM"/>
-
-		<TextView
-			android:id="@+id/event_location"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginHorizontal="16dp"
-			android:layout_marginTop="2dp"
-			android:textAppearance="@style/m3_body_small"
-			android:textColor="?colorM3OnSurfaceVariant"
-			android:singleLine="true"
-			android:ellipsize="end"
-			android:visibility="gone"
-			tools:text="Sydney, Australia"/>
-
-		<TextView
-			android:id="@+id/event_description"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginHorizontal="16dp"
-			android:layout_marginTop="4dp"
-			android:textAppearance="@style/m3_body_medium"
-			android:textColor="?colorM3OnSurface"
-			android:maxLines="3"
-			android:ellipsize="end"
-			android:visibility="gone"
-			tools:text="Event description here"/>
-
-		<LinearLayout
-			android:id="@+id/event_rsvp_row"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:layout_marginHorizontal="16dp"
-			android:layout_marginTop="8dp"
 			android:gravity="center_vertical"
-			android:visibility="gone">
+			android:paddingStart="16dp"
+			android:paddingEnd="16dp"
+			android:paddingTop="14dp"
+			android:paddingBottom="14dp">
 
-			<TextView
-				android:id="@+id/event_going_count"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3OnSurfaceVariant"
-				android:layout_marginEnd="12dp"
-				tools:text="3 going"/>
+			<!-- Date badge -->
+			<LinearLayout
+				android:id="@+id/date_badge"
+				android:layout_width="50dp"
+				android:layout_height="50dp"
+				android:orientation="vertical"
+				android:gravity="center"
+				android:layout_marginEnd="14dp">
 
-			<TextView
-				android:id="@+id/event_interested_count"
-				android:layout_width="wrap_content"
+				<TextView
+					android:id="@+id/date_day"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="20sp"
+					android:textStyle="bold"
+					android:textColor="?colorM3OnSurface"
+					android:lineSpacingExtra="0dp"
+					tools:text="29"/>
+
+				<TextView
+					android:id="@+id/date_month"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="10sp"
+					android:textStyle="bold"
+					android:textAllCaps="true"
+					android:letterSpacing="0.05"
+					android:textColor="?colorM3OnSurfaceVariant"
+					tools:text="MAR"/>
+
+			</LinearLayout>
+
+			<!-- Content -->
+			<LinearLayout
+				android:layout_width="0dp"
 				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3OnSurfaceVariant"
-				tools:text="5 interested"/>
+				android:layout_weight="1"
+				android:orientation="vertical">
+
+				<TextView
+					android:id="@+id/event_title"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:textSize="15sp"
+					android:textStyle="bold"
+					android:textColor="?colorM3OnSurface"
+					android:maxLines="2"
+					android:ellipsize="end"
+					tools:text="MAYHEM"/>
+
+				<TextView
+					android:id="@+id/event_meta"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="2dp"
+					android:textSize="12sp"
+					android:textColor="?colorM3OnSurfaceVariant"
+					android:maxLines="2"
+					android:ellipsize="end"
+					tools:text="Sat 7:00 PM · Sydney · 3 going"/>
+
+			</LinearLayout>
+
 		</LinearLayout>
 
 	</LinearLayout>
+
 </FrameLayout>
