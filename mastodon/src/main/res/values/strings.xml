@@ -1041,4 +1041,5 @@ End-to-end encrypted</string>
     <string name="kuestions_answers_heading">Answers</string>
     <string name="error_posting_question">Failed to post question</string>
     <string name="error_posting_answer">Failed to post answer</string>
+    <string name="questions_empty">No questions yet. Ask something!</string>
 </resources>
