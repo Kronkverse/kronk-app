@@ -61,6 +61,12 @@ public class Status extends BaseModel implements DisplayItemsParent{
 	public Quote quote;
 	public QuoteApproval quoteApproval;
 
+	public String postType;
+	public int answersCount;
+	public List<Account> answerers;
+	public boolean hasAnswered;
+	public Proposal proposal;
+
 	public boolean favourited;
 	public boolean reblogged;
 	public Boolean muted;

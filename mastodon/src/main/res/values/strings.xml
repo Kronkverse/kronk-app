@@ -999,6 +999,7 @@ End-to-end encrypted</string>
     <string name="nudge_total_sent">SENT</string>
     <string name="nudge_total_received">RECEIVED</string>
     <string name="tab_nudges">Nudges</string>
+    <string name="tab_kuestions">₭uestions</string>
     <string name="nudge_section_sent">NUDGES SENT</string>
     <string name="nudge_section_received">NUDGES RECEIVED</string>
     <string name="nudge_empty_title">No nudges yet!</string>
@@ -1018,4 +1019,28 @@ End-to-end encrypted</string>
     <string name="notification_type_nudge">Nudges</string>
     <string name="kommons_the_forest">The Forest</string>
     <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
+    <string name="space_bar_asked_question">asked a question</string>
+    <string name="space_bar_answered_question">answered a question</string>
+    <string name="space_bar_created_event">created an event</string>
+    <string name="space_bar_made_proposal">planted a seed</string>
+    <string name="question_label">Question</string>
+    <string name="answer_label">Answer</string>
+    <string name="seed_label">Seed</string>
+    <plurals name="answers_count">
+        <item quantity="one">%d answer</item>
+        <item quantity="other">%d answers</item>
+    </plurals>
+    <string name="you_answered">You answered</string>
+    <string name="answer_to_unlock">Answer to access answers</string>
+    <string name="see_all_answers">See all answers →</string>
+    <string name="ask_a_question">Ask a question</string>
+    <string name="question_compose_hint">What\'s your question?</string>
+    <string name="answer_compose_hint">Write your answer…</string>
+    <string name="btn_ask">Ask</string>
+    <string name="btn_post_answer">Post answer</string>
+    <string name="kuestions_answers_heading">Answers</string>
+    <string name="error_posting_question">Failed to post question</string>
+    <string name="error_posting_answer">Failed to post answer</string>
+    <string name="questions_empty">No questions yet. Ask something!</string>
+    <string name="see_kommons">View in ₭ommons →</string>
 </resources>

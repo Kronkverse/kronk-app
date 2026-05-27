@@ -29,6 +29,7 @@ import org.joinmastodon.android.model.NotificationType;
 import org.joinmastodon.android.ui.compose.KronkSpace;
 import org.joinmastodon.android.ui.compose.SpaceUsageTracker;
 import org.joinmastodon.android.fragments.NudgesFragment;
+import org.joinmastodon.android.fragments.KuestionsFragment;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.utils.ObjectIdComparator;
 import org.parceler.Parcels;
@@ -45,7 +46,7 @@ import me.grishka.appkit.utils.V;
 
 public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment {
 
-	public enum Space { FEED, EVENTS, HUDDLE, KOMMONS, NUDGES }
+	public enum Space { FEED, EVENTS, HUDDLE, KOMMONS, NUDGES, QUESTIONS }
 
 	private FrameLayout fragmentContainer;
 
@@ -56,6 +57,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private LiveFragment huddleFragment;
 	private KommonsFragment kommonsFragment;
 	private NudgesFragment nudgesFragment;
+	private KuestionsFragment questionsFragment;
 	private NotificationsListFragment notificationsFragment;
 
 	private View bottomNavWrap;
@@ -110,6 +112,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			nudgesFragment = new NudgesFragment();
 			nudgesFragment.setArguments(new Bundle(lazyArgs));
 
+			questionsFragment = new KuestionsFragment();
+			questionsFragment.setArguments(new Bundle(lazyArgs));
+
 			notificationsFragment = new NotificationsListFragment();
 			notificationsFragment.setArguments(new Bundle(lazyArgs));
 		}
@@ -140,9 +145,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		navHub = root.findViewById(R.id.nav_hub);
 		navNotifications = root.findViewById(R.id.nav_notifications);
 
-		navProfile.setOnClickListener(v -> onProfileTapped());
+		navProfile.setOnClickListener(v -> onHomeTapped());
 		navHub.setOnClickListener(v -> onHubTapped());
-		navNotifications.setOnClickListener(v -> onNotificationsTapped());
+		navNotifications.setOnClickListener(v -> onHuddleTapped());
 
 		if (savedInstanceState == null) {
 			getChildFragmentManager().beginTransaction()
@@ -153,6 +158,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 					.add(me.grishka.appkit.R.id.fragment_wrap, huddleFragment).hide(huddleFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, kommonsFragment).hide(kommonsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, nudgesFragment).hide(nudgesFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, questionsFragment).hide(questionsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
 					.commit();
 
@@ -231,8 +237,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			case EVENTS:  return eventsFragment;
 			case HUDDLE:  return huddleFragment;
 			case KOMMONS: return kommonsFragment;
-			case NUDGES:  return nudgesFragment;
-			default:      return feedFragment;
+			case NUDGES:     return nudgesFragment;
+			case QUESTIONS:  return questionsFragment;
+			default:         return feedFragment;
 		}
 	}
 
@@ -241,9 +248,19 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			case EVENTS:  return KronkSpace.KALENDAR;
 			case HUDDLE:  return KronkSpace.HUDDLE;
 			case KOMMONS: return KronkSpace.KOMMONS;
-			case NUDGES:  return KronkSpace.NUDGES;
-			default:      return KronkSpace.MURMUR;
+			case NUDGES:     return KronkSpace.NUDGES;
+			case QUESTIONS:  return KronkSpace.KUESTIONS;
+			default:         return KronkSpace.MURMUR;
 		}
+	}
+
+	private void onHomeTapped() {
+		boolean alreadyOnFeed = !showingHub && !showingProfile && !showingNotifications && currentSpace == Space.FEED;
+		if (alreadyOnFeed) {
+			feedFragment.scrollToTop();
+			return;
+		}
+		openSpace(Space.FEED);
 	}
 
 	private void onProfileTapped() {
@@ -275,6 +292,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
+	private void onHuddleTapped() {
+		openSpace(Space.HUDDLE);
+	}
+
 	private void onNotificationsTapped() {
 		if (!showingNotifications) {
 			switchToNotifications();
@@ -283,9 +304,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	private void updateNavSelection() {
 		if (navHub == null) return;
-		navProfile.setSelected(showingProfile);
+		boolean neutral = !showingHub && !showingProfile && !showingNotifications;
+		navProfile.setSelected(neutral && currentSpace == Space.FEED);
 		navHub.setSelected(showingHub);
-		navNotifications.setSelected(showingNotifications);
+		navNotifications.setSelected(neutral && currentSpace == Space.HUDDLE);
 	}
 
 	private void maybeTriggerLoading(android.app.Fragment fragment) {
@@ -347,6 +369,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		notificationsFragment.onApplyWindowInsets(topAndBottom);
 		eventsFragment.onApplyWindowInsets(topAndBottom);
 		profileFragment.onApplyWindowInsets(topAndBottom);
+		if (questionsFragment != null) questionsFragment.onApplyWindowInsets(topAndBottom);
 	}
 
 	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
@@ -394,6 +417,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if (huddleFragment != null) getChildFragmentManager().putFragment(outState, "huddleFragment", huddleFragment);
 		if (kommonsFragment != null) getChildFragmentManager().putFragment(outState, "kommonsFragment", kommonsFragment);
 		if (nudgesFragment != null) getChildFragmentManager().putFragment(outState, "nudgesFragment", nudgesFragment);
+		if (questionsFragment != null) getChildFragmentManager().putFragment(outState, "questionsFragment", questionsFragment);
 		if (notificationsFragment != null) getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
 	}
 
@@ -408,6 +432,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
 		kommonsFragment = (KommonsFragment) getChildFragmentManager().getFragment(savedInstanceState, "kommonsFragment");
 		nudgesFragment = (NudgesFragment) getChildFragmentManager().getFragment(savedInstanceState, "nudgesFragment");
+		questionsFragment = (KuestionsFragment) getChildFragmentManager().getFragment(savedInstanceState, "questionsFragment");
 		notificationsFragment = (NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
 		showingHub = savedInstanceState.getBoolean("showingHub");
 		showingProfile = savedInstanceState.getBoolean("showingProfile");
