@@ -370,6 +370,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		eventsFragment.onApplyWindowInsets(topAndBottom);
 		profileFragment.onApplyWindowInsets(topAndBottom);
 		if (questionsFragment != null) questionsFragment.onApplyWindowInsets(topAndBottom);
+		if (kommonsFragment != null) kommonsFragment.onApplyWindowInsets(topAndBottom);
 		huddleFragment.onApplyWindowInsets(topAndBottom);
 	}
 

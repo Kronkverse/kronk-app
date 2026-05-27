@@ -21,6 +21,7 @@ public class Proposal extends BaseModel{
 	public List<String> categories;
 	public String outcomeNotes;
 	public Instant opensAt;
+	public Instant archivedAt;
 	public int supportCount;
 	public int vetoCount;
 	public int participationCount;

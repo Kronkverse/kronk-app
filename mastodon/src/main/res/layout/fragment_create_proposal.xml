@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:fillViewport="true">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:padding="20dp">
+
+		<!-- Title field -->
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/kommons_form_title_label"
+			android:textAppearance="@style/m3_label_medium"
+			android:textColor="?colorM3OnSurface"/>
+
+		<EditText
+			android:id="@+id/title_input"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:inputType="text|textCapSentences"
+			android:maxLength="240"
+			android:hint="@string/kommons_form_title_hint"
+			android:background="@null"/>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:layout_marginTop="2dp"
+			android:layout_marginBottom="16dp">
+
+			<TextView
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="@string/kommons_form_title_hint_sub"
+				android:textAppearance="@style/m3_body_small"
+				android:textColor="?colorM3OnSurfaceVariant"/>
+
+			<TextView
+				android:id="@+id/title_counter"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textAppearance="@style/m3_body_small"
+				android:textColor="?colorM3OnSurfaceVariant"
+				android:text="0/240"/>
+
+		</LinearLayout>
+
+		<!-- Description field -->
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/kommons_form_body_label"
+			android:textAppearance="@style/m3_label_medium"
+			android:textColor="?colorM3OnSurface"/>
+
+		<EditText
+			android:id="@+id/body_input"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:layout_marginBottom="4dp"
+			android:inputType="textMultiLine|textCapSentences"
+			android:minLines="5"
+			android:gravity="top|start"
+			android:hint="@string/kommons_form_body_hint"
+			android:background="@null"/>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginBottom="20dp"
+			android:text="@string/kommons_form_body_hint"
+			android:textAppearance="@style/m3_body_small"
+			android:textColor="?colorM3OnSurfaceVariant"/>
+
+		<!-- Tasks section heading -->
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/kommons_form_tasks_heading"
+			android:textAppearance="@style/m3_title_small"
+			android:textColor="?colorM3OnSurface"/>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="2dp"
+			android:layout_marginBottom="12dp"
+			android:text="@string/kommons_form_tasks_hint"
+			android:textAppearance="@style/m3_body_small"
+			android:textColor="?colorM3OnSurfaceVariant"/>
+
+		<!-- Dynamic task rows injected here by fragment -->
+		<LinearLayout
+			android:id="@+id/task_rows_container"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"/>
+
+		<!-- Add task button -->
+		<Button
+			android:id="@+id/btn_add_task"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="24dp"
+			android:text="@string/kommons_form_add_task"
+			android:drawableStart="@drawable/ic_add_24px"
+			android:drawablePadding="6dp"
+			style="@style/Widget.AppCompat.Button.Borderless"
+			android:textColor="?colorM3Primary"
+			android:textSize="14sp"/>
+
+		<!-- Error message -->
+		<TextView
+			android:id="@+id/error_text"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginBottom="12dp"
+			android:textAppearance="@style/m3_body_medium"
+			android:textColor="?colorM3Error"
+			android:visibility="gone"/>
+
+		<!-- Submit button -->
+		<Button
+			android:id="@+id/btn_submit"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:text="@string/kommons_form_submit"
+			android:textSize="15sp"
+			android:textStyle="bold"
+			android:paddingVertical="14dp"
+			style="@style/Widget.AppCompat.Button.Colored"/>
+
+	</LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
