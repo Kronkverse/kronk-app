@@ -1043,4 +1043,35 @@ End-to-end encrypted</string>
     <string name="error_posting_answer">Failed to post answer</string>
     <string name="questions_empty">No questions yet. Ask something!</string>
     <string name="see_kommons">View in ₭ommons →</string>
+
+    <!-- Kommons hero + plant seed flow -->
+    <string name="kommons_hero_title">₭ommons</string>
+    <string name="kommons_hero_intro">₭ommons is where we build Kronk together. Plant seeds, support what matters most, let\'s grow Kronk as we want it.</string>
+    <string name="kommons_plant_seed">Plant a seed</string>
+    <string name="kommons_back_to_seeds">← All seeds</string>
+    <string name="kommons_archived_section">Archived seeds</string>
+    <string name="kommons_empty_subtitle_new">Be the first to plant one.</string>
+    <string name="kommons_fan">Fan this seed</string>
+    <string name="kommons_unfan">Unfan this seed</string>
+    <plurals name="kommons_seeds_count">
+        <item quantity="one">%d seed</item>
+        <item quantity="other">%d seeds</item>
+    </plurals>
+
+    <!-- Create proposal form -->
+    <string name="kommons_form_title_label">Title *</string>
+    <string name="kommons_form_title_hint">A short, descriptive name</string>
+    <string name="kommons_form_title_hint_sub">A short, descriptive name.</string>
+    <string name="kommons_form_body_label">Description *</string>
+    <string name="kommons_form_body_hint">Describe the seed, the rationale, and expected impact.</string>
+    <string name="kommons_form_tasks_heading">Implementation tasks</string>
+    <string name="kommons_form_tasks_hint">Optional. Break the seed into work units.</string>
+    <string name="kommons_form_add_task">Add task</string>
+    <string name="kommons_form_task_title_hint">Task title</string>
+    <string name="kommons_form_task_desc_hint">Task description (optional)</string>
+    <string name="kommons_form_remove_task">Remove task</string>
+    <string name="kommons_form_submit">Plant seed</string>
+    <string name="kommons_form_planting">Planting seed…</string>
+    <string name="kommons_form_adding_tasks">Adding tasks…</string>
+    <string name="kommons_form_error">Failed to plant seed. Please try again.</string>
 </resources>

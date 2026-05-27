@@ -1,113 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Fan col + vote strip + card body — matches webapp ProposalCard layout -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
+	android:orientation="horizontal"
 	android:paddingHorizontal="16dp"
-	android:paddingBottom="10dp">
+	android:paddingBottom="8dp">
 
+	<!-- Fan column: agree count + fan button -->
 	<LinearLayout
-		android:layout_width="match_parent"
+		android:layout_width="40dp"
 		android:layout_height="wrap_content"
 		android:orientation="vertical"
-		android:foreground="@drawable/fg_link_card"
-		android:paddingHorizontal="16dp"
-		android:paddingVertical="14dp"
-		android:clipToPadding="false">
+		android:gravity="center_horizontal"
+		android:paddingTop="14dp"
+		android:paddingEnd="4dp">
 
+		<TextView
+			android:id="@+id/fan_count"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="13sp"
+			android:textStyle="bold"
+			android:textColor="?colorM3OnSurface"
+			android:gravity="center"
+			tools:text="12"/>
+
+		<ImageButton
+			android:id="@+id/btn_fan"
+			android:layout_width="28dp"
+			android:layout_height="28dp"
+			android:layout_marginTop="2dp"
+			android:padding="4dp"
+			android:src="@drawable/ic_toys_fan_24px"
+			android:background="?android:attr/selectableItemBackgroundBorderless"
+			android:contentDescription="@string/kommons_fan"
+			android:scaleType="fitCenter"/>
+
+	</LinearLayout>
+
+	<!-- Vote strip: thin colored left border -->
+	<View
+		android:id="@+id/vote_strip"
+		android:layout_width="3dp"
+		android:layout_height="match_parent"
+		android:layout_marginEnd="8dp"
+		android:background="#36248C"/>
+
+	<!-- Main card area -->
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical"
+		android:foreground="@drawable/fg_link_card"
+		android:paddingStart="10dp"
+		android:paddingEnd="10dp"
+		android:paddingTop="10dp"
+		android:paddingBottom="10dp"
+		android:focusable="true"
+		android:clickable="true">
+
+		<!-- Status badge + archived icon -->
 		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal"
 			android:gravity="center_vertical"
-			android:layout_marginBottom="6dp">
+			android:layout_marginBottom="5dp">
 
 			<TextView
 				android:id="@+id/status_badge"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:paddingHorizontal="8dp"
-				android:paddingVertical="3dp"
-				android:textSize="11sp"
+				android:paddingHorizontal="7dp"
+				android:paddingVertical="2dp"
+				android:textSize="10sp"
 				android:textStyle="bold"
 				android:textAllCaps="true"
-				android:letterSpacing="0.04"
+				android:letterSpacing="0.05"
 				android:background="@drawable/bg_inline_status"
 				tools:text="OPEN"/>
 
-			<View
-				android:layout_width="0dp"
-				android:layout_height="0dp"
-				android:layout_weight="1"/>
+			<View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
 
-			<TextView
-				android:id="@+id/author"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3OnSurfaceVariant"
-				tools:text="@talita"/>
+			<ImageView
+				android:id="@+id/archived_icon"
+				android:layout_width="14dp"
+				android:layout_height="14dp"
+				android:src="@drawable/ic_archive_24px"
+				android:tint="?colorM3OnSurfaceVariant"
+				android:visibility="gone"/>
 
 		</LinearLayout>
 
+		<!-- Title -->
 		<TextView
 			android:id="@+id/title"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:textAppearance="@style/m3_title_medium"
+			android:textAppearance="@style/m3_title_small"
 			android:textColor="?colorM3OnSurface"
 			android:maxLines="2"
 			android:ellipsize="end"
 			tools:text="Add a community calendar to Kronk"/>
 
+		<!-- Body preview -->
 		<TextView
-			android:id="@+id/summary"
+			android:id="@+id/body_preview"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:textAppearance="@style/m3_body_medium"
+			android:layout_marginTop="3dp"
+			android:textAppearance="@style/m3_body_small"
 			android:textColor="?colorM3OnSurfaceVariant"
 			android:maxLines="2"
 			android:ellipsize="end"
 			android:visibility="gone"
 			tools:text="A shared events calendar where members can post and browse upcoming community events."/>
 
+		<!-- Author row: avatar + username + dot + time -->
 		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal"
-			android:layout_marginTop="10dp"
-			android:gravity="center_vertical">
+			android:gravity="center_vertical"
+			android:layout_marginTop="7dp">
+
+			<ImageView
+				android:id="@+id/author_avatar"
+				android:layout_width="16dp"
+				android:layout_height="16dp"
+				android:scaleType="centerCrop"
+				android:importantForAccessibility="no"/>
 
 			<TextView
-				android:id="@+id/vote_agree"
+				android:id="@+id/author_name"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:drawablePadding="4dp"
-				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3Primary"
-				tools:text="12 agree"/>
-
-			<TextView
-				android:id="@+id/vote_abstain"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginStart="12dp"
+				android:layout_marginStart="4dp"
 				android:textAppearance="@style/m3_body_small"
 				android:textColor="?colorM3OnSurfaceVariant"
-				tools:text="3 abstain"/>
+				tools:text="@talita"/>
 
 			<TextView
-				android:id="@+id/vote_block"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:layout_marginStart="12dp"
+				android:layout_marginHorizontal="4dp"
+				android:text="·"
 				android:textAppearance="@style/m3_body_small"
-				android:textColor="?colorM3Error"
-				tools:text="1 block"/>
+				android:textColor="?colorM3OnSurfaceVariant"/>
+
+			<TextView
+				android:id="@+id/time_ago"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textAppearance="@style/m3_body_small"
+				android:textColor="?colorM3OnSurfaceVariant"
+				tools:text="3 days ago"/>
 
 		</LinearLayout>
 
 	</LinearLayout>
 
-</FrameLayout>
+</LinearLayout>

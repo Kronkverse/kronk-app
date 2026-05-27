@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:layout_marginBottom="12dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical">
+
+		<EditText
+			android:id="@+id/task_title"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:inputType="text|textCapSentences"
+			android:hint="@string/kommons_form_task_title_hint"
+			android:background="@null"/>
+
+		<ImageButton
+			android:id="@+id/btn_remove_task"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:layout_marginStart="8dp"
+			android:padding="6dp"
+			android:src="@drawable/ic_delete_24px"
+			android:background="?android:attr/selectableItemBackgroundBorderless"
+			android:contentDescription="@string/kommons_form_remove_task"
+			android:tint="?colorM3OnSurfaceVariant"/>
+
+	</LinearLayout>
+
+	<EditText
+		android:id="@+id/task_description"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="6dp"
+		android:inputType="textMultiLine|textCapSentences"
+		android:minLines="2"
+		android:gravity="top|start"
+		android:hint="@string/kommons_form_task_desc_hint"
+		android:background="@null"/>
+
+</LinearLayout>
