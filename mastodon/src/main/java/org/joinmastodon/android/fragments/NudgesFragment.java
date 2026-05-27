@@ -117,7 +117,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		if (list != null) list.smoothScrollToPosition(0);
 	}
 
-	private void loadData() {
+	void loadData() {
 		loading = true;
 		new GetNudgePartners()
 				.setCallback(new Callback<NudgePartnersResponse>() {

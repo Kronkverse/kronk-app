@@ -1,42 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Toolbar provided by MastodonToolbarFragment — no custom back bar needed -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:orientation="vertical">
-
-	<!-- Back bar -->
-	<LinearLayout
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		android:gravity="center_vertical"
-		android:paddingStart="4dp"
-		android:paddingEnd="16dp"
-		android:paddingVertical="8dp">
-
-		<ImageButton
-			android:id="@+id/btn_back"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
-			android:src="@drawable/ic_arrow_back_24px"
-			android:tint="?colorM3OnSurface"
-			android:background="?android:selectableItemBackgroundBorderless"
-			android:contentDescription="@string/back"/>
-
-		<TextView
-			android:id="@+id/detail_header_title"
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:layout_marginStart="4dp"
-			android:textAppearance="@style/m3_title_large"
-			android:textColor="?colorM3OnSurface"
-			android:singleLine="true"
-			android:ellipsize="end"
-			tools:text="Add a community calendar"/>
-
-	</LinearLayout>
 
 	<!-- Scrollable content -->
 	<androidx.core.widget.NestedScrollView

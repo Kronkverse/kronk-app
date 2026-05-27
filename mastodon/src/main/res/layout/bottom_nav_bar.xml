@@ -3,6 +3,7 @@
 	android:id="@+id/bottom_nav_wrap"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
+	android:layout_gravity="bottom"
 	android:background="@drawable/bg_tabbar"
 	android:elevation="3dp"
 	android:outlineProvider="bounds"
@@ -20,7 +21,7 @@
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/tab_profile"
+			android:contentDescription="@string/tab_home"
 			android:clickable="true"
 			android:focusable="true">
 
@@ -33,7 +34,7 @@
 				android:importantForAccessibility="no"
 				android:duplicateParentState="true"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_profile"/>
+				android:src="@drawable/ic_tab_home"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -47,7 +48,7 @@
 				android:duplicateParentState="true"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/tab_profile"/>
+				android:text="@string/tab_home"/>
 
 		</FrameLayout>
 
@@ -96,7 +97,7 @@
 			android:layout_weight="1"
 			android:background="@drawable/bg_tabbar_tab"
 			android:paddingHorizontal="4dp"
-			android:contentDescription="@string/notifications"
+			android:contentDescription="@string/tab_live"
 			android:clickable="true"
 			android:focusable="true">
 
@@ -109,7 +110,7 @@
 				android:importantForAccessibility="no"
 				android:duplicateParentState="true"
 				android:tint="@color/tab_bar_icon"
-				android:src="@drawable/ic_tab_notifications"/>
+				android:src="@drawable/ic_tab_live"/>
 
 			<TextView
 				android:id="@+id/label"
@@ -123,7 +124,7 @@
 				android:duplicateParentState="true"
 				android:singleLine="true"
 				android:ellipsize="end"
-				android:text="@string/notifications"/>
+				android:text="@string/tab_live"/>
 
 		</FrameLayout>
 

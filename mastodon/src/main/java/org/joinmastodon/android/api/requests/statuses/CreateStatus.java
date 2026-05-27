@@ -18,6 +18,7 @@ public class CreateStatus extends MastodonAPIRequest<Status>{
 
 	public static class Request{
 		public String status;
+		public String postType;
 		public List<MediaAttribute> mediaAttributes;
 		public List<String> mediaIds;
 		public Poll poll;

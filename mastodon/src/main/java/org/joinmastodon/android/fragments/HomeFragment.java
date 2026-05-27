@@ -9,7 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+
+import androidx.annotation.Nullable;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
 import com.squareup.otto.Subscribe;
 
@@ -18,13 +20,16 @@ import org.joinmastodon.android.PushNotificationReceiver;
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.notifications.GetNotificationsV1;
 import org.joinmastodon.android.api.requests.notifications.GetUnreadNotificationsCount;
-import org.joinmastodon.android.api.session.AccountSession;
 import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.NotificationsMarkerUpdatedEvent;
 import org.joinmastodon.android.events.StatusDisplaySettingsChangedEvent;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.model.Notification;
 import org.joinmastodon.android.model.NotificationType;
+import org.joinmastodon.android.ui.compose.KronkSpace;
+import org.joinmastodon.android.ui.compose.SpaceUsageTracker;
+import org.joinmastodon.android.fragments.NudgesFragment;
+import org.joinmastodon.android.fragments.KuestionsFragment;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.utils.ObjectIdComparator;
 import org.parceler.Parcels;
@@ -32,28 +37,27 @@ import org.parceler.Parcels;
 import java.util.EnumSet;
 import java.util.List;
 
-import androidx.annotation.Nullable;
 import me.grishka.appkit.FragmentStackActivity;
-import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
 import me.grishka.appkit.fragments.LoaderFragment;
 import me.grishka.appkit.utils.V;
-import me.grishka.appkit.views.FragmentRootLinearLayout;
 
 public class HomeFragment extends AppKitFragment implements AssistContentProviderFragment {
 
-	public enum Space { HUB, FEED, EVENTS, HUDDLE, KOMMONS }
+	public enum Space { FEED, EVENTS, HUDDLE, KOMMONS, NUDGES, QUESTIONS }
 
-	private FragmentRootLinearLayout content;
 	private FrameLayout fragmentContainer;
 
-	private HubFragment hubFragment;
+	private HubFragment hubTabFragment;
+	private ProfileFragment profileFragment;
 	private HomeTimelineFragment feedFragment;
 	private EventsFragment eventsFragment;
 	private LiveFragment huddleFragment;
 	private KommonsFragment kommonsFragment;
+	private NudgesFragment nudgesFragment;
+	private KuestionsFragment questionsFragment;
 	private NotificationsListFragment notificationsFragment;
 
 	private View bottomNavWrap;
@@ -61,12 +65,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	private View navHub;
 	private View navNotifications;
 
-	private Space currentSpace = Space.HUB;
+	private Space currentSpace = Space.FEED;
 	private boolean showingNotifications;
+	private boolean showingHub;
+	private boolean showingProfile;
 	private String accountID;
 
-	// Registered while any non-hub space is active so back press returns to hub.
-	private final Runnable spaceBackCallback = this::switchToHub;
+	private final Runnable spaceBackCallback = () -> switchToSpace(Space.FEED);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -81,8 +86,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			Bundle args = new Bundle();
 			args.putString("account", accountID);
 
-			hubFragment = new HubFragment();
-			hubFragment.setArguments(new Bundle(args));
+			hubTabFragment = new HubFragment();
+			hubTabFragment.setArguments(new Bundle(args));
+
+			Bundle profileArgs = new Bundle(args);
+			profileArgs.putParcelable("profileAccount", Parcels.wrap(AccountSessionManager.get(accountID).self));
+			profileFragment = new ProfileFragment();
+			profileFragment.setArguments(profileArgs);
 
 			feedFragment = new HomeTimelineFragment();
 			feedFragment.setArguments(new Bundle(args));
@@ -98,6 +108,12 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 			kommonsFragment = new KommonsFragment();
 			kommonsFragment.setArguments(new Bundle(lazyArgs));
+
+			nudgesFragment = new NudgesFragment();
+			nudgesFragment.setArguments(new Bundle(lazyArgs));
+
+			questionsFragment = new KuestionsFragment();
+			questionsFragment.setArguments(new Bundle(lazyArgs));
 
 			notificationsFragment = new NotificationsListFragment();
 			notificationsFragment.setArguments(new Bundle(lazyArgs));
@@ -115,30 +131,34 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	@Nullable
 	@Override
 	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-		content = new FragmentRootLinearLayout(getActivity());
-		content.setOrientation(LinearLayout.VERTICAL);
+		CoordinatorLayout root = new CoordinatorLayout(getActivity());
 
 		fragmentContainer = new FrameLayout(getActivity());
 		fragmentContainer.setId(me.grishka.appkit.R.id.fragment_wrap);
-		content.addView(fragmentContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+		CoordinatorLayout.LayoutParams fcParams = new CoordinatorLayout.LayoutParams(
+				ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+		root.addView(fragmentContainer, fcParams);
 
-		inflater.inflate(R.layout.bottom_nav_bar, content);
-		bottomNavWrap = content.findViewById(R.id.bottom_nav_wrap);
-		navProfile = content.findViewById(R.id.nav_profile);
-		navHub = content.findViewById(R.id.nav_hub);
-		navNotifications = content.findViewById(R.id.nav_notifications);
+		inflater.inflate(R.layout.bottom_nav_bar, root);
+		bottomNavWrap = root.findViewById(R.id.bottom_nav_wrap);
+		navProfile = root.findViewById(R.id.nav_profile);
+		navHub = root.findViewById(R.id.nav_hub);
+		navNotifications = root.findViewById(R.id.nav_notifications);
 
-		navProfile.setOnClickListener(v -> onProfileTapped());
+		navProfile.setOnClickListener(v -> onHomeTapped());
 		navHub.setOnClickListener(v -> onHubTapped());
-		navNotifications.setOnClickListener(v -> onNotificationsTapped());
+		navNotifications.setOnClickListener(v -> onHuddleTapped());
 
 		if (savedInstanceState == null) {
 			getChildFragmentManager().beginTransaction()
-					.add(me.grishka.appkit.R.id.fragment_wrap, hubFragment)
-					.add(me.grishka.appkit.R.id.fragment_wrap, feedFragment).hide(feedFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, feedFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, hubTabFragment).hide(hubTabFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, profileFragment).hide(profileFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, eventsFragment).hide(eventsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, huddleFragment).hide(huddleFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, kommonsFragment).hide(kommonsFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, nudgesFragment).hide(nudgesFragment)
+					.add(me.grishka.appkit.R.id.fragment_wrap, questionsFragment).hide(questionsFragment)
 					.add(me.grishka.appkit.R.id.fragment_wrap, notificationsFragment).hide(notificationsFragment)
 					.commit();
 
@@ -149,16 +169,20 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		}
 
 		updateNavSelection();
-		return content;
+		return root;
 	}
 
-	// Called by HubFragment tiles
 	public void openSpace(Space space) {
-		if (showingNotifications) {
-			showingNotifications = false;
-			getChildFragmentManager().beginTransaction().hide(notificationsFragment).show(hubFragment).commitNow();
+		android.app.Fragment current = activeFragment();
+		showingNotifications = false;
+		showingHub = false;
+		showingProfile = false;
+		if (space == currentSpace) {
+			getChildFragmentManager().beginTransaction().hide(current).show(fragmentForSpace(currentSpace)).commitNow();
+			updateNavSelection();
+			return;
 		}
-		if (space == currentSpace && space != Space.HUB) return;
+		getChildFragmentManager().beginTransaction().hide(current).show(fragmentForSpace(space)).commitNow();
 		switchToSpace(space);
 	}
 
@@ -172,8 +196,9 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 				.commit();
 
 		currentSpace = space;
+		SpaceUsageTracker.INSTANCE.increment(getActivity(), accountID, toKronkSpace(space));
 
-		if (space != Space.HUB) {
+		if (space != Space.FEED) {
 			addBackCallback(spaceBackCallback);
 			maybeTriggerLoading(incoming);
 		} else {
@@ -184,23 +209,13 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
-	private void switchToHub() {
-		switchToSpace(Space.HUB);
-	}
-
 	private void switchToNotifications() {
-		if (currentSpace != Space.HUB) {
-			// Return to hub first so hub is restored when leaving notifications
-			getChildFragmentManager().beginTransaction()
-					.hide(fragmentForSpace(currentSpace))
-					.show(hubFragment)
-					.commitNow();
-			currentSpace = Space.HUB;
-			removeBackCallback(spaceBackCallback);
-		}
+		android.app.Fragment current = activeFragment();
+		showingHub = false;
+		showingProfile = false;
 		showingNotifications = true;
 		getChildFragmentManager().beginTransaction()
-				.hide(hubFragment)
+				.hide(current)
 				.show(notificationsFragment)
 				.commit();
 		maybeTriggerLoading(notificationsFragment);
@@ -210,37 +225,75 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
+	private android.app.Fragment activeFragment() {
+		if (showingNotifications) return notificationsFragment;
+		if (showingHub) return hubTabFragment;
+		if (showingProfile) return profileFragment;
+		return fragmentForSpace(currentSpace);
+	}
+
 	private android.app.Fragment fragmentForSpace(Space space) {
 		switch (space) {
-			case FEED: return feedFragment;
-			case EVENTS: return eventsFragment;
-			case HUDDLE: return huddleFragment;
+			case EVENTS:  return eventsFragment;
+			case HUDDLE:  return huddleFragment;
 			case KOMMONS: return kommonsFragment;
-			default: return hubFragment;
+			case NUDGES:     return nudgesFragment;
+			case QUESTIONS:  return questionsFragment;
+			default:         return feedFragment;
 		}
+	}
+
+	private KronkSpace toKronkSpace(Space space) {
+		switch (space) {
+			case EVENTS:  return KronkSpace.KALENDAR;
+			case HUDDLE:  return KronkSpace.HUDDLE;
+			case KOMMONS: return KronkSpace.KOMMONS;
+			case NUDGES:     return KronkSpace.NUDGES;
+			case QUESTIONS:  return KronkSpace.KUESTIONS;
+			default:         return KronkSpace.MURMUR;
+		}
+	}
+
+	private void onHomeTapped() {
+		boolean alreadyOnFeed = !showingHub && !showingProfile && !showingNotifications && currentSpace == Space.FEED;
+		if (alreadyOnFeed) {
+			feedFragment.scrollToTop();
+			return;
+		}
+		openSpace(Space.FEED);
 	}
 
 	private void onProfileTapped() {
-		AccountSession session = AccountSessionManager.get(accountID);
-		Bundle args = new Bundle();
-		args.putString("account", accountID);
-		args.putParcelable("profileAccount", Parcels.wrap(session.self));
-		Nav.go(getActivity(), ProfileFragment.class, args);
+		if (showingProfile) return;
+		android.app.Fragment current = activeFragment();
+		showingNotifications = false;
+		showingHub = false;
+		showingProfile = true;
+		getChildFragmentManager().beginTransaction()
+				.hide(current)
+				.show(profileFragment)
+				.commit();
+		maybeTriggerLoading(profileFragment);
+		updateNavSelection();
+		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
 	}
 
 	private void onHubTapped() {
-		if (showingNotifications) {
-			showingNotifications = false;
-			getChildFragmentManager().beginTransaction()
-					.hide(notificationsFragment)
-					.show(fragmentForSpace(currentSpace))
-					.commit();
-			updateNavSelection();
-			((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
-		} else if (currentSpace != Space.HUB) {
-			switchToHub();
-		}
-		// Already on hub: no-op
+		if (showingHub) return;
+		android.app.Fragment current = activeFragment();
+		showingNotifications = false;
+		showingProfile = false;
+		showingHub = true;
+		getChildFragmentManager().beginTransaction()
+				.hide(current)
+				.show(hubTabFragment)
+				.commit();
+		updateNavSelection();
+		((FragmentStackActivity) getActivity()).invalidateSystemBarColors(this);
+	}
+
+	private void onHuddleTapped() {
+		openSpace(Space.HUDDLE);
 	}
 
 	private void onNotificationsTapped() {
@@ -251,9 +304,10 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	private void updateNavSelection() {
 		if (navHub == null) return;
-		navHub.setSelected(!showingNotifications);
-		navNotifications.setSelected(showingNotifications);
-		navProfile.setSelected(false);
+		boolean neutral = !showingHub && !showingProfile && !showingNotifications;
+		navProfile.setSelected(neutral && currentSpace == Space.FEED);
+		navHub.setSelected(showingHub);
+		navNotifications.setSelected(neutral && currentSpace == Space.HUDDLE);
 	}
 
 	private void maybeTriggerLoading(android.app.Fragment fragment) {
@@ -264,11 +318,11 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 			lf.loadData();
 		} else if (fragment instanceof KommonsFragment kf) {
 			kf.loadData();
+		} else if (fragment instanceof NudgesFragment nf) {
+			nf.loadData();
 		}
 	}
 
-	// Forward permission results to child fragments — the system only delivers
-	// them to the parent fragment; children need explicit forwarding.
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -298,19 +352,28 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 
 	@Override
 	public void onApplyWindowInsets(WindowInsets insets) {
+		int topInset = insets.getSystemWindowInsetTop();
+		int systemNavInset = insets.getSystemWindowInsetBottom();
+		int navBarPadding = systemNavInset > 0 ? Math.max(systemNavInset, V.dp(24)) : 0;
+		// Nav bar is 80dp fixed + system nav inset padding
+		int totalNavHeight = V.dp(80) + navBarPadding;
 		if (Build.VERSION.SDK_INT >= 27) {
-			int inset = insets.getSystemWindowInsetBottom();
-			bottomNavWrap.setPadding(0, 0, 0, inset > 0 ? Math.max(inset, V.dp(24)) : 0);
+			bottomNavWrap.setPadding(0, 0, 0, navBarPadding);
 			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), 0));
 		} else {
-			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom()));
+			super.onApplyWindowInsets(insets.replaceSystemWindowInsets(insets.getSystemWindowInsetLeft(), 0, insets.getSystemWindowInsetRight(), systemNavInset));
 		}
-		WindowInsets topOnly = insets.replaceSystemWindowInsets(0, insets.getSystemWindowInsetTop(), 0, 0);
-		feedFragment.onApplyWindowInsets(topOnly);
-		notificationsFragment.onApplyWindowInsets(topOnly);
+		// Pass top + full nav height as bottom so fragments pad their scroll content correctly
+		WindowInsets topAndBottom = insets.replaceSystemWindowInsets(0, topInset, 0, totalNavHeight);
+		feedFragment.onApplyWindowInsets(topAndBottom);
+		notificationsFragment.onApplyWindowInsets(topAndBottom);
+		eventsFragment.onApplyWindowInsets(topAndBottom);
+		profileFragment.onApplyWindowInsets(topAndBottom);
+		if (questionsFragment != null) questionsFragment.onApplyWindowInsets(topAndBottom);
+		if (kommonsFragment != null) kommonsFragment.onApplyWindowInsets(topAndBottom);
+		huddleFragment.onApplyWindowInsets(topAndBottom);
 	}
 
-	// Public API used by HomeTimelineFragment and AccountSwitcherSheet
 	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
 	public void removeSpaceBackCallback(Runnable cb) { removeBackCallback(cb); }
 
@@ -338,7 +401,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		if (tabId == R.id.tab_live) {
 			openSpace(Space.HUDDLE);
 		} else {
-			switchToHub();
+			openSpace(Space.FEED);
 		}
 	}
 
@@ -346,28 +409,38 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
 		outState.putBoolean("showingNotifications", showingNotifications);
+		outState.putBoolean("showingHub", showingHub);
+		outState.putBoolean("showingProfile", showingProfile);
 		outState.putString("currentSpace", currentSpace.name());
-		if (hubFragment != null) getChildFragmentManager().putFragment(outState, "hubFragment", hubFragment);
+		if (hubTabFragment != null) getChildFragmentManager().putFragment(outState, "hubTabFragment", hubTabFragment);
+		if (profileFragment != null) getChildFragmentManager().putFragment(outState, "profileFragment", profileFragment);
 		if (feedFragment != null) getChildFragmentManager().putFragment(outState, "feedFragment", feedFragment);
 		if (eventsFragment != null) getChildFragmentManager().putFragment(outState, "eventsFragment", eventsFragment);
 		if (huddleFragment != null) getChildFragmentManager().putFragment(outState, "huddleFragment", huddleFragment);
 		if (kommonsFragment != null) getChildFragmentManager().putFragment(outState, "kommonsFragment", kommonsFragment);
+		if (nudgesFragment != null) getChildFragmentManager().putFragment(outState, "nudgesFragment", nudgesFragment);
+		if (questionsFragment != null) getChildFragmentManager().putFragment(outState, "questionsFragment", questionsFragment);
 		if (notificationsFragment != null) getChildFragmentManager().putFragment(outState, "notificationsFragment", notificationsFragment);
 	}
 
 	@Override
 	public void onViewStateRestored(Bundle savedInstanceState) {
 		super.onViewStateRestored(savedInstanceState);
-		if (savedInstanceState == null || hubFragment != null) return;
-		hubFragment = (HubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubFragment");
+		if (savedInstanceState == null || hubTabFragment != null) return;
+		hubTabFragment = (HubFragment) getChildFragmentManager().getFragment(savedInstanceState, "hubTabFragment");
+		profileFragment = (ProfileFragment) getChildFragmentManager().getFragment(savedInstanceState, "profileFragment");
 		feedFragment = (HomeTimelineFragment) getChildFragmentManager().getFragment(savedInstanceState, "feedFragment");
 		eventsFragment = (EventsFragment) getChildFragmentManager().getFragment(savedInstanceState, "eventsFragment");
 		huddleFragment = (LiveFragment) getChildFragmentManager().getFragment(savedInstanceState, "huddleFragment");
 		kommonsFragment = (KommonsFragment) getChildFragmentManager().getFragment(savedInstanceState, "kommonsFragment");
+		nudgesFragment = (NudgesFragment) getChildFragmentManager().getFragment(savedInstanceState, "nudgesFragment");
+		questionsFragment = (KuestionsFragment) getChildFragmentManager().getFragment(savedInstanceState, "questionsFragment");
 		notificationsFragment = (NotificationsListFragment) getChildFragmentManager().getFragment(savedInstanceState, "notificationsFragment");
+		showingHub = savedInstanceState.getBoolean("showingHub");
+		showingProfile = savedInstanceState.getBoolean("showingProfile");
 		showingNotifications = savedInstanceState.getBoolean("showingNotifications");
-		currentSpace = Space.valueOf(savedInstanceState.getString("currentSpace", Space.HUB.name()));
-		if (currentSpace != Space.HUB) addBackCallback(spaceBackCallback);
+		currentSpace = Space.valueOf(savedInstanceState.getString("currentSpace", Space.FEED.name()));
+		if (currentSpace != Space.FEED) addBackCallback(spaceBackCallback);
 		updateNavSelection();
 	}
 

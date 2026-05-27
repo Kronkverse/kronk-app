@@ -1,30 +1,37 @@
 package org.joinmastodon.android.fragments;
 
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.proposals.GetProposals;
+import org.joinmastodon.android.api.requests.proposals.UnvoteProposal;
 import org.joinmastodon.android.api.requests.proposals.VoteOnProposal;
 import org.joinmastodon.android.model.Proposal;
+import org.parceler.Parcels;
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.grishka.appkit.Nav;
 import me.grishka.appkit.api.Callback;
 import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.fragments.AppKitFragment;
@@ -32,331 +39,352 @@ import me.grishka.appkit.imageloader.ViewImageLoader;
 import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
 
-public class KommonsFragment extends AppKitFragment{
-	private static final DateTimeFormatter DATE_FMT=DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
+public class KommonsFragment extends AppKitFragment {
+
+	// Set by CreateProposalFragment on success so we reload when returning
+	public static boolean sNeedsReload = false;
+
+	private static final int COLOR_KOMMONS = Color.parseColor("#36248C");
+	private static final int COLOR_FAN_ACTIVE = Color.parseColor("#36248C");
+
+	private static final int VT_HEADER   = 0;
+	private static final int VT_PROPOSAL = 1;
+	private static final int VT_SECTION  = 2;
 
 	private String accountID;
-	private List<Proposal> proposals=new ArrayList<>();
-	private boolean loading;
+	private List<Object> items = new ArrayList<>(); // HeaderSentinel | Proposal | SectionSentinel
+	private boolean loading = false;
+	private boolean loaded = false;
 
-	private View listContainer;
-	private ViewGroup detailContainer;
+	private View root;
 	private RecyclerView recyclerView;
 	private SwipeRefreshLayout swipeRefresh;
-	private LinearLayout emptyView;
-	private TextView emptyTitle;
-	private TextView emptySubtitle;
-	private ProposalAdapter adapter;
-	private Proposal selectedProposal;
-	private final Runnable detailBackCallback=this::showList;
+	private TextView emptyText;
+	private KommonsAdapter adapter;
+
+	// Sentinels for special list positions
+	private static final Object HEADER = new Object();
+	private static final Object ARCHIVED_SECTION = new Object();
 
 	@Nullable
 	@Override
-	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState){
-		View rootView=inflater.inflate(R.layout.fragment_kommons, container, false);
-		listContainer=rootView.findViewById(R.id.list_container);
-		detailContainer=rootView.findViewById(R.id.detail_container);
+	public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+		root = inflater.inflate(R.layout.fragment_kommons, container, false);
+		recyclerView = root.findViewById(R.id.proposal_list);
+		swipeRefresh = root.findViewById(R.id.refresh_layout);
+		emptyText = root.findViewById(R.id.empty_subtitle);
 
-		swipeRefresh=rootView.findViewById(R.id.refresh_layout);
-		swipeRefresh.setOnRefreshListener(()->loadProposals(true));
-
-		emptyView=rootView.findViewById(R.id.empty_view);
-		emptyTitle=rootView.findViewById(R.id.empty_title);
-		emptySubtitle=rootView.findViewById(R.id.empty_subtitle);
-
-		recyclerView=rootView.findViewById(R.id.proposal_list);
 		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-		adapter=new ProposalAdapter();
+		adapter = new KommonsAdapter();
 		recyclerView.setAdapter(adapter);
+		// suppress default divider — cards provide their own spacing
+		swipeRefresh.setOnRefreshListener(() -> loadProposals(true));
 
-		accountID=getArguments()!=null ? getArguments().getString("account") : null;
+		accountID = getArguments() != null ? getArguments().getString("account") : null;
 
-		if(getArguments()==null || !getArguments().getBoolean("noAutoLoad")){
-			loadProposals(false);
+		rebuildItems(new ArrayList<>());
+		adapter.notifyDataSetChanged();
+
+		if (!loading && !loaded) loadProposals(false);
+		return root;
+	}
+
+	@Override
+	public void onHiddenChanged(boolean hidden) {
+		super.onHiddenChanged(hidden);
+		if (!hidden && sNeedsReload) {
+			sNeedsReload = false;
+			loadProposals(true);
 		}
-		return rootView;
 	}
 
-	public void loadData(){
-		if(!loading && proposals.isEmpty()) loadProposals(false);
+	public void loadData() {
+		if (!loading && !loaded) loadProposals(false);
 	}
 
-	private void loadProposals(boolean refresh){
-		loading=true;
-		if(refresh) swipeRefresh.setRefreshing(true);
-		else setEmptyState(null, null);
+	public void onApplyWindowInsets(WindowInsets insets) {
+		if (root != null) {
+			root.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+		}
+	}
+
+	private void loadProposals(boolean refresh) {
+		loading = true;
+		if (refresh) swipeRefresh.setRefreshing(true);
 
 		new GetProposals(null)
-			.setCallback(new Callback<List<Proposal>>(){
-				@Override
-				public void onSuccess(List<Proposal> result){
-					if(getActivity()==null) return;
-					loading=false;
-					swipeRefresh.setRefreshing(false);
-					proposals.clear();
-					proposals.addAll(result);
-					adapter.notifyDataSetChanged();
-					if(proposals.isEmpty()){
-						setEmptyState(getString(R.string.kommons_empty_title), getString(R.string.kommons_empty_subtitle));
-					}else{
-						recyclerView.setVisibility(View.VISIBLE);
-						emptyView.setVisibility(View.GONE);
+				.setCallback(new Callback<List<Proposal>>() {
+					@Override
+					public void onSuccess(List<Proposal> result) {
+						if (getActivity() == null) return;
+						loading = false;
+						loaded = true;
+						swipeRefresh.setRefreshing(false);
+						rebuildItems(result);
+						adapter.notifyDataSetChanged();
+						emptyText.setVisibility(result.isEmpty() ? View.VISIBLE : View.GONE);
 					}
-				}
-				@Override
-				public void onError(ErrorResponse error){
-					if(getActivity()==null) return;
-					loading=false;
-					swipeRefresh.setRefreshing(false);
-					setEmptyState(getString(R.string.error_loading), null);
-				}
-			})
-			.exec(accountID);
-	}
-
-	private void setEmptyState(String title, String sub){
-		if(title==null){
-			emptyView.setVisibility(View.GONE);
-		}else{
-			recyclerView.setVisibility(View.GONE);
-			emptyView.setVisibility(View.VISIBLE);
-			emptyTitle.setText(title);
-			emptySubtitle.setText(sub!=null ? sub : "");
-		}
-	}
-
-	private void openDetail(Proposal proposal){
-		selectedProposal=proposal;
-		View detail=LayoutInflater.from(getActivity()).inflate(R.layout.fragment_kommons_detail, detailContainer, false);
-		bindDetail(detail, proposal);
-		detailContainer.removeAllViews();
-		detailContainer.addView(detail);
-		listContainer.setVisibility(View.GONE);
-		detailContainer.setVisibility(View.VISIBLE);
-		addBackCallback(detailBackCallback);
-	}
-
-	private void showList(){
-		selectedProposal=null;
-		detailContainer.setVisibility(View.GONE);
-		listContainer.setVisibility(View.VISIBLE);
-		removeBackCallback(detailBackCallback);
-	}
-
-	private void bindDetail(View v, Proposal p){
-		((TextView)v.findViewById(R.id.detail_header_title)).setText(p.title);
-		v.findViewById(R.id.btn_back).setOnClickListener(bv->showList());
-
-		TextView statusBadge=v.findViewById(R.id.detail_status);
-		statusBadge.setText(statusLabel(p.status));
-		applyPositionColor(statusBadge, p.status);
-
-		TextView meta=v.findViewById(R.id.detail_meta);
-		String author=p.createdByAccount!=null ? "@"+p.createdByAccount.username : "";
-		if(p.createdAt!=null){
-			String date=DATE_FMT.format(p.createdAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate());
-			meta.setText(getString(R.string.kommons_meta_by_date, author, date));
-		}else{
-			meta.setText(author);
-		}
-
-		((TextView)v.findViewById(R.id.detail_body)).setText(p.body!=null ? p.body : "");
-
-		bindVoteSection(v, p);
-		bindVoters(v, p);
-		bindChallenges(v, p);
-	}
-
-	private void bindVoteSection(View v, Proposal p){
-		Button btnAgree=v.findViewById(R.id.btn_agree);
-		Button btnAbstain=v.findViewById(R.id.btn_abstain);
-		Button btnBlock=v.findViewById(R.id.btn_block);
-
-		String pos=p.currentVote!=null ? p.currentVote.position : null;
-		updateVoteButtons(btnAgree, btnAbstain, btnBlock, pos);
-
-		btnAgree.setOnClickListener(bv->castVote(v, p, "agree", btnAgree, btnAbstain, btnBlock));
-		btnAbstain.setOnClickListener(bv->castVote(v, p, "abstain", btnAgree, btnAbstain, btnBlock));
-		btnBlock.setOnClickListener(bv->castVote(v, p, "block", btnAgree, btnAbstain, btnBlock));
-
-		updateTally(v, p);
-	}
-
-	private void castVote(View v, Proposal p, String position, Button a, Button ab, Button bl){
-		a.setEnabled(false); ab.setEnabled(false); bl.setEnabled(false);
-		new VoteOnProposal(p.id, position)
-			.setCallback(new Callback<Proposal>(){
-				@Override
-				public void onSuccess(Proposal updated){
-					if(getActivity()==null) return;
-					for(int i=0;i<proposals.size();i++){
-						if(proposals.get(i).id.equals(updated.id)){
-							proposals.set(i, updated);
-							adapter.notifyItemChanged(i);
-							break;
-						}
+					@Override
+					public void onError(ErrorResponse error) {
+						if (getActivity() == null) return;
+						loading = false;
+						swipeRefresh.setRefreshing(false);
 					}
-					selectedProposal=updated;
-					String newPos=updated.currentVote!=null ? updated.currentVote.position : null;
-					updateVoteButtons(a, ab, bl, newPos);
-					a.setEnabled(true); ab.setEnabled(true); bl.setEnabled(true);
-					updateTally(v, updated);
-					bindVoters(v, updated);
-					bindChallenges(v, updated);
-				}
-				@Override
-				public void onError(ErrorResponse error){
-					if(getActivity()==null) return;
-					a.setEnabled(true); ab.setEnabled(true); bl.setEnabled(true);
-				}
-			})
-			.exec(accountID);
+				})
+				.exec(accountID);
 	}
 
-	private void updateVoteButtons(Button agree, Button abstain, Button block, String pos){
-		agree.setSelected("agree".equals(pos));
-		abstain.setSelected("abstain".equals(pos));
-		block.setSelected("block".equals(pos));
-	}
+	private void rebuildItems(List<Proposal> proposals) {
+		items.clear();
+		items.add(HEADER);
 
-	private void updateTally(View v, Proposal p){
-		if(p.voteSummary==null) return;
-		((TextView)v.findViewById(R.id.tally_agree)).setText(
-			getResources().getQuantityString(R.plurals.kommons_agree_count, p.voteSummary.agree, p.voteSummary.agree));
-		((TextView)v.findViewById(R.id.tally_abstain)).setText(
-			getResources().getQuantityString(R.plurals.kommons_abstain_count, p.voteSummary.abstain, p.voteSummary.abstain));
-		((TextView)v.findViewById(R.id.tally_block)).setText(
-			getResources().getQuantityString(R.plurals.kommons_block_count, p.voteSummary.block, p.voteSummary.block));
-	}
-
-	private void bindVoters(View v, Proposal p){
-		LinearLayout list=v.findViewById(R.id.voters_list);
-		TextView heading=v.findViewById(R.id.voters_heading);
-		list.removeAllViews();
-		if(p.voters==null||p.voters.isEmpty()){ heading.setVisibility(View.GONE); return; }
-		heading.setVisibility(View.VISIBLE);
-		LayoutInflater inf=LayoutInflater.from(getActivity());
-		for(Proposal.Voter voter:p.voters){
-			View row=inf.inflate(R.layout.item_kommons_voter, list, false);
-			ImageView ava=row.findViewById(R.id.avatar);
-			if(voter.account!=null&&!TextUtils.isEmpty(voter.account.avatar)){
-				ViewImageLoader.loadWithoutAnimation(ava, null,
-					new UrlImageLoaderRequest(voter.account.avatar, V.dp(32), V.dp(32)));
-			}
-			((TextView)row.findViewById(R.id.username)).setText(
-				voter.account!=null ? "@"+voter.account.username : "");
-			TextView badge=row.findViewById(R.id.position_badge);
-			badge.setText(voter.position!=null ? voter.position.toUpperCase() : "");
-			applyPositionColor(badge, voter.position);
-			TextView stmt=row.findViewById(R.id.statement);
-			if(!TextUtils.isEmpty(voter.statement)){
-				stmt.setText(voter.statement); stmt.setVisibility(View.VISIBLE);
-			}else{
-				stmt.setVisibility(View.GONE);
-			}
-			list.addView(row);
+		List<Proposal> active   = new ArrayList<>();
+		List<Proposal> archived = new ArrayList<>();
+		for (Proposal p : proposals) {
+			if (p.archivedAt != null) archived.add(p); else active.add(p);
+		}
+		items.addAll(active);
+		if (!archived.isEmpty()) {
+			items.add(ARCHIVED_SECTION);
+			items.addAll(archived);
 		}
 	}
 
-	private void bindChallenges(View v, Proposal p){
-		LinearLayout list=v.findViewById(R.id.challenges_list);
-		TextView heading=v.findViewById(R.id.challenges_heading);
-		list.removeAllViews();
-		if(p.challenges==null||p.challenges.isEmpty()){ heading.setVisibility(View.GONE); return; }
-		heading.setVisibility(View.VISIBLE);
-		for(Proposal.Challenge ch:p.challenges){
-			LinearLayout block=new LinearLayout(getActivity());
-			block.setOrientation(LinearLayout.VERTICAL);
-			block.setPadding(0, 0, 0, V.dp(12));
-			if(!TextUtils.isEmpty(ch.statement)){
-				TextView stmt=new TextView(getActivity());
-				stmt.setTextAppearance(getActivity(), android.R.style.TextAppearance_Material_Body1);
-				stmt.setText(ch.statement);
-				stmt.setPadding(0, 0, 0, V.dp(4));
-				block.addView(stmt);
+	private void updateProposal(Proposal updated) {
+		for (int i = 0; i < items.size(); i++) {
+			if (items.get(i) instanceof Proposal p && p.id.equals(updated.id)) {
+				items.set(i, updated);
+				adapter.notifyItemChanged(i);
+				break;
 			}
-			if(ch.conditions!=null){
-				for(Proposal.Condition cond:ch.conditions){
-					TextView condTv=new TextView(getActivity());
-					condTv.setTextAppearance(getActivity(), android.R.style.TextAppearance_Material_Caption);
-					condTv.setText((cond.met?"✓ ":"· ")+cond.text);
-					condTv.setPadding(V.dp(8), V.dp(2), 0, 0);
-					block.addView(condTv);
-				}
-			}
-			list.addView(block);
 		}
 	}
 
-	private String statusLabel(String status){
-		if(status==null) return "";
-		switch(status){
-			case "open": return getString(R.string.kommons_status_open);
-			case "in_progress": return getString(R.string.kommons_status_in_progress);
-			case "vetoed": return getString(R.string.kommons_status_vetoed);
-			case "delivered": return getString(R.string.kommons_status_delivered);
-			default: return status.toUpperCase();
-		}
+	private void openCreateProposal() {
+		Bundle args = new Bundle();
+		args.putString("account", accountID);
+		Nav.go(getActivity(), CreateProposalFragment.class, args);
 	}
 
-	private void applyPositionColor(TextView tv, String pos){
-		if(pos==null) return;
-		int colorRes;
-		switch(pos){
-			case "block": case "vetoed":
-				colorRes=android.R.color.holo_red_dark; break;
-			case "agree": case "delivered":
-				colorRes=android.R.color.holo_green_dark; break;
-			default:
-				colorRes=android.R.color.darker_gray; break;
-		}
-		tv.setTextColor(getResources().getColor(colorRes, getActivity().getTheme()));
+	private void openDetail(Proposal proposal) {
+		Bundle args = new Bundle();
+		args.putString("account", accountID);
+		args.putParcelable("proposal", Parcels.wrap(proposal));
+		Nav.go(getActivity(), KommonsDetailFragment.class, args);
 	}
 
 	// ---- Adapter ----
 
-	private class ProposalAdapter extends RecyclerView.Adapter<ProposalViewHolder>{
+	private class KommonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 		@Override
-		public ProposalViewHolder onCreateViewHolder(ViewGroup parent, int viewType){
-			return new ProposalViewHolder(
-				LayoutInflater.from(getActivity()).inflate(R.layout.item_proposal_card, parent, false));
+		public int getItemViewType(int pos) {
+			Object item = items.get(pos);
+			if (item == HEADER) return VT_HEADER;
+			if (item == ARCHIVED_SECTION) return VT_SECTION;
+			return VT_PROPOSAL;
 		}
+
 		@Override
-		public void onBindViewHolder(ProposalViewHolder h, int pos){ h.bind(proposals.get(pos)); }
+		public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+			LayoutInflater inf = LayoutInflater.from(getActivity());
+			if (viewType == VT_HEADER) {
+				return new HeaderHolder(inf.inflate(R.layout.item_kommons_header, parent, false));
+			} else if (viewType == VT_SECTION) {
+				return new SectionHolder(inf.inflate(R.layout.item_kommons_section, parent, false));
+			} else {
+				return new ProposalHolder(inf.inflate(R.layout.item_proposal_card, parent, false));
+			}
+		}
+
 		@Override
-		public int getItemCount(){ return proposals.size(); }
+		public void onBindViewHolder(RecyclerView.ViewHolder h, int pos) {
+			if (h instanceof ProposalHolder ph) ph.bind((Proposal) items.get(pos));
+			else if (h instanceof SectionHolder sh) sh.bind();
+			// HeaderHolder binds itself in constructor
+		}
+
+		@Override
+		public int getItemCount() { return items.size(); }
 	}
 
-	private class ProposalViewHolder extends RecyclerView.ViewHolder{
-		private final TextView statusBadge, author, title, summary, voteAgree, voteAbstain, voteBlock;
+	// ---- View Holders ----
 
-		ProposalViewHolder(View v){
+	private class HeaderHolder extends RecyclerView.ViewHolder {
+		HeaderHolder(View v) {
 			super(v);
-			statusBadge=v.findViewById(R.id.status_badge);
-			author=v.findViewById(R.id.author);
-			title=v.findViewById(R.id.title);
-			summary=v.findViewById(R.id.summary);
-			voteAgree=v.findViewById(R.id.vote_agree);
-			voteAbstain=v.findViewById(R.id.vote_abstain);
-			voteBlock=v.findViewById(R.id.vote_block);
-			v.setOnClickListener(bv->openDetail(proposals.get(getAdapterPosition())));
+			v.findViewById(R.id.btn_plant_seed).setOnClickListener(bv -> openCreateProposal());
+		}
+	}
+
+	private class SectionHolder extends RecyclerView.ViewHolder {
+		private final TextView label;
+		SectionHolder(View v) {
+			super(v);
+			label = v.findViewById(R.id.section_label);
+		}
+		void bind() { label.setText(R.string.kommons_archived_section); }
+	}
+
+	private class ProposalHolder extends RecyclerView.ViewHolder {
+		private final TextView statusBadge;
+		private final ImageView archivedIcon;
+		private final TextView title;
+		private final TextView bodyPreview;
+		private final ImageView authorAvatar;
+		private final TextView authorName;
+		private final TextView timeAgo;
+		private final TextView fanCount;
+		private final ImageButton btnFan;
+		private final View voteStrip;
+
+		ProposalHolder(View v) {
+			super(v);
+			statusBadge  = v.findViewById(R.id.status_badge);
+			archivedIcon = v.findViewById(R.id.archived_icon);
+			title        = v.findViewById(R.id.title);
+			bodyPreview  = v.findViewById(R.id.body_preview);
+			authorAvatar = v.findViewById(R.id.author_avatar);
+			authorName   = v.findViewById(R.id.author_name);
+			timeAgo      = v.findViewById(R.id.time_ago);
+			fanCount     = v.findViewById(R.id.fan_count);
+			btnFan       = v.findViewById(R.id.btn_fan);
+			voteStrip    = v.findViewById(R.id.vote_strip);
+
+			authorAvatar.setOutlineProvider(
+					org.joinmastodon.android.ui.OutlineProviders.roundedRect(99));
+			authorAvatar.setClipToOutline(true);
+
+			v.setOnClickListener(bv -> {
+				int pos = getBindingAdapterPosition();
+				if (pos == RecyclerView.NO_POSITION || !(items.get(pos) instanceof Proposal)) return;
+				openDetail((Proposal) items.get(pos));
+			});
 		}
 
-		void bind(Proposal p){
+		void bind(Proposal p) {
+			boolean isArchived = p.archivedAt != null;
+
+			// Status badge
 			statusBadge.setText(statusLabel(p.status));
-			applyPositionColor(statusBadge, p.status);
+			applyStatusColor(statusBadge, p.status);
+			archivedIcon.setVisibility(isArchived ? View.VISIBLE : View.GONE);
+
+			// Title
 			title.setText(p.title);
-			if(p.createdByAccount!=null) author.setText("@"+p.createdByAccount.username);
-			if(!TextUtils.isEmpty(p.summary)){
-				summary.setText(p.summary); summary.setVisibility(View.VISIBLE);
-			}else{
-				summary.setVisibility(View.GONE);
+			float alpha = isArchived ? 0.45f : 1f;
+			title.setAlpha(alpha);
+
+			// Body preview — strip [New Space] / meta prefix tags
+			String rawBody = p.body != null ? p.body : "";
+			String stripped = rawBody.replaceAll("^(\\[.*?]\\s*\\n?)+", "").trim();
+			if (!TextUtils.isEmpty(stripped)) {
+				String preview = stripped.length() > 160 ? stripped.substring(0, 157) + "…" : stripped;
+				bodyPreview.setText(preview);
+				bodyPreview.setVisibility(View.VISIBLE);
+				bodyPreview.setAlpha(alpha);
+			} else {
+				bodyPreview.setVisibility(View.GONE);
 			}
-			if(p.voteSummary!=null){
-				voteAgree.setText(p.voteSummary.agree+" agree");
-				voteAbstain.setText(p.voteSummary.abstain+" abstain");
-				voteBlock.setText(p.voteSummary.block+" block");
+
+			// Author
+			if (p.createdByAccount != null) {
+				authorName.setText("@" + p.createdByAccount.username);
+				String avatarUrl = p.createdByAccount.avatarStatic != null
+						? p.createdByAccount.avatarStatic : p.createdByAccount.avatar;
+				if (avatarUrl != null) {
+					ViewImageLoader.load(authorAvatar, null,
+							new UrlImageLoaderRequest(avatarUrl, V.dp(16), V.dp(16)));
+				}
 			}
+
+			// Relative time
+			if (p.createdAt != null) {
+				long millis = p.createdAt.toEpochMilli();
+				timeAgo.setText(DateUtils.getRelativeTimeSpanString(
+						millis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS,
+						DateUtils.FORMAT_ABBREV_RELATIVE));
+			}
+
+			// Fan count + button state
+			int agreeCount = p.voteSummary != null ? p.voteSummary.agree : 0;
+			fanCount.setText(String.valueOf(agreeCount));
+			boolean isFanned = p.currentVote != null && "agree".equals(p.currentVote.position);
+			int fanTint = isFanned ? COLOR_FAN_ACTIVE : 0xFF888888;
+			btnFan.setImageTintList(android.content.res.ColorStateList.valueOf(fanTint));
+			btnFan.setOnClickListener(v -> toggleFan(p));
+
+			// Vote strip: color bar proportional to agree
+			updateVoteStrip(p);
 		}
+
+		private void updateVoteStrip(Proposal p) {
+			if (p.voteSummary == null) {
+				voteStrip.setBackgroundColor(COLOR_KOMMONS);
+				return;
+			}
+			int agree   = p.voteSummary.agree;
+			int abstain = p.voteSummary.abstain;
+			int block   = p.voteSummary.block;
+			int total   = agree + abstain + block;
+			if (total == 0) {
+				voteStrip.setBackgroundColor(COLOR_KOMMONS);
+				return;
+			}
+			// Gradient: agree=green, abstain=gray, block=red (top→bottom)
+			float agreeEnd   = (float) agree / total;
+			float abstainEnd = agreeEnd + (float) abstain / total;
+			GradientDrawable gd = new GradientDrawable(
+					GradientDrawable.Orientation.TOP_BOTTOM,
+					new int[]{0xFF4CAF50, 0xFF4CAF50, 0xFF9E9E9E, 0xFF9E9E9E, 0xFFF44336, 0xFFF44336});
+			// Approximate proportional strip using a solid color weighted toward majority
+			int color;
+			if (agree >= abstain && agree >= block) color = 0xFF4CAF50;
+			else if (block >= abstain) color = 0xFFF44336;
+			else color = 0xFF9E9E9E;
+			voteStrip.setBackgroundColor(color);
+		}
+	}
+
+	private void toggleFan(Proposal p) {
+		boolean isFanned = p.currentVote != null && "agree".equals(p.currentVote.position);
+		if (isFanned) {
+			new UnvoteProposal(p.id)
+					.setCallback(new Callback<Proposal>() {
+						@Override public void onSuccess(Proposal updated) {
+							if (getActivity() != null) updateProposal(updated);
+						}
+						@Override public void onError(ErrorResponse error) {}
+					})
+					.exec(accountID);
+		} else {
+			new VoteOnProposal(p.id, "agree")
+					.setCallback(new Callback<Proposal>() {
+						@Override public void onSuccess(Proposal updated) {
+							if (getActivity() != null) updateProposal(updated);
+						}
+						@Override public void onError(ErrorResponse error) {}
+					})
+					.exec(accountID);
+		}
+	}
+
+	private String statusLabel(String status) {
+		if (status == null) return "";
+		switch (status) {
+			case "open":        return getString(R.string.kommons_status_open);
+			case "in_progress": return getString(R.string.kommons_status_in_progress);
+			case "vetoed":      return getString(R.string.kommons_status_vetoed);
+			case "delivered":   return getString(R.string.kommons_status_delivered);
+			default:            return status.toUpperCase();
+		}
+	}
+
+	private void applyStatusColor(TextView tv, String status) {
+		int color;
+		if ("vetoed".equals(status))    color = 0xFFE53935;
+		else if ("delivered".equals(status)) color = 0xFF43A047;
+		else if ("in_progress".equals(status)) color = 0xFF1E88E5;
+		else color = COLOR_KOMMONS; // open
+		tv.setTextColor(color);
 	}
 }

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/kuestions_root"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<!-- Pill tab strip, centered -->
+	<LinearLayout
+		android:id="@+id/tab_strip"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center"
+		android:padding="12dp">
+
+		<TextView
+			android:id="@+id/tab_ask"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Ask"
+			android:textSize="14sp"
+			android:textAllCaps="false" />
+
+		<Space
+			android:layout_width="8dp"
+			android:layout_height="wrap_content" />
+
+		<TextView
+			android:id="@+id/tab_browse"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/tab_kuestions"
+			android:textSize="14sp"
+			android:textAllCaps="false" />
+
+	</LinearLayout>
+
+	<!-- Content area -->
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1">
+
+		<!-- Ask section (default) -->
+		<ScrollView
+			android:id="@+id/ask_section"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical"
+				android:paddingLeft="20dp"
+				android:paddingRight="20dp"
+				android:paddingTop="32dp"
+				android:paddingBottom="32dp">
+
+				<!-- Hero title -->
+				<TextView
+					android:id="@+id/hero_title"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:text="@string/tab_kuestions"
+					android:textSize="52sp"
+					android:fontFamily="serif"
+					android:textColor="#4844C0"
+					android:gravity="center"
+					android:layout_marginBottom="28dp" />
+
+				<!-- Composer card (styled in Java) -->
+				<LinearLayout
+					android:id="@+id/composer_card"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:orientation="vertical"
+					android:padding="16dp">
+
+					<EditText
+						android:id="@+id/question_input"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:minLines="3"
+						android:background="@null"
+						android:gravity="top"
+						android:hint="@string/question_compose_hint"
+						android:inputType="textMultiLine|textCapSentences"
+						android:maxLength="140"
+						android:textSize="16sp"
+						android:textColor="?colorM3OnSurface"
+						android:textColorHint="?colorM3OnSurfaceVariant" />
+
+					<LinearLayout
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:orientation="horizontal"
+						android:gravity="center_vertical"
+						android:layout_marginTop="12dp">
+
+						<TextView
+							android:id="@+id/char_counter"
+							android:layout_width="0dp"
+							android:layout_height="wrap_content"
+							android:layout_weight="1"
+							android:text="0/140"
+							android:textSize="12sp"
+							android:textColor="?colorM3OnSurfaceVariant" />
+
+						<Button
+							android:id="@+id/btn_ask"
+							android:layout_width="wrap_content"
+							android:layout_height="wrap_content"
+							android:text="@string/btn_ask"
+							android:enabled="false" />
+
+					</LinearLayout>
+
+				</LinearLayout>
+
+			</LinearLayout>
+
+		</ScrollView>
+
+		<!-- Browse section -->
+		<FrameLayout
+			android:id="@+id/browse_section"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:visibility="gone">
+
+			<ProgressBar
+				android:id="@+id/questions_progress"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_gravity="center"
+				android:visibility="gone" />
+
+			<TextView
+				android:id="@+id/questions_empty"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_gravity="center"
+				android:gravity="center"
+				android:padding="32dp"
+				android:text="@string/questions_empty"
+				android:textSize="15sp"
+				android:textColor="?colorM3OnSurfaceVariant"
+				android:visibility="gone" />
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/questions_list"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:visibility="gone" />
+
+		</FrameLayout>
+
+	</FrameLayout>
+
+</LinearLayout>

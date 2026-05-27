@@ -314,9 +314,22 @@ public class HeaderStatusDisplayItem extends StatusDisplayItem{
 			itemView.setPadding(itemView.getPaddingLeft(), itemView.getPaddingTop(), itemView.getPaddingRight(), item.needBottomPadding ? V.dp(6) : V.dp(4));
 			if(TextUtils.isEmpty(item.extraText)){
 				extraText.setVisibility(View.GONE);
+				extraText.setCompoundDrawablesRelative(null, null, null, null);
 			}else{
 				extraText.setVisibility(View.VISIBLE);
 				extraText.setText(item.extraText);
+				int iconRes=spaceBarIconFor(item.status);
+				if(iconRes!=0){
+					android.graphics.drawable.Drawable icon=extraText.getContext().getDrawable(iconRes);
+					if(icon!=null){
+						int size=V.dp(14);
+						icon.setBounds(0, 0, size, size);
+						icon.setTint(extraText.getCurrentTextColor());
+						extraText.setCompoundDrawablesRelative(icon, null, null, null);
+					}
+				}else{
+					extraText.setCompoundDrawablesRelative(null, null, null, null);
+				}
 			}
 			if(clickableThing!=null){
 				clickableThing.setContentDescription(item.context.getString(R.string.avatar_description, item.user.acct));
@@ -349,6 +362,18 @@ public class HeaderStatusDisplayItem extends StatusDisplayItem{
 			args.putString("account", item.accountID);
 			args.putParcelable("profileAccount", Parcels.wrap(item.user));
 			Nav.go((Activity) item.context, ProfileFragment.class, args);
+		}
+
+		private static int spaceBarIconFor(Status status){
+			if(status==null) return 0;
+			if(status.event!=null) return R.drawable.ic_calendar_month_24px;
+			if(status.postType==null) return 0;
+			return switch(status.postType){
+				case "question" -> R.drawable.ic_help_24px;
+				case "answer" -> R.drawable.ic_reply_24px;
+				case "proposal" -> R.drawable.ic_edit_24px;
+				default -> 0;
+			};
 		}
 
 		private void onMoreClick(View v){

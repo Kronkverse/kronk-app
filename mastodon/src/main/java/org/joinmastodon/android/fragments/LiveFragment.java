@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.media.AudioManager;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -19,6 +20,7 @@ import android.webkit.WebView;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -293,6 +295,18 @@ public class LiveFragment extends Fragment{
 			joinRoom();
 		}else{
 			android.widget.Toast.makeText(getActivity(), R.string.huddle_mic_required, android.widget.Toast.LENGTH_LONG).show();
+		}
+	}
+
+	public void onApplyWindowInsets(WindowInsets insets) {
+		int top = insets.getSystemWindowInsetTop();
+		int bottom = insets.getSystemWindowInsetBottom();
+		if (lobby != null) {
+			((ScrollView) lobby).setClipToPadding(false);
+			lobby.setPadding(0, top, 0, bottom);
+		}
+		if (jitsiContainer != null) {
+			jitsiContainer.setPadding(0, top, 0, bottom);
 		}
 	}
 

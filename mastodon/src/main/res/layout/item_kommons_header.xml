@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hero header for the Kommons proposal list -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:padding="24dp"
+	android:paddingBottom="16dp">
+
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/kommons_hero_title"
+		android:textSize="36sp"
+		android:textStyle="bold"
+		android:textColor="#36248C"
+		android:fontFamily="serif"/>
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:layout_marginBottom="20dp"
+		android:text="@string/kommons_hero_intro"
+		android:textAppearance="@style/m3_body_medium"
+		android:textColor="?colorM3OnSurfaceVariant"
+		android:lineSpacingMultiplier="1.35"/>
+
+	<Button
+		android:id="@+id/btn_plant_seed"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/kommons_plant_seed"
+		android:textSize="15sp"
+		android:textStyle="bold"
+		android:paddingHorizontal="24dp"
+		android:paddingVertical="12dp"
+		android:textColor="#FFFFFF"
+		android:backgroundTint="#36248C"
+		style="@style/Widget.AppCompat.Button.Colored"
+		android:stateListAnimator="@null"/>
+
+</LinearLayout>

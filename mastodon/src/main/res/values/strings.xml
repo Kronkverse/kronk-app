@@ -725,7 +725,7 @@ End-to-end encrypted</string>
 	<string name="huddle_people_in_room">%d person in room</string>
 	<string name="huddle_people_in_room_plural">%d people in room</string>
 	<string name="tab_profile">Profile</string>
-	<string name="tab_events">Events</string>
+	<string name="tab_events">₭alendar</string>
 	<string name="tab_hub">Hub</string>
 	<string name="tab_feed">Feed</string>
 	<string name="spaces">Spaces</string>
@@ -999,6 +999,7 @@ End-to-end encrypted</string>
     <string name="nudge_total_sent">SENT</string>
     <string name="nudge_total_received">RECEIVED</string>
     <string name="tab_nudges">Nudges</string>
+    <string name="tab_kuestions">₭uestions</string>
     <string name="nudge_section_sent">NUDGES SENT</string>
     <string name="nudge_section_received">NUDGES RECEIVED</string>
     <string name="nudge_empty_title">No nudges yet!</string>
@@ -1016,4 +1017,61 @@ End-to-end encrypted</string>
         <item quantity="other">%d waiting for you to nudge back</item>
     </plurals>
     <string name="notification_type_nudge">Nudges</string>
+    <string name="kommons_the_forest">The Forest</string>
+    <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
+    <string name="space_bar_asked_question">asked a question</string>
+    <string name="space_bar_answered_question">answered a question</string>
+    <string name="space_bar_created_event">created an event</string>
+    <string name="space_bar_made_proposal">planted a seed</string>
+    <string name="question_label">Question</string>
+    <string name="answer_label">Answer</string>
+    <string name="seed_label">Seed</string>
+    <plurals name="answers_count">
+        <item quantity="one">%d answer</item>
+        <item quantity="other">%d answers</item>
+    </plurals>
+    <string name="you_answered">You answered</string>
+    <string name="answer_to_unlock">Answer to access answers</string>
+    <string name="see_all_answers">See all answers →</string>
+    <string name="ask_a_question">Ask a question</string>
+    <string name="question_compose_hint">What\'s your question?</string>
+    <string name="answer_compose_hint">Write your answer…</string>
+    <string name="btn_ask">Ask</string>
+    <string name="btn_post_answer">Post answer</string>
+    <string name="kuestions_answers_heading">Answers</string>
+    <string name="error_posting_question">Failed to post question</string>
+    <string name="error_posting_answer">Failed to post answer</string>
+    <string name="questions_empty">No questions yet. Ask something!</string>
+    <string name="see_kommons">View in ₭ommons →</string>
+
+    <!-- Kommons hero + plant seed flow -->
+    <string name="kommons_hero_title">₭ommons</string>
+    <string name="kommons_hero_intro">₭ommons is where we build Kronk together. Plant seeds, support what matters most, let\'s grow Kronk as we want it.</string>
+    <string name="kommons_plant_seed">Plant a seed</string>
+    <string name="kommons_back_to_seeds">← All seeds</string>
+    <string name="kommons_archived_section">Archived seeds</string>
+    <string name="kommons_empty_subtitle_new">Be the first to plant one.</string>
+    <string name="kommons_fan">Fan this seed</string>
+    <string name="kommons_unfan">Unfan this seed</string>
+    <plurals name="kommons_seeds_count">
+        <item quantity="one">%d seed</item>
+        <item quantity="other">%d seeds</item>
+    </plurals>
+
+    <!-- Create proposal form -->
+    <string name="kommons_form_title_label">Title *</string>
+    <string name="kommons_form_title_hint">A short, descriptive name</string>
+    <string name="kommons_form_title_hint_sub">A short, descriptive name.</string>
+    <string name="kommons_form_body_label">Description *</string>
+    <string name="kommons_form_body_hint">Describe the seed, the rationale, and expected impact.</string>
+    <string name="kommons_form_tasks_heading">Implementation tasks</string>
+    <string name="kommons_form_tasks_hint">Optional. Break the seed into work units.</string>
+    <string name="kommons_form_add_task">Add task</string>
+    <string name="kommons_form_task_title_hint">Task title</string>
+    <string name="kommons_form_task_desc_hint">Task description (optional)</string>
+    <string name="kommons_form_remove_task">Remove task</string>
+    <string name="kommons_form_submit">Plant seed</string>
+    <string name="kommons_form_planting">Planting seed…</string>
+    <string name="kommons_form_adding_tasks">Adding tasks…</string>
+    <string name="kommons_form_error">Failed to plant seed. Please try again.</string>
 </resources>
