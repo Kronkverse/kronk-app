@@ -185,7 +185,7 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			// Count / status text
 			seeAnswersText.setTextColor(spaceColor);
 			if (isProposal) {
-				countText.setVisibility(View.GONE);
+				countText.setVisibility(View.INVISIBLE); // keeps it as a spacer to push the link right
 				seeAnswersText.setText(R.string.see_kommons);
 				seeAnswersText.setVisibility(View.VISIBLE);
 			} else if (isQuestion) {
