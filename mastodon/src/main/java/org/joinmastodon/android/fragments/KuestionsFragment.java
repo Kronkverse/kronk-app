@@ -282,7 +282,7 @@ public class KuestionsFragment extends AppKitFragment {
 			avatar.setClipToOutline(true);
 			v.setOnClickListener(view -> {
 				int pos = getBindingAdapterPosition();
-				if (pos == RecyclerView.NO_ID) return;
+				if (pos == RecyclerView.NO_POSITION) return;
 				Status q = questions.get(pos);
 				Bundle args = new Bundle();
 				args.putString("account", accountID);
