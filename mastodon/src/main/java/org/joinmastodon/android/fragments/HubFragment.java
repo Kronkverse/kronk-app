@@ -35,11 +35,11 @@ public class HubFragment extends AppKitFragment {
 		int color
 	) {}
 
-	// Planet colors matching KronkSpace.kt
-	private static final int COLOR_KOMMONS   = Color.parseColor("#B97FFF");
-	private static final int COLOR_EVENTS    = Color.parseColor("#4FD1A0");
-	private static final int COLOR_NUDGES    = Color.parseColor("#FF6B9D");
-	private static final int COLOR_KUESTIONS = Color.parseColor("#FFD166");
+	// Planet colors (dark purple family, matching card badge colors)
+	private static final int COLOR_KOMMONS   = Color.parseColor("#36248C"); // Jupiter
+	private static final int COLOR_EVENTS    = Color.parseColor("#343070"); // Neptune
+	private static final int COLOR_NUDGES    = Color.parseColor("#5C2D8C"); // deep violet
+	private static final int COLOR_KUESTIONS = Color.parseColor("#4844C0"); // Saturn
 
 	private static final List<SpaceEntry> SPACES = List.of(
 		new SpaceEntry(HomeFragment.Space.KOMMONS,   R.drawable.ic_gavel_24px,   R.string.kommons_space,    COLOR_KOMMONS),

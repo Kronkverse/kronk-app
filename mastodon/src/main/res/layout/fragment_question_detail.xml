@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:fillViewport="true">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical">
+
+		<!-- Question display -->
+		<LinearLayout
+			android:id="@+id/question_card"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:padding="20dp">
+
+			<!-- Author row -->
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:layout_marginBottom="14dp">
+
+				<ImageView
+					android:id="@+id/author_avatar"
+					android:layout_width="40dp"
+					android:layout_height="40dp"
+					android:layout_marginEnd="12dp"
+					android:importantForAccessibility="no"/>
+
+				<LinearLayout
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:orientation="vertical">
+
+					<TextView
+						android:id="@+id/display_name"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:textSize="15sp"
+						android:textStyle="bold"
+						android:textColor="?colorM3OnSurface"
+						android:maxLines="1"
+						android:ellipsize="end"
+						tools:text="talitamoss"/>
+
+					<TextView
+						android:id="@+id/username"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:textSize="13sp"
+						android:textColor="?colorM3OnSurfaceVariant"
+						tools:text="@talitamoss"/>
+
+				</LinearLayout>
+
+			</LinearLayout>
+
+			<!-- Question content -->
+			<TextView
+				android:id="@+id/question_content"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:textSize="17sp"
+				android:lineSpacingMultiplier="1.3"
+				android:textColor="?colorM3OnSurface"
+				tools:text="What is the most underrated programming language?"/>
+
+			<!-- Answerer info row -->
+			<LinearLayout
+				android:id="@+id/answerers_row"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:layout_marginTop="14dp"
+				android:visibility="gone">
+
+				<LinearLayout
+					android:id="@+id/avatars_row"
+					android:layout_width="wrap_content"
+					android:layout_height="22dp"
+					android:orientation="horizontal"
+					android:clipChildren="false"
+					android:clipToPadding="false"
+					android:layout_marginEnd="8dp">
+
+					<ImageView android:id="@+id/avatar_0"
+						android:layout_width="22dp" android:layout_height="22dp"
+						android:importantForAccessibility="no"/>
+					<ImageView android:id="@+id/avatar_1"
+						android:layout_width="22dp" android:layout_height="22dp"
+						android:layout_marginStart="-6dp"
+						android:importantForAccessibility="no"/>
+					<ImageView android:id="@+id/avatar_2"
+						android:layout_width="22dp" android:layout_height="22dp"
+						android:layout_marginStart="-6dp"
+						android:importantForAccessibility="no"/>
+
+				</LinearLayout>
+
+				<TextView
+					android:id="@+id/answer_count_text"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="13sp"
+					android:textColor="?colorM3OnSurfaceVariant"
+					tools:text="12 answers"/>
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+		<!-- Divider -->
+		<View
+			android:layout_width="match_parent"
+			android:layout_height="1dp"
+			android:background="?colorM3OutlineVariant"/>
+
+		<!-- Answers section heading -->
+		<TextView
+			android:id="@+id/answers_heading"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:padding="20dp"
+			android:paddingBottom="12dp"
+			android:textSize="15sp"
+			android:textStyle="bold"
+			android:textColor="?colorM3OnSurface"
+			tools:text="Answers"/>
+
+		<!-- Compose section (visible when user hasn't answered) -->
+		<LinearLayout
+			android:id="@+id/compose_section"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:paddingStart="20dp"
+			android:paddingEnd="20dp"
+			android:paddingBottom="20dp">
+
+			<EditText
+				android:id="@+id/answer_input"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:minHeight="100dp"
+				android:gravity="top"
+				android:hint="@string/answer_compose_hint"
+				android:inputType="textMultiLine|textCapSentences"
+				android:maxLength="500"
+				android:textSize="15sp"
+				android:textColor="?colorM3OnSurface"
+				android:textColorHint="?colorM3OnSurfaceVariant"
+				android:padding="12dp"
+				android:background="@drawable/bg_m3_filled_text_field"/>
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:layout_marginTop="10dp">
+
+				<TextView
+					android:id="@+id/char_counter"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="0/500"
+					android:textSize="13sp"
+					android:textColor="?colorM3OnSurfaceVariant"/>
+
+				<Button
+					android:id="@+id/btn_post_answer"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/btn_post_answer"
+					android:enabled="false"/>
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+		<!-- Loading answers -->
+		<ProgressBar
+			android:id="@+id/answers_progress"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal"
+			android:layout_marginTop="24dp"
+			android:layout_marginBottom="24dp"
+			android:visibility="gone"/>
+
+		<!-- Answers RecyclerView (nestedScrollingEnabled=false set in code) -->
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/answers_list"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:visibility="gone"/>
+
+	</LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

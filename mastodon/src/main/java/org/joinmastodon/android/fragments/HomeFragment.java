@@ -369,6 +369,7 @@ public class HomeFragment extends AppKitFragment implements AssistContentProvide
 		notificationsFragment.onApplyWindowInsets(topAndBottom);
 		eventsFragment.onApplyWindowInsets(topAndBottom);
 		profileFragment.onApplyWindowInsets(topAndBottom);
+		if (questionsFragment != null) questionsFragment.onApplyWindowInsets(topAndBottom);
 	}
 
 	public void addSpaceBackCallback(Runnable cb) { addBackCallback(cb); }
