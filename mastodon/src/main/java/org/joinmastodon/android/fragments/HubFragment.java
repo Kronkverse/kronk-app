@@ -57,17 +57,16 @@ public class HubFragment extends AppKitFragment {
 
 			ImageView icon = bubble.findViewById(R.id.icon);
 			icon.setImageResource(entry.icon());
-			icon.setImageTintList(ColorStateList.valueOf(entry.color()));
+			icon.setImageTintList(ColorStateList.valueOf(Color.WHITE));
 
 			((TextView) bubble.findViewById(R.id.label)).setText(entry.label());
 
 			FrameLayout bubbleView = bubble.findViewById(R.id.bubble);
 			GradientDrawable shape = new GradientDrawable();
 			shape.setShape(GradientDrawable.OVAL);
-			shape.setColor(withAlpha(entry.color(), 38));  // ~15% opacity fill
-			shape.setStroke(V.dp(2), withAlpha(entry.color(), 120)); // ~47% opacity border
+			shape.setColor(entry.color());
 			bubbleView.setBackground(new RippleDrawable(
-					ColorStateList.valueOf(withAlpha(entry.color(), 90)),
+					ColorStateList.valueOf(withAlpha(Color.WHITE, 80)),
 					shape, null));
 
 			bubbleView.setOnClickListener(v -> open(entry.space()));

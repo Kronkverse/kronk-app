@@ -57,6 +57,7 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 		private final View badgeHeader;
 		private final ImageView badgeIcon;
 		private final TextView badgeLabel;
+		private final TextView cardTitle;
 		private final TextView cardBody;
 		private final View cardFooter;
 		private final LinearLayout avatarsRow;
@@ -70,6 +71,7 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			badgeHeader = findViewById(R.id.badge_header);
 			badgeIcon = findViewById(R.id.badge_icon);
 			badgeLabel = findViewById(R.id.badge_label);
+			cardTitle = findViewById(R.id.card_title);
 			cardBody = findViewById(R.id.card_body);
 			cardFooter = findViewById(R.id.card_footer);
 			avatarsRow = findViewById(R.id.avatars_row);
@@ -129,12 +131,21 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			}
 			badgeIcon.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
 
-			// Body text (the question / answer / seed content)
+			// Body: for proposals show title (spoilerText) + truncated description; others show full content
+			String rawTitle = isProposal ? item.status.spoilerText : null;
 			String rawContent = item.status.content;
+			if (!TextUtils.isEmpty(rawTitle)) {
+				cardTitle.setText(rawTitle);
+				cardTitle.setVisibility(View.VISIBLE);
+			} else {
+				cardTitle.setVisibility(View.GONE);
+			}
 			if (!TextUtils.isEmpty(rawContent)) {
 				CharSequence parsed = android.text.Html.fromHtml(rawContent, android.text.Html.FROM_HTML_MODE_COMPACT);
 				cardBody.setText(parsed.toString().trim());
 				cardBody.setVisibility(View.VISIBLE);
+				cardBody.setMaxLines(isProposal ? 3 : Integer.MAX_VALUE);
+				cardBody.setEllipsize(isProposal ? android.text.TextUtils.TruncateAt.END : null);
 			} else {
 				cardBody.setVisibility(View.GONE);
 			}

@@ -152,7 +152,9 @@ public abstract class StatusDisplayItem{
 			contentItems=spoilerItem.contentItems;
 			cwParentItems=contentItems;
 		}
-		if(!TextUtils.isEmpty(statusForContent.spoilerText)){
+		// Proposals use spoilerText as a title — show it in the card, not as a CW gate
+		boolean isProposalPost = "proposal".equals(statusForContent.postType);
+		if(!TextUtils.isEmpty(statusForContent.spoilerText) && !isProposalPost){
 			SpoilerStatusDisplayItem spoilerItem=new SpoilerStatusDisplayItem(parentID, callbacks, context, null, status, statusForContent, Type.SPOILER, Status.SpoilerType.CONTENT_WARNING);
 			contentItems.add(spoilerItem);
 			contentItems=spoilerItem.contentItems;
