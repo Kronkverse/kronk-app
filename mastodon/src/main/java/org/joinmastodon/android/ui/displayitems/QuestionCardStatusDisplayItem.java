@@ -131,17 +131,28 @@ public class QuestionCardStatusDisplayItem extends StatusDisplayItem {
 			}
 			badgeIcon.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
 
-			// Body: for proposals show title (spoilerText) + truncated description; others show full content
-			String rawTitle = isProposal ? item.status.spoilerText : null;
-			String rawContent = item.status.content;
+			// Body: for proposals prefer embedded proposal.title/body, then fall back to spoilerText/content
+			String rawTitle = null;
+			String rawBody = null;
+			if (isProposal && item.status.proposal != null) {
+				rawTitle = item.status.proposal.title;
+				rawBody = !TextUtils.isEmpty(item.status.proposal.body)
+						? item.status.proposal.body
+						: item.status.proposal.summary;
+			} else if (isProposal) {
+				rawTitle = item.status.spoilerText;
+				rawBody = item.status.content;
+			} else {
+				rawBody = item.status.content;
+			}
 			if (!TextUtils.isEmpty(rawTitle)) {
 				cardTitle.setText(rawTitle);
 				cardTitle.setVisibility(View.VISIBLE);
 			} else {
 				cardTitle.setVisibility(View.GONE);
 			}
-			if (!TextUtils.isEmpty(rawContent)) {
-				CharSequence parsed = android.text.Html.fromHtml(rawContent, android.text.Html.FROM_HTML_MODE_COMPACT);
+			if (!TextUtils.isEmpty(rawBody)) {
+				CharSequence parsed = android.text.Html.fromHtml(rawBody, android.text.Html.FROM_HTML_MODE_COMPACT);
 				cardBody.setText(parsed.toString().trim());
 				cardBody.setVisibility(View.VISIBLE);
 				cardBody.setMaxLines(isProposal ? 3 : Integer.MAX_VALUE);

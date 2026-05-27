@@ -12,5 +12,6 @@ enum class KronkSpace(
     KOMMONS  ("₭ommons",  Color(0xFFB97FFF), Color(0xFF7A3FCC), 1),
     HUDDLE   ("Huddle",   Color(0xFFFF8C42), Color(0xFFCC5A1A), 2),
     KALENDAR ("₭alendar", Color(0xFF4FD1A0), Color(0xFF1FA070), 3),
-    NUDGES   ("Nudges",   Color(0xFFFF6B9D), Color(0xFFCC3A6B), 4),
+    NUDGES    ("Nudges",    Color(0xFFFF6B9D), Color(0xFFCC3A6B), 4),
+    KUESTIONS ("₭uestions", Color(0xFFFFD166), Color(0xFFCC9F33), 5),
 }

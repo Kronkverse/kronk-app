@@ -30,7 +30,8 @@ private val KronkSpace.icon get() = when (this) {
     KronkSpace.KOMMONS  -> Icons.Default.Gavel
     KronkSpace.HUDDLE   -> Icons.Default.Diversity2
     KronkSpace.KALENDAR -> Icons.Default.CalendarMonth
-    KronkSpace.NUDGES   -> Icons.Default.Handshake
+    KronkSpace.NUDGES     -> Icons.Default.Handshake
+    KronkSpace.KUESTIONS  -> Icons.Default.Help
 }
 
 @Composable

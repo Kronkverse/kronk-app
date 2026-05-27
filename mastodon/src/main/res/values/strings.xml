@@ -999,6 +999,7 @@ End-to-end encrypted</string>
     <string name="nudge_total_sent">SENT</string>
     <string name="nudge_total_received">RECEIVED</string>
     <string name="tab_nudges">Nudges</string>
+    <string name="tab_kuestions">₭uestions</string>
     <string name="nudge_section_sent">NUDGES SENT</string>
     <string name="nudge_section_received">NUDGES RECEIVED</string>
     <string name="nudge_empty_title">No nudges yet!</string>

@@ -35,15 +35,17 @@ public class HubFragment extends AppKitFragment {
 		int color
 	) {}
 
-	// Planet colors from webapp planets.tsx
-	private static final int COLOR_KOMMONS = Color.parseColor("#36248C"); // Jupiter
-	private static final int COLOR_EVENTS  = Color.parseColor("#343070"); // Neptune
-	private static final int COLOR_NUDGES  = Color.parseColor("#7B2D8B"); // Uranus
+	// Planet colors matching KronkSpace.kt
+	private static final int COLOR_KOMMONS   = Color.parseColor("#B97FFF");
+	private static final int COLOR_EVENTS    = Color.parseColor("#4FD1A0");
+	private static final int COLOR_NUDGES    = Color.parseColor("#FF6B9D");
+	private static final int COLOR_KUESTIONS = Color.parseColor("#FFD166");
 
 	private static final List<SpaceEntry> SPACES = List.of(
-		new SpaceEntry(HomeFragment.Space.KOMMONS, R.drawable.ic_gavel_24px, R.string.kommons_space, COLOR_KOMMONS),
-		new SpaceEntry(HomeFragment.Space.EVENTS,  R.drawable.ic_tab_events, R.string.tab_events,   COLOR_EVENTS),
-		new SpaceEntry(HomeFragment.Space.NUDGES,  R.drawable.ic_tab_nudges, R.string.tab_nudges,   COLOR_NUDGES)
+		new SpaceEntry(HomeFragment.Space.KOMMONS,   R.drawable.ic_gavel_24px,   R.string.kommons_space,    COLOR_KOMMONS),
+		new SpaceEntry(HomeFragment.Space.EVENTS,    R.drawable.ic_tab_events,   R.string.tab_events,       COLOR_EVENTS),
+		new SpaceEntry(HomeFragment.Space.NUDGES,    R.drawable.ic_tab_nudges,   R.string.tab_nudges,       COLOR_NUDGES),
+		new SpaceEntry(HomeFragment.Space.QUESTIONS, R.drawable.ic_help_24px,    R.string.tab_kuestions,    COLOR_KUESTIONS)
 	);
 
 	@Nullable

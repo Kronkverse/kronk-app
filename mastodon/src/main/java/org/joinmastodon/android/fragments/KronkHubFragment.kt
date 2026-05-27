@@ -139,7 +139,8 @@ class KronkHubFragment : AppKitFragment(), LifecycleOwner, ViewModelStoreOwner, 
             KronkSpace.KOMMONS  -> HomeFragment.Space.KOMMONS
             KronkSpace.HUDDLE   -> HomeFragment.Space.HUDDLE
             KronkSpace.KALENDAR -> HomeFragment.Space.EVENTS
-            KronkSpace.NUDGES   -> HomeFragment.Space.NUDGES
+            KronkSpace.NUDGES     -> HomeFragment.Space.NUDGES
+            KronkSpace.KUESTIONS  -> HomeFragment.Space.QUESTIONS
         }
         homeFragment()?.openSpace(target)
     }
