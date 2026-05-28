@@ -34,7 +34,7 @@ import me.grishka.appkit.views.BottomSheet;
 public class SplashFragment extends AppKitFragment{
 
 	// Hardcoded to Kronk instance - no other servers allowed
-	private static final String DEFAULT_SERVER="mastodon.kronk.info";
+	private static final String DEFAULT_SERVER="kronk.info";
 
 	private SizeListenerFrameLayout contentView;
 	private View artContainer, blueFill, greenFill;
