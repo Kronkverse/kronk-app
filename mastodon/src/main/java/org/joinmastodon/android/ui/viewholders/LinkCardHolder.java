@@ -182,7 +182,8 @@ public class LinkCardHolder<T extends LinkCardHolder.LinkCardProvider> extends S
 		CardViewModel card=item.getCard();
 		Uri uri=Uri.parse(card.card.url);
 		String uriPath=uri.getPath();
-		if("kronk.info".equalsIgnoreCase(uri.getHost())
+		String uriHost=uri.getHost();
+		if(("kronk.info".equalsIgnoreCase(uriHost) || "mastodon.kronk.info".equalsIgnoreCase(uriHost))
 				&& uriPath!=null
 				&& (uriPath.equals("/home") || uriPath.equals("/huddle") || uriPath.startsWith("/kalendar") || uriPath.equals("/kommons"))
 				&& activity instanceof MainActivity ma){

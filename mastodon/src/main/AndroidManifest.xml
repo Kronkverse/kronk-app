@@ -61,7 +61,19 @@
 				<action android:name="android.intent.action.VIEW"/>
 				<category android:name="android.intent.category.BROWSABLE"/>
 				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/@"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
 				<data android:scheme="https" android:host="kronk.info" android:pathPrefix="/@"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/invite/"/>
 			</intent-filter>
 			<intent-filter android:autoVerify="true">
 				<action android:name="android.intent.action.VIEW"/>
@@ -73,7 +85,19 @@
 				<action android:name="android.intent.action.VIEW"/>
 				<category android:name="android.intent.category.BROWSABLE"/>
 				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/kalendar"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
 				<data android:scheme="https" android:host="kronk.info" android:pathPrefix="/kalendar"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/home"/>
 			</intent-filter>
 			<intent-filter android:autoVerify="true">
 				<action android:name="android.intent.action.VIEW"/>
@@ -85,7 +109,19 @@
 				<action android:name="android.intent.action.VIEW"/>
 				<category android:name="android.intent.category.BROWSABLE"/>
 				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/huddle"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
 				<data android:scheme="https" android:host="kronk.info" android:pathPrefix="/huddle"/>
+			</intent-filter>
+			<intent-filter android:autoVerify="true">
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				<category android:name="android.intent.category.DEFAULT"/>
+				<data android:scheme="https" android:host="mastodon.kronk.info" android:pathPrefix="/kommons"/>
 			</intent-filter>
 			<intent-filter android:autoVerify="true">
 				<action android:name="android.intent.action.VIEW"/>
