@@ -5,6 +5,7 @@
 	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
 	<application>
+		<receiver android:name=".updater.UpdateInstallReceiver" android:exported="false"/>
 		<!--		<receiver android:name=".updater.GithubSelfUpdaterImpl$InstallerStatusReceiver" android:exported="false"/>-->
 		<!--		<receiver android:name=".updater.GithubSelfUpdaterImpl$AfterUpdateRestartReceiver" android:exported="true" android:enabled="false">-->
 		<!--			<intent-filter>-->

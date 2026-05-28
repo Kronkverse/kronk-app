@@ -307,6 +307,9 @@
 	<!-- %s is file size -->
 	<string name="download_update">Download (%s)</string>
 	<string name="install_update">Install</string>
+	<string name="update_notification_channel_name">App updates</string>
+	<string name="update_notification_title">Kronk update ready</string>
+	<string name="update_notification_body">Version %s is ready to install. Tap to install.</string>
 	<string name="privacy_policy_title">Your privacy</string>
 	<string name="privacy_policy_subtitle">Kronk doesn\'t track you, profile you, or sell your data. We collect only what\'s needed to make the service work - nothing more.\n\nYou own what you create here. If that sounds right, welcome home.</string>
 	<string name="i_agree">I agree</string>
