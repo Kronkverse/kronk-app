@@ -80,13 +80,13 @@ public class InstanceChooserLoginFragment extends InstanceCatalogFragment{
 		}
 		if(filteredData.isEmpty()){
 			for(CatalogInstance inst:data){
-				if(inst.normalizedDomain.equals("mastodon.kronk.info") || inst.normalizedDomain.equals("mastodon.kronk.info")){
+				if(inst.normalizedDomain.equals("mastodon.kronk.info") || inst.normalizedDomain.equals("kronk.info")){
 					filteredData.add(inst);
 				}
 			}
 			if(BuildConfig.DEBUG){
 				CatalogInstance staging=new CatalogInstance();
-				staging.domain=staging.normalizedDomain="staging.mastodon.kronk.info";
+				staging.domain=staging.normalizedDomain="staging.kronk.info";
 				staging.version="4.4";
 				staging.description="Mastodon staging instance";
 				staging.languages=List.of("en");

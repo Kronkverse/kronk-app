@@ -138,7 +138,8 @@ public class UiUtils{
 	public static void launchWebBrowser(Context context, String url){
 		Uri parsedUri=Uri.parse(url);
 		String parsedPath=parsedUri.getPath();
-		if("mastodon.kronk.info".equalsIgnoreCase(parsedUri.getHost())
+		String uriHost=parsedUri.getHost();
+		if(("kronk.info".equalsIgnoreCase(uriHost) || "mastodon.kronk.info".equalsIgnoreCase(uriHost))
 				&& parsedPath!=null
 				&& (parsedPath.equals("/home") || parsedPath.equals("/huddle") || parsedPath.startsWith("/kalendar") || parsedPath.equals("/kommons"))
 				&& context instanceof MainActivity ma){

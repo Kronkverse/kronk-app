@@ -1,5 +1,6 @@
 package org.joinmastodon.android.api;
 
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -88,7 +89,9 @@ public class MastodonAPIController{
 				Request.Builder builder=new Request.Builder()
 						.url(req.getURL().toString())
 						.method(req.getMethod(), req.getRequestBody())
-						.header("User-Agent", "MastodonAndroid/"+BuildConfig.VERSION_NAME);
+						.header("User-Agent", "MastodonAndroid/"+BuildConfig.VERSION_NAME)
+						.header("X-Kronk-Version", BuildConfig.VERSION_NAME)
+						.header("X-Kronk-Platform", "android/"+Build.VERSION.RELEASE);
 
 				String token=null;
 				if(session!=null)
