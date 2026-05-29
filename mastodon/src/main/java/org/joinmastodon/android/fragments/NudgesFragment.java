@@ -2,9 +2,12 @@ package org.joinmastodon.android.fragments;
 
 import android.app.Activity;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +19,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -32,8 +36,15 @@ import org.joinmastodon.android.model.NudgeResult;
 import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import me.grishka.appkit.Nav;
@@ -42,23 +53,27 @@ import me.grishka.appkit.api.ErrorResponse;
 import me.grishka.appkit.imageloader.ViewImageLoader;
 import me.grishka.appkit.imageloader.requests.UrlImageLoaderRequest;
 import me.grishka.appkit.utils.V;
+import me.grishka.appkit.views.BottomSheet;
 
 public class NudgesFragment extends android.app.Fragment implements ScrollableToTop {
 
-	private static final int TYPE_HEADER = 0;
-	private static final int TYPE_SECTION = 1;
-	private static final int TYPE_PARTNER = 2;
+	private static final int TYPE_HEADER   = 0;
+	private static final int TYPE_SECTION  = 1;
+	private static final int TYPE_PARTNER  = 2;
+	private static final int TYPE_NUDGE_ALL = 3;
+
+	private static final int MILESTONE_THRESHOLD = 10;
 
 	private String accountID;
 	private NudgePartnersResponse data;
 	private boolean loaded, loading;
 	private int totalSent, totalReceived;
+	private List<NudgePartner> pendingReceived = new ArrayList<>();
 
 	private ProgressBar progress;
 	private SwipeRefreshLayout refreshLayout;
 	private RecyclerView list;
 	private View emptyView;
-
 	private NudgesAdapter adapter;
 	private final List<ListItem> items = new ArrayList<>();
 
@@ -80,6 +95,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		list.setLayoutManager(new LinearLayoutManager(getActivity()));
 		adapter = new NudgesAdapter();
 		list.setAdapter(adapter);
+
+		new ItemTouchHelper(new SwipeToNudgeCallback()).attachToRecyclerView(list);
 
 		refreshLayout.setOnRefreshListener(() -> {
 			loaded = false;
@@ -209,9 +226,12 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			if (p.can_nudge_back) received.add(p);
 			else sent.add(p);
 		}
+		pendingReceived = received;
 
 		if (!received.isEmpty()) {
 			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null, true));
+			if (received.size() >= 2)
+				items.add(new ListItem(TYPE_NUDGE_ALL, null, null, true));
 			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p, false));
 		}
 
@@ -221,6 +241,103 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		}
 
 		adapter.notifyDataSetChanged();
+	}
+
+	private void sendNudgeForPartner(NudgePartner partner) {
+		if (partner.account == null || !partner.can_nudge_back) return;
+		boolean wasReceived = partner.can_nudge_back;
+		partner.can_nudge_back = false;
+		partner.sent_count++;
+		if (data != null) {
+			data.grand_total++;
+			if (wasReceived && data.pending_count > 0) data.pending_count--;
+		}
+		rebuildItems();
+
+		new SendNudge(partner.account.id)
+				.setCallback(new Callback<NudgeResult>() {
+					@Override
+					public void onSuccess(NudgeResult result) {
+						if (result.streak > 0) partner.streak = result.streak;
+						if (getActivity() != null) rebuildItems();
+					}
+					@Override
+					public void onError(ErrorResponse error) {
+						if (getActivity() == null) return;
+						if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr && mr.httpStatus == 422) {
+							// server confirms already sent — keep optimistic state
+							rebuildItems();
+						} else {
+							// revert
+							partner.can_nudge_back = true;
+							partner.sent_count--;
+							if (data != null) {
+								data.grand_total--;
+								data.pending_count++;
+							}
+							rebuildItems();
+							error.showToast(getActivity());
+						}
+					}
+				})
+				.exec(accountID);
+	}
+
+	private void nudgeAllBack() {
+		for (NudgePartner p : new ArrayList<>(pendingReceived)) sendNudgeForPartner(p);
+	}
+
+	private void showQuickSheet(NudgePartner partner) {
+		Activity activity = getActivity();
+		if (activity == null || partner.account == null) return;
+		Account acc = partner.account;
+
+		BottomSheet sheet = new BottomSheet(activity);
+		View v = LayoutInflater.from(activity).inflate(R.layout.bottom_sheet_nudge_quick, null);
+
+		ImageView sheetAvatar = v.findViewById(R.id.sheet_avatar);
+		TextView sheetName = v.findViewById(R.id.sheet_name);
+		TextView sheetUsername = v.findViewById(R.id.sheet_username);
+		TextView sheetStreakSent = v.findViewById(R.id.sheet_streak_sent);
+		TextView sheetStreakReceived = v.findViewById(R.id.sheet_streak_received);
+		Button sheetNudgeBtn = v.findViewById(R.id.sheet_nudge_btn);
+		Button sheetProfileBtn = v.findViewById(R.id.sheet_profile_btn);
+
+		String name = acc.displayName.isEmpty() ? acc.username : acc.displayName;
+		sheetName.setText(name);
+		sheetUsername.setText("@" + acc.acct);
+		sheetStreakSent.setText(getString(R.string.nudge_streak_sent, partner.sent_count));
+		sheetStreakReceived.setText(getString(R.string.nudge_streak_received, partner.received_count));
+
+		String url = GlobalUserPreferences.playGifs ? acc.avatar : acc.avatarStatic;
+		ViewImageLoader.load(sheetAvatar, null, new UrlImageLoaderRequest(url, V.dp(72), V.dp(72)));
+		sheetAvatar.setOutlineProvider(OutlineProviders.roundedRect(12));
+		sheetAvatar.setClipToOutline(true);
+
+		if (partner.can_nudge_back) {
+			sheetNudgeBtn.setText(R.string.nudge_back);
+			sheetNudgeBtn.setEnabled(true);
+		} else {
+			sheetNudgeBtn.setText(R.string.nudge_waiting);
+			sheetNudgeBtn.setEnabled(false);
+			sheetNudgeBtn.setAlpha(0.5f);
+		}
+
+		sheetNudgeBtn.setOnClickListener(vv -> {
+			sendNudgeForPartner(partner);
+			sheet.dismiss();
+		});
+
+		sheetProfileBtn.setOnClickListener(vv -> {
+			sheet.dismiss();
+			Bundle args = new Bundle();
+			args.putString("account", accountID);
+			args.putParcelable("profileAccount", org.parceler.Parcels.wrap(acc));
+			Nav.go(activity, ProfileFragment.class, args);
+		});
+
+		sheet.setContentView(v);
+		sheet.show();
 	}
 
 	private static class ListItem {
@@ -248,40 +365,43 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 			LayoutInflater inflater = LayoutInflater.from(getActivity());
 			return switch (viewType) {
-				case TYPE_HEADER -> new HeaderViewHolder(inflater.inflate(R.layout.item_nudge_stats_header, parent, false));
-				case TYPE_SECTION -> new SectionViewHolder(inflater.inflate(R.layout.item_nudge_section_label, parent, false));
-				default -> new PartnerViewHolder(inflater.inflate(R.layout.item_nudge_partner, parent, false));
+				case TYPE_HEADER    -> new HeaderViewHolder(inflater.inflate(R.layout.item_nudge_stats_header, parent, false));
+				case TYPE_SECTION   -> new SectionViewHolder(inflater.inflate(R.layout.item_nudge_section_label, parent, false));
+				case TYPE_NUDGE_ALL -> new NudgeAllViewHolder(inflater.inflate(R.layout.item_nudge_all_back, parent, false));
+				default             -> new PartnerViewHolder(inflater.inflate(R.layout.item_nudge_partner, parent, false));
 			};
 		}
 
 		@Override
 		public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 			ListItem item = items.get(position);
-			if (holder instanceof HeaderViewHolder h) h.bind();
-			else if (holder instanceof SectionViewHolder s) s.bind(item.label, item.isReceivedSection);
-			else if (holder instanceof PartnerViewHolder p) p.bind(item.partner);
+			if (holder instanceof HeaderViewHolder h)    h.bind();
+			else if (holder instanceof SectionViewHolder s)   s.bind(item.label, item.isReceivedSection);
+			else if (holder instanceof NudgeAllViewHolder a)  a.bind(pendingReceived.size());
+			else if (holder instanceof PartnerViewHolder p)   p.bind(item.partner);
 		}
 
 		@Override
-		public int getItemCount() {
-			return items.size();
-		}
+		public int getItemCount() { return items.size(); }
 	}
 
 	private class HeaderViewHolder extends RecyclerView.ViewHolder {
+		private final TextView grandTotalNumber;
 		private final TextView sentNumber;
 		private final TextView receivedNumber;
 		private final TextView pendingHint;
 
 		HeaderViewHolder(View view) {
 			super(view);
-			sentNumber = view.findViewById(R.id.total_sent_number);
-			receivedNumber = view.findViewById(R.id.total_received_number);
-			pendingHint = view.findViewById(R.id.pending_hint);
+			grandTotalNumber = view.findViewById(R.id.grand_total_number);
+			sentNumber       = view.findViewById(R.id.total_sent_number);
+			receivedNumber   = view.findViewById(R.id.total_received_number);
+			pendingHint      = view.findViewById(R.id.pending_hint);
 		}
 
 		void bind() {
 			if (data == null) return;
+			grandTotalNumber.setText(String.valueOf(data.grand_total));
 			sentNumber.setText(String.valueOf(totalSent));
 			receivedNumber.setText(String.valueOf(totalReceived));
 			if (data.pending_count > 0) {
@@ -314,6 +434,18 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		}
 	}
 
+	private class NudgeAllViewHolder extends RecyclerView.ViewHolder {
+		private final Button btn;
+		NudgeAllViewHolder(View view) {
+			super(view);
+			btn = view.findViewById(R.id.nudge_all_btn);
+			btn.setOnClickListener(v -> nudgeAllBack());
+		}
+		void bind(int count) {
+			btn.setText(getResources().getQuantityString(R.plurals.nudge_all_back, count, count));
+		}
+	}
+
 	private class PartnerViewHolder extends RecyclerView.ViewHolder {
 		private final ImageView avatar;
 		private final ImageView waveIcon;
@@ -321,19 +453,20 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		private final TextView username;
 		private final TextView streakSent;
 		private final TextView streakReceived;
+		private final TextView nudgeTimestamp;
 		private final Button nudgeBtn;
 		private NudgePartner currentPartner;
-		private boolean nudgeSent;
 
 		PartnerViewHolder(View view) {
 			super(view);
-			avatar = view.findViewById(R.id.avatar);
-			waveIcon = view.findViewById(R.id.wave_icon);
-			displayName = view.findViewById(R.id.display_name);
-			username = view.findViewById(R.id.username);
-			streakSent = view.findViewById(R.id.streak_sent);
+			avatar         = view.findViewById(R.id.avatar);
+			waveIcon       = view.findViewById(R.id.wave_icon);
+			displayName    = view.findViewById(R.id.display_name);
+			username       = view.findViewById(R.id.username);
+			streakSent     = view.findViewById(R.id.streak_sent);
 			streakReceived = view.findViewById(R.id.streak_received);
-			nudgeBtn = view.findViewById(R.id.nudge_btn);
+			nudgeTimestamp = view.findViewById(R.id.nudge_timestamp);
+			nudgeBtn       = view.findViewById(R.id.nudge_btn);
 
 			avatar.setOutlineProvider(OutlineProviders.roundedRect(8));
 			avatar.setClipToOutline(true);
@@ -341,36 +474,76 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			waveIcon.setImageTintList(ColorStateList.valueOf(
 					UiUtils.getThemeColor(view.getContext(), R.attr.colorM3Primary)));
 
-			avatar.setOnClickListener(v -> openProfile());
-			displayName.setOnClickListener(v -> openProfile());
-			nudgeBtn.setOnClickListener(v -> onNudgeClick());
+			avatar.setOnClickListener(v -> {
+				if (currentPartner != null) showQuickSheet(currentPartner);
+			});
+			displayName.setOnClickListener(v -> {
+				if (currentPartner != null) showQuickSheet(currentPartner);
+			});
+			nudgeBtn.setOnClickListener(v -> {
+				if (currentPartner != null) sendNudgeForPartner(currentPartner);
+			});
 		}
 
 		void bind(NudgePartner partner) {
 			currentPartner = partner;
-			nudgeSent = false;
 
 			Account acc = partner.account;
 			if (acc != null) {
-				String name = acc.displayName.isEmpty() ? acc.username : acc.displayName;
-				displayName.setText(name);
 				username.setText("@" + acc.acct);
 				String url = GlobalUserPreferences.playGifs ? acc.avatar : acc.avatarStatic;
 				ViewImageLoader.load(avatar, null, new UrlImageLoaderRequest(url, V.dp(46), V.dp(46)));
 			} else {
-				displayName.setText(partner.account_id);
 				username.setText("");
 				avatar.setImageResource(R.drawable.image_placeholder);
 			}
 
-			updateStreakLabels(partner.sent_count, partner.received_count);
+			streakSent.setText(getString(R.string.nudge_streak_sent, partner.sent_count));
+			streakReceived.setText(getString(R.string.nudge_streak_received, partner.received_count));
+
+			bindTimestamp(partner.last_nudge_at);
+			bindMilestoneBadge(partner);
 			updateRowBackground(partner.can_nudge_back);
-			updateButton();
+			updateButton(partner.can_nudge_back);
 		}
 
-		private void updateStreakLabels(int sent, int received) {
-			streakSent.setText(getResources().getString(R.string.nudge_streak_sent, sent));
-			streakReceived.setText(getResources().getString(R.string.nudge_streak_received, received));
+		private void bindTimestamp(String lastNudgeAt) {
+			if (lastNudgeAt == null || lastNudgeAt.isEmpty()) {
+				nudgeTimestamp.setVisibility(View.GONE);
+				return;
+			}
+			try {
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+				sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+				Date date = sdf.parse(lastNudgeAt);
+				CharSequence relative = DateUtils.getRelativeTimeSpanString(
+						date.getTime(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
+				nudgeTimestamp.setText(relative);
+				nudgeTimestamp.setVisibility(View.VISIBLE);
+			} catch (Exception e) {
+				nudgeTimestamp.setVisibility(View.GONE);
+			}
+		}
+
+		private void bindMilestoneBadge(NudgePartner partner) {
+			int total = partner.sent_count + partner.received_count;
+			Account acc = partner.account;
+			String name = (acc != null)
+					? (acc.displayName.isEmpty() ? acc.username : acc.displayName)
+					: partner.account_id;
+
+			if (total >= MILESTONE_THRESHOLD) {
+				SpannableStringBuilder sb = new SpannableStringBuilder(name);
+				sb.append("  ★");
+				int starColor = UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Tertiary);
+				sb.setSpan(new ForegroundColorSpan(starColor),
+						sb.length() - 1, sb.length(),
+						android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				displayName.setText(sb);
+			} else {
+				displayName.setText(name);
+			}
+			waveIcon.setBackgroundResource(R.drawable.bg_nudge_wave_badge);
 		}
 
 		private void updateRowBackground(boolean isReceived) {
@@ -382,84 +555,65 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			}
 		}
 
-		private void updateButton() {
-			if (nudgeSent) {
-				nudgeBtn.setText(R.string.nudged);
-				nudgeBtn.setEnabled(false);
-				nudgeBtn.setAlpha(0.5f);
-				setButtonStyle(false);
-			} else if (currentPartner.can_nudge_back) {
+		private void updateButton(boolean canNudgeBack) {
+			if (canNudgeBack) {
 				nudgeBtn.setText(R.string.nudge_back);
 				nudgeBtn.setEnabled(true);
 				nudgeBtn.setAlpha(1f);
-				setButtonStyle(true);
-			} else {
-				nudgeBtn.setText(R.string.nudge_waiting);
-				nudgeBtn.setEnabled(false);
-				nudgeBtn.setAlpha(0.45f);
-				setButtonStyle(false);
-			}
-		}
-
-		private void setButtonStyle(boolean filled) {
-			if (filled) {
 				nudgeBtn.setBackgroundTintList(ColorStateList.valueOf(
 						UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3Primary)));
 				nudgeBtn.setTextColor(UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3OnPrimary));
 			} else {
+				nudgeBtn.setText(R.string.nudge_waiting);
+				nudgeBtn.setEnabled(false);
+				nudgeBtn.setAlpha(0.45f);
 				nudgeBtn.setBackgroundTintList(ColorStateList.valueOf(
 						UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3SecondaryContainer)));
 				nudgeBtn.setTextColor(UiUtils.getThemeColor(nudgeBtn.getContext(), R.attr.colorM3OnSecondaryContainer));
 			}
 		}
+	}
 
-		private void onNudgeClick() {
-			if (currentPartner == null || nudgeSent) return;
-			Account acc = currentPartner.account;
-			if (acc == null) return;
+	private class SwipeToNudgeCallback extends ItemTouchHelper.SimpleCallback {
+		private final Paint swipePaint = new Paint();
 
-			nudgeBtn.setEnabled(false);
-			new SendNudge(acc.id)
-					.setCallback(new Callback<NudgeResult>() {
-						@Override
-						public void onSuccess(NudgeResult result) {
-							if (getActivity() == null) return;
-							nudgeSent = true;
-							boolean wasReceived = currentPartner.can_nudge_back;
-							currentPartner.can_nudge_back = false;
-							if (result.streak > 0) currentPartner.streak = result.streak;
-							currentPartner.sent_count++;
-							if (data != null) {
-								data.grand_total++;
-								if (wasReceived && data.pending_count > 0) data.pending_count--;
-							}
-							rebuildItems();
-						}
-
-						@Override
-						public void onError(ErrorResponse error) {
-							if (getActivity() == null) return;
-							if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr && mr.httpStatus == 422) {
-								nudgeSent = true;
-								boolean wasReceived = currentPartner.can_nudge_back;
-								currentPartner.can_nudge_back = false;
-								if (data != null && wasReceived && data.pending_count > 0) data.pending_count--;
-								rebuildItems();
-							} else {
-								nudgeBtn.setEnabled(true);
-								error.showToast(getActivity());
-							}
-						}
-					})
-					.exec(accountID);
+		SwipeToNudgeCallback() {
+			super(0, ItemTouchHelper.RIGHT);
 		}
 
-		private void openProfile() {
-			if (currentPartner == null || currentPartner.account == null) return;
-			Bundle args = new Bundle();
-			args.putString("account", accountID);
-			args.putParcelable("profileAccount", org.parceler.Parcels.wrap(currentPartner.account));
-			Nav.go(getActivity(), ProfileFragment.class, args);
+		@Override
+		public int getSwipeDirs(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh) {
+			int pos = vh.getAdapterPosition();
+			if (pos < 0 || pos >= items.size()) return 0;
+			ListItem item = items.get(pos);
+			if (item.type == TYPE_PARTNER && item.partner != null && item.partner.can_nudge_back)
+				return ItemTouchHelper.RIGHT;
+			return 0;
+		}
+
+		@Override
+		public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh, @NonNull RecyclerView.ViewHolder target) {
+			return false;
+		}
+
+		@Override
+		public void onSwiped(@NonNull RecyclerView.ViewHolder vh, int direction) {
+			int pos = vh.getAdapterPosition();
+			if (pos >= 0 && pos < items.size() && items.get(pos).partner != null)
+				sendNudgeForPartner(items.get(pos).partner);
+		}
+
+		@Override
+		public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh,
+				float dX, float dY, int actionState, boolean isCurrentlyActive) {
+			if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX > 0) {
+				View item = vh.itemView;
+				int primary = UiUtils.getThemeColor(item.getContext(), R.attr.colorM3Primary);
+				int alpha = Math.min(70, (int) (dX / item.getWidth() * 100));
+				swipePaint.setColor(applyAlpha(primary, alpha));
+				c.drawRect(item.getLeft(), item.getTop(), item.getLeft() + dX, item.getBottom(), swipePaint);
+			}
+			super.onChildDraw(c, rv, vh, dX, dY, actionState, isCurrentlyActive);
 		}
 	}
 
