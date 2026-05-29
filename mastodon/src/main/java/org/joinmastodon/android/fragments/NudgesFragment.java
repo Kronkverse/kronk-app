@@ -7,7 +7,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,9 +37,6 @@ import org.joinmastodon.android.model.NudgePartnersResponse;
 import org.joinmastodon.android.model.NudgeResult;
 import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
-
-import android.text.SpannableStringBuilder;
-import android.text.style.ForegroundColorSpan;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
