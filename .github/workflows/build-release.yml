@@ -86,11 +86,6 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           VERSION: ${{ steps.version.outputs.version }}
-
-      - name: Deploy to website
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
           mkdir -p ~/.ssh
