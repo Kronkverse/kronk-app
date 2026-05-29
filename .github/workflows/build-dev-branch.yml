@@ -1,11 +1,7 @@
 name: Build Dev Branch
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-      - 'fix/**'
-      - 'docs/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
