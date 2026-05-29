@@ -36,6 +36,9 @@ import org.joinmastodon.android.model.NudgeResult;
 import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -487,13 +490,10 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 
 			Account acc = partner.account;
 			if (acc != null) {
-				String name = acc.displayName.isEmpty() ? acc.username : acc.displayName;
-				displayName.setText(name);
 				username.setText("@" + acc.acct);
 				String url = GlobalUserPreferences.playGifs ? acc.avatar : acc.avatarStatic;
 				ViewImageLoader.load(avatar, null, new UrlImageLoaderRequest(url, V.dp(46), V.dp(46)));
 			} else {
-				displayName.setText(partner.account_id);
 				username.setText("");
 				avatar.setImageResource(R.drawable.image_placeholder);
 			}
@@ -502,7 +502,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			streakReceived.setText(getString(R.string.nudge_streak_received, partner.received_count));
 
 			bindTimestamp(partner.last_nudge_at);
-			bindMilestoneBadge(partner.sent_count + partner.received_count);
+			bindMilestoneBadge(partner);
 			updateRowBackground(partner.can_nudge_back);
 			updateButton(partner.can_nudge_back);
 		}
@@ -525,10 +525,25 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			}
 		}
 
-		private void bindMilestoneBadge(int total) {
-			waveIcon.setBackgroundResource(total >= MILESTONE_THRESHOLD
-					? R.drawable.bg_nudge_wave_badge_milestone
-					: R.drawable.bg_nudge_wave_badge);
+		private void bindMilestoneBadge(NudgePartner partner) {
+			int total = partner.sent_count + partner.received_count;
+			Account acc = partner.account;
+			String name = (acc != null)
+					? (acc.displayName.isEmpty() ? acc.username : acc.displayName)
+					: partner.account_id;
+
+			if (total >= MILESTONE_THRESHOLD) {
+				SpannableStringBuilder sb = new SpannableStringBuilder(name);
+				sb.append("  ★");
+				int starColor = UiUtils.getThemeColor(itemView.getContext(), R.attr.colorM3Tertiary);
+				sb.setSpan(new ForegroundColorSpan(starColor),
+						sb.length() - 1, sb.length(),
+						android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+				displayName.setText(sb);
+			} else {
+				displayName.setText(name);
+			}
+			waveIcon.setBackgroundResource(R.drawable.bg_nudge_wave_badge);
 		}
 
 		private void updateRowBackground(boolean isReceived) {
