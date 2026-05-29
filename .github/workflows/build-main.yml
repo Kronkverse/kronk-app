@@ -85,5 +85,6 @@ jobs:
           ENTRY=$(printf '{"branch":"main","slug":"development","channel":"development","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \
             "$VERSION" "$VERSION_CODE" "$COMMIT" "$APK_SIZE" "$BUILD_TIME")
           ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py remove main" || true
 
           echo "Deployed dev build ${VERSION} to https://kronk.info/dev/kronk.apk"
