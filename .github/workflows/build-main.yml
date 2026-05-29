@@ -1,4 +1,4 @@
-name: Build Main
+name: Build Development
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           VERSION=$(grep 'versionName' mastodon/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
           VERSION_CODE=$(grep 'versionCode' mastodon/build.gradle | head -1 | sed 's/[^0-9]*//g')
           COMMIT_SHA=${GITHUB_SHA::7}
-          echo "version=${VERSION}-main.${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}-dev.${COMMIT_SHA}" >> $GITHUB_OUTPUT
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
 
@@ -58,7 +58,7 @@ jobs:
           $APKSIGNER sign --ks /tmp/release.jks \
             --ks-pass pass:"${KEYSTORE_PASSWORD}" \
             --ks-key-alias kronk \
-            --out kronk-main.apk \
+            --out kronk-dev.apk \
             kronk-aligned.apk
 
       - name: Deploy
@@ -73,17 +73,16 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
 
-          APK_SIZE=$(stat -c%s "kronk-main.apk")
+          APK_SIZE=$(stat -c%s "kronk-dev.apk")
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          ssh -i ~/.ssh/deploy_key root@kronk.info "mkdir -p /var/www/kronk.info/dev/main"
-          scp -i ~/.ssh/deploy_key kronk-main.apk root@kronk.info:/var/www/kronk.info/dev/main/kronk.apk
+          scp -i ~/.ssh/deploy_key kronk-dev.apk root@kronk.info:/var/www/kronk.info/dev/kronk.apk
 
           scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
           ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
 
-          ENTRY=$(printf '{"branch":"main","slug":"main","channel":"main","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/main/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \
+          ENTRY=$(printf '{"branch":"main","slug":"development","channel":"development","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \
             "$VERSION" "$VERSION_CODE" "$COMMIT" "$APK_SIZE" "$BUILD_TIME")
           ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
 
-          echo "Deployed main build ${VERSION} to kronk.info/dev/main/"
+          echo "Deployed dev build ${VERSION} to https://kronk.info/dev/kronk.apk"
