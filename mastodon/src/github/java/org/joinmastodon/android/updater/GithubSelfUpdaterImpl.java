@@ -2,6 +2,10 @@ package org.joinmastodon.android.updater;
 
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -33,7 +37,9 @@ import okhttp3.Response;
 
 @Keep
 public class GithubSelfUpdaterImpl extends GithubSelfUpdater{
-	private static final long CHECK_PERIOD=24*3600*1000L;
+	private static final long CHECK_PERIOD=6*3600*1000L;
+	private static final String UPDATE_CHANNEL_ID="app_updates";
+	private static final int UPDATE_NOTIFICATION_ID=1001;
 	private static final String TAG="GithubSelfUpdater";
 
 	private UpdateState state=UpdateState.NO_UPDATE;
@@ -138,6 +144,33 @@ public class GithubSelfUpdaterImpl extends GithubSelfUpdater{
 	private void setState(UpdateState state){
 		this.state=state;
 		E.post(new SelfUpdateStateChangedEvent(state));
+		if(state==UpdateState.UPDATE_AVAILABLE){
+			downloadUpdate();
+		}else if(state==UpdateState.DOWNLOADED){
+			showInstallNotification();
+		}
+	}
+
+	private void showInstallNotification(){
+		Context ctx=MastodonApp.context;
+		NotificationManager nm=ctx.getSystemService(NotificationManager.class);
+		if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+			NotificationChannel channel=new NotificationChannel(UPDATE_CHANNEL_ID,
+					ctx.getString(R.string.update_notification_channel_name),
+					NotificationManager.IMPORTANCE_HIGH);
+			nm.createNotificationChannel(channel);
+		}
+		Intent installIntent=new Intent(ctx, UpdateInstallReceiver.class);
+		PendingIntent pi=PendingIntent.getBroadcast(ctx, 0, installIntent,
+				PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+		Notification n=new Notification.Builder(ctx, UPDATE_CHANNEL_ID)
+				.setSmallIcon(R.drawable.ic_ntf_logo)
+				.setContentTitle(ctx.getString(R.string.update_notification_title))
+				.setContentText(ctx.getString(R.string.update_notification_body, info.version))
+				.setContentIntent(pi)
+				.setAutoCancel(true)
+				.build();
+		nm.notify(UPDATE_NOTIFICATION_ID, n);
 	}
 
 	@Override
