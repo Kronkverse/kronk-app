@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingHorizontal="24dp"
+	android:paddingTop="24dp"
+	android:paddingBottom="32dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginBottom="16dp">
+
+		<ImageView
+			android:id="@+id/compose_avatar"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:scaleType="centerCrop"
+			android:importantForAccessibility="no"
+			android:src="@drawable/image_placeholder"/>
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:orientation="vertical"
+			android:layout_marginStart="12dp">
+
+			<TextView
+				android:id="@+id/compose_display_name"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="16sp"
+				android:textStyle="bold"
+				android:textColor="?attr/colorM3OnSurface"
+				android:maxLines="1"
+				android:ellipsize="end"/>
+
+			<TextView
+				android:id="@+id/compose_username"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="13sp"
+				android:textColor="?colorM3OnSurfaceVariant"/>
+
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<EditText
+		android:id="@+id/compose_message"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:minHeight="96dp"
+		android:gravity="top"
+		android:background="@drawable/bg_compose_nudge_input"
+		android:padding="12dp"
+		android:textSize="14sp"
+		android:textColor="?attr/colorM3OnSurface"
+		android:hint="@string/nudge_compose_hint"
+		android:inputType="textMultiLine|textCapSentences"
+		android:maxLines="6"/>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:layout_marginTop="8dp"
+		android:gravity="center_vertical">
+
+		<Button
+			android:id="@+id/compose_attach_btn"
+			android:layout_width="wrap_content"
+			android:layout_height="36dp"
+			android:textSize="12sp"
+			android:textAllCaps="false"
+			android:text="@string/nudge_compose_attach_image"
+			style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+		<TextView
+			android:id="@+id/compose_word_count"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:gravity="end"
+			android:textSize="12sp"
+			android:textColor="?colorM3OnSurfaceVariant"
+			android:text="0 / 100 words"/>
+
+	</LinearLayout>
+
+	<ImageView
+		android:id="@+id/compose_image_preview"
+		android:layout_width="match_parent"
+		android:layout_height="160dp"
+		android:layout_marginTop="8dp"
+		android:scaleType="centerCrop"
+		android:visibility="gone"
+		android:background="@drawable/bg_compose_nudge_input"/>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:layout_marginTop="20dp"
+		android:gravity="end">
+
+		<Button
+			android:id="@+id/compose_cancel_btn"
+			android:layout_width="wrap_content"
+			android:layout_height="44dp"
+			android:layout_marginEnd="8dp"
+			android:textAllCaps="false"
+			android:text="@android:string/cancel"
+			style="@style/Widget.Mastodon.M3.Button.Text"/>
+
+		<Button
+			android:id="@+id/compose_send_btn"
+			android:layout_width="wrap_content"
+			android:layout_height="44dp"
+			android:textAllCaps="false"
+			android:text="@string/nudge_compose_just_nudge"
+			style="@style/Widget.Mastodon.M3.Button"/>
+
+	</LinearLayout>
+
+</LinearLayout>

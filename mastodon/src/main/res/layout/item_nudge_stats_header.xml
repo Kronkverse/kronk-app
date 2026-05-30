@@ -4,15 +4,42 @@
 	android:layout_height="wrap_content"
 	android:orientation="vertical"
 	android:paddingHorizontal="16dp"
-	android:paddingTop="16dp"
+	android:paddingTop="14dp"
 	android:paddingBottom="8dp">
 
 	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:orientation="vertical"
-		android:padding="20dp"
+		android:paddingHorizontal="16dp"
+		android:paddingVertical="14dp"
 		android:background="@drawable/bg_nudge_stats_card">
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="11sp"
+			android:letterSpacing="0.07"
+			android:textStyle="bold"
+			android:textColor="?colorM3OnSurfaceVariant"
+			android:text="@string/nudge_grand_total_title"/>
+
+		<TextView
+			android:id="@+id/grand_total_number"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="2dp"
+			android:textSize="30sp"
+			android:textStyle="bold"
+			android:lineHeight="30sp"
+			android:textColor="?attr/colorM3Primary"/>
+
+		<View
+			android:layout_width="match_parent"
+			android:layout_height="1dp"
+			android:layout_marginTop="10dp"
+			android:layout_marginBottom="10dp"
+			android:background="?attr/colorM3OutlineVariant"/>
 
 		<LinearLayout
 			android:layout_width="match_parent"
@@ -31,15 +58,15 @@
 					android:id="@+id/total_sent_number"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:textSize="36sp"
+					android:textSize="22sp"
 					android:textStyle="bold"
-					android:lineHeight="36sp"
+					android:lineHeight="22sp"
 					android:textColor="?attr/colorM3Primary"/>
 
 				<TextView
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:layout_marginTop="4dp"
+					android:layout_marginTop="3dp"
 					android:textSize="11sp"
 					android:letterSpacing="0.08"
 					android:textStyle="bold"
@@ -50,7 +77,7 @@
 
 			<View
 				android:layout_width="1dp"
-				android:layout_height="48dp"
+				android:layout_height="36dp"
 				android:background="?attr/colorM3OutlineVariant"
 				android:layout_marginHorizontal="8dp"/>
 
@@ -65,15 +92,15 @@
 					android:id="@+id/total_received_number"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:textSize="36sp"
+					android:textSize="22sp"
 					android:textStyle="bold"
-					android:lineHeight="36sp"
+					android:lineHeight="22sp"
 					android:textColor="?attr/colorM3Primary"/>
 
 				<TextView
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:layout_marginTop="4dp"
+					android:layout_marginTop="3dp"
 					android:textSize="11sp"
 					android:letterSpacing="0.08"
 					android:textStyle="bold"
@@ -88,7 +115,7 @@
 			android:id="@+id/pending_hint"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="12dp"
+			android:layout_marginTop="10dp"
 			android:paddingHorizontal="10dp"
 			android:paddingVertical="4dp"
 			android:textSize="12sp"
