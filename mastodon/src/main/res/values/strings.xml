@@ -992,7 +992,7 @@ End-to-end encrypted</string>
 
     <string name="error_loading">Failed to load</string>
 
-    <string name="user_nudged_you">%s nudged you</string>
+    <string name="user_nudged_you">%s has nudged you</string>
     <string name="nudge">Nudge</string>
     <string name="nudged">Nudged!</string>
     <string name="nudge_waiting">Waiting…</string>
@@ -1005,6 +1005,10 @@ End-to-end encrypted</string>
     <string name="tab_kuestions">₭uestions</string>
     <string name="nudge_section_sent">NUDGES SENT</string>
     <string name="nudge_section_received">NUDGES RECEIVED</string>
+    <string name="nudge_section_top_streaks">TOP STREAKS</string>
+    <string name="nudge_section_suggestions">NUDGE SOMEONE</string>
+    <string name="nudge_show_more">Show %d more</string>
+    <string name="nudge_show_less">Show less</string>
     <string name="nudge_empty_title">No nudges yet!</string>
     <string name="nudge_empty_subtitle">Nudge someone from their profile to start a streak</string>
     <plurals name="nudge_grand_total">
