@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kronk Dev</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f13;
+      color: #e0e0e8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 24px 16px 48px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+    .site-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+    }
+    .site-header .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #6c63ff;
+      flex-shrink: 0;
+    }
+    .site-header .sub {
+      margin-left: auto;
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    section { margin-bottom: 36px; }
+
+    /* ── Builds ── */
+    .builds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .build-card {
+      background: #17171f;
+      border: 1px solid #26263a;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .build-card__channel {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .build-card__channel--development { color: #6c63ff; }
+    .build-card__channel--production  { color: #3dc97b; }
+    .build-card__channel--branch      { color: #f0a500; }
+    .build-card__version {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .build-card__meta {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    .build-card__meta span + span::before { content: ' · '; }
+    .build-card a.download {
+      display: inline-block;
+      background: #6c63ff22;
+      border: 1px solid #6c63ff55;
+      color: #9d97ff;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .build-card a.download:hover { background: #6c63ff44; }
+    .build-card--production a.download {
+      background: #3dc97b22;
+      border-color: #3dc97b55;
+      color: #6de89f;
+    }
+    .build-card--production a.download:hover { background: #3dc97b44; }
+
+    /* ── Stack ── */
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .stack-layer {
+      background: #17171f;
+      border: 1px solid #26263a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+    .stack-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      color: #333;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .stack-layer__badge {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .stack-layer__badge--app  { background: #6c63ff22; }
+    .stack-layer__badge--api  { background: #f0a50022; }
+    .stack-layer__badge--web  { background: #3dc97b22; }
+    .stack-layer__name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 14px;
+    }
+    .stack-layer__detail {
+      font-size: 12px;
+      color: #555;
+      margin-top: 1px;
+    }
+    .stack-layer__tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .tag--app  { background: #6c63ff22; color: #9d97ff; }
+    .tag--api  { background: #f0a50022; color: #f5c04a; }
+    .tag--web  { background: #3dc97b22; color: #6de89f; }
+
+    /* ── Workflow ── */
+    .flows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px) { .flows { grid-template-columns: 1fr; } }
+    .flow-card {
+      background: #17171f;
+      border: 1px solid #26263a;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .flow-card__title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .flow-card--app .flow-card__title   { color: #9d97ff; }
+    .flow-card--web .flow-card__title   { color: #6de89f; }
+    .flow-steps { list-style: none; }
+    .flow-steps li {
+      font-size: 12px;
+      color: #aaa;
+      padding: 3px 0 3px 18px;
+      position: relative;
+    }
+    .flow-steps li::before {
+      content: '';
+      position: absolute;
+      left: 5px; top: 10px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #333;
+    }
+    .flow-steps li.step--key { color: #e0e0e8; }
+    .flow-steps li.step--key::before { background: #6c63ff; }
+    .flow-card--web .flow-steps li.step--key::before { background: #3dc97b; }
+    code {
+      background: #26263a;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #c0bfff;
+    }
+    .flow-card--web code { color: #9de8b0; }
+
+    /* ── Cross-repo note ── */
+    .note {
+      background: #17171f;
+      border: 1px solid #26263a;
+      border-left: 3px solid #f0a500;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #888;
+    }
+    .note strong { color: #f5c04a; }
+
+    /* ── Loading ── */
+    .loading { color: #444; font-size: 13px; padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="dot"></div>
+    <h1>Kronk Dev</h1>
+    <span class="sub" id="updated-time"></span>
+  </header>
+
+  <!-- Builds -->
+  <section>
+    <p class="section-title">Builds</p>
+    <div class="builds-grid" id="builds-container">
+      <p class="loading">Loading builds…</p>
+    </div>
+  </section>
+
+  <!-- Stack -->
+  <section>
+    <p class="section-title">Stack Layers</p>
+    <div class="stack">
+
+      <div class="stack-layer">
+        <div class="stack-layer__badge stack-layer__badge--app">📱</div>
+        <div>
+          <div class="stack-layer__name">Android App</div>
+          <div class="stack-layer__detail">kronk-app · Java/Kotlin · <code>mastodon/src/main/java/</code></div>
+        </div>
+        <span class="stack-layer__tag tag--app">kronk-app</span>
+      </div>
+
+      <div class="stack-connector">↕</div>
+
+      <div class="stack-layer">
+        <div class="stack-layer__badge stack-layer__badge--api">⚙️</div>
+        <div>
+          <div class="stack-layer__name">Rails API</div>
+          <div class="stack-layer__detail">kronk · Ruby · <code>app/controllers/api/</code> · <code>app/models/</code></div>
+        </div>
+        <span class="stack-layer__tag tag--api">kronk</span>
+      </div>
+
+      <div class="stack-connector">↕</div>
+
+      <div class="stack-layer">
+        <div class="stack-layer__badge stack-layer__badge--web">🌐</div>
+        <div>
+          <div class="stack-layer__name">Web Frontend</div>
+          <div class="stack-layer__detail">kronk · TypeScript/React · <code>app/javascript/mastodon/</code></div>
+        </div>
+        <span class="stack-layer__tag tag--web">kronk</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Workflow -->
+  <section>
+    <p class="section-title">Dev Workflow</p>
+    <div class="flows">
+
+      <div class="flow-card flow-card--app">
+        <div class="flow-card__title">📱 App</div>
+        <ul class="flow-steps">
+          <li class="step--key">Branch off <code>upstream/development</code></li>
+          <li>Make changes, commit</li>
+          <li class="step--key">Open PR → <code>development</code></li>
+          <li>Merge → CI builds APK (~10–15 min)</li>
+          <li class="step--key">Install from <code>kronk.info/dev/kronk.apk</code></li>
+        </ul>
+      </div>
+
+      <div class="flow-card flow-card--web">
+        <div class="flow-card__title">🌐 Web + API</div>
+        <ul class="flow-steps">
+          <li class="step--key">Branch off <code>upstream/staging</code></li>
+          <li>Make changes, commit, push</li>
+          <li class="step--key">Open draft PR → <code>staging</code></li>
+          <li>Comment <code>/deploy-staging</code> on PR</li>
+          <li class="step--key">Test at <code>dev.mastodon.kronk.info</code></li>
+          <li>Mark ready → merge → production</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cross-repo note -->
+  <section>
+    <p class="section-title">Cross-Repo Features</p>
+    <div class="note">
+      <strong>App + Web changes?</strong> Build and merge the <strong>web/API side first</strong> —
+      it needs to be live on staging before the app can test against it.
+      Note in each PR which repo holds the other half.
+    </div>
+  </section>
+
+  <script>
+    // Live builds from builds.json
+    async function loadBuilds() {
+      const container = document.getElementById('builds-container');
+      try {
+        const res = await fetch('/dev/builds.json?_=' + Date.now());
+        const builds = await res.json();
+
+        container.innerHTML = '';
+        builds.forEach(b => {
+          const channel = b.channel || 'branch';
+          const time = b.buildTime ? new Date(b.buildTime).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : '—';
+          const commit = b.commit ? `<span>${b.commit}</span>` : '';
+          const size = b.apkSize ? `<span>${(b.apkSize / 1024 / 1024).toFixed(1)} MB</span>` : '';
+
+          const card = document.createElement('div');
+          card.className = `build-card build-card--${channel}`;
+          card.innerHTML = `
+            <div class="build-card__channel build-card__channel--${channel}">${channel}</div>
+            <div class="build-card__version">${b.version || '—'}</div>
+            <div class="build-card__meta">${[time, commit, size].filter(x=>x).join('')}</div>
+            ${b.apkUrl ? `<a class="download" href="${b.apkUrl}">Download APK</a>` : ''}
+          `;
+          container.appendChild(card);
+        });
+      } catch (e) {
+        container.innerHTML = '<p class="loading">Could not load builds.</p>';
+      }
+    }
+
+    document.getElementById('updated-time').textContent =
+      new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    loadBuilds();
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:paddingHorizontal="16dp"
+	android:paddingTop="4dp"
+	android:paddingBottom="8dp">
+
+	<Button
+		android:id="@+id/nudge_all_btn"
+		android:layout_width="match_parent"
+		android:layout_height="40dp"
+		android:textAllCaps="false"
+		android:textSize="14sp"
+		style="@style/Widget.Mastodon.M3.Button"/>
+
+</LinearLayout>
