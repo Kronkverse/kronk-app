@@ -7,7 +7,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.SpannableStringBuilder;
+import android.text.TextWatcher;
 import android.text.format.DateUtils;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
@@ -15,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -294,7 +297,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		adapter.notifyDataSetChanged();
 	}
 
-	private void sendNudgeForPartner(NudgePartner partner) {
+	private void sendNudgeForPartner(NudgePartner partner, String text, String mediaId) {
 		if (partner.account == null || !partner.can_nudge_back) return;
 		boolean wasReceived = partner.can_nudge_back;
 		partner.can_nudge_back = false;
@@ -305,7 +308,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		}
 		rebuildItems();
 
-		new SendNudge(partner.account.id)
+		new SendNudge(partner.account.id, text, mediaId)
 				.setCallback(new Callback<NudgeResult>() {
 					@Override
 					public void onSuccess(NudgeResult result) {
@@ -316,10 +319,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					public void onError(ErrorResponse error) {
 						if (getActivity() == null) return;
 						if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr && mr.httpStatus == 422) {
-							// server confirms already sent — keep optimistic state
 							rebuildItems();
 						} else {
-							// revert
 							partner.can_nudge_back = true;
 							partner.sent_count--;
 							if (data != null) {
@@ -335,7 +336,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 	}
 
 	private void nudgeAllBack() {
-		for (NudgePartner p : new ArrayList<>(pendingReceived)) sendNudgeForPartner(p);
+		for (NudgePartner p : new ArrayList<>(pendingReceived)) sendNudgeForPartner(p, null, null);
 	}
 
 	private void showQuickSheet(NudgePartner partner) {
@@ -375,8 +376,8 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		}
 
 		sheetNudgeBtn.setOnClickListener(vv -> {
-			sendNudgeForPartner(partner);
 			sheet.dismiss();
+			showComposeSheet(acc, (text, mediaId) -> sendNudgeForPartner(partner, text, mediaId));
 		});
 
 		sheetProfileBtn.setOnClickListener(vv -> {
@@ -386,6 +387,68 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			args.putParcelable("profileAccount", org.parceler.Parcels.wrap(acc));
 			Nav.go(activity, ProfileFragment.class, args);
 		});
+
+		sheet.setContentView(v);
+		sheet.show();
+	}
+
+	interface NudgeSendCallback {
+		void onSend(String text, String mediaId);
+	}
+
+	private void showComposeSheet(Account acc, NudgeSendCallback onSend) {
+		Activity activity = getActivity();
+		if (activity == null || acc == null) return;
+
+		BottomSheet sheet = new BottomSheet(activity);
+		View v = LayoutInflater.from(activity).inflate(R.layout.bottom_sheet_nudge_compose, null);
+
+		ImageView avatar    = v.findViewById(R.id.compose_avatar);
+		TextView dname      = v.findViewById(R.id.compose_display_name);
+		TextView uname      = v.findViewById(R.id.compose_username);
+		EditText msgInput   = v.findViewById(R.id.compose_message);
+		TextView wordCount  = v.findViewById(R.id.compose_word_count);
+		Button sendBtn      = v.findViewById(R.id.compose_send_btn);
+		Button cancelBtn    = v.findViewById(R.id.compose_cancel_btn);
+
+		String name = acc.displayName.isEmpty() ? acc.username : acc.displayName;
+		dname.setText(name);
+		uname.setText("@" + acc.acct);
+		String url = GlobalUserPreferences.playGifs ? acc.avatar : acc.avatarStatic;
+		ViewImageLoader.load(avatar, null, new UrlImageLoaderRequest(url, V.dp(40), V.dp(40)));
+		avatar.setOutlineProvider(OutlineProviders.roundedRect(8));
+		avatar.setClipToOutline(true);
+
+		final int[] wc = {0};
+		final boolean[] overLimit = {false};
+
+		msgInput.addTextChangedListener(new TextWatcher() {
+			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+			@Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+			@Override public void afterTextChanged(Editable s) {
+				String text = s.toString().trim();
+				wc[0] = text.isEmpty() ? 0 : text.split("\\s+").length;
+				overLimit[0] = wc[0] > 100;
+				wordCount.setText(wc[0] + " / 100 words");
+				wordCount.setTextColor(overLimit[0]
+						? UiUtils.getThemeColor(activity, R.attr.colorM3Error)
+						: UiUtils.getThemeColor(activity, R.attr.colorM3OnSurfaceVariant));
+				boolean hasMsg = !msgInput.getText().toString().trim().isEmpty();
+				sendBtn.setText(hasMsg
+						? getString(R.string.nudge_compose_send_nudge)
+						: getString(R.string.nudge_compose_just_nudge));
+				sendBtn.setEnabled(!overLimit[0]);
+			}
+		});
+
+		sendBtn.setOnClickListener(vv -> {
+			if (overLimit[0]) return;
+			String text = msgInput.getText().toString().trim();
+			sheet.dismiss();
+			onSend.onSend(text.isEmpty() ? null : text, null);
+		});
+
+		cancelBtn.setOnClickListener(vv -> sheet.dismiss());
 
 		sheet.setContentView(v);
 		sheet.show();
@@ -489,7 +552,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		void bind(String text, boolean isReceived) {
 			label.setText(text);
 			int dotColor = isReceived
-					? UiUtils.getThemeColor(label.getContext(), R.attr.colorM3Primary)
+					? UiUtils.getThemeColor(label.getContext(), R.attr.colorM3Tertiary)
 					: applyAlpha(UiUtils.getThemeColor(label.getContext(), R.attr.colorM3OnSurfaceVariant), 120);
 			GradientDrawable dot = new GradientDrawable();
 			dot.setShape(GradientDrawable.OVAL);
@@ -551,25 +614,27 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			nudgeBtn.setText(R.string.nudge);
 			nudgeBtn.setOnClickListener(v -> {
 				if (currentSuggestion == null || currentSuggestion.account == null) return;
-				nudgeBtn.setEnabled(false);
-				new org.joinmastodon.android.api.requests.accounts.SendNudge(currentSuggestion.account_id)
-						.setCallback(new Callback<org.joinmastodon.android.model.NudgeResult>() {
-							@Override public void onSuccess(org.joinmastodon.android.model.NudgeResult result) {
-								if (getActivity() == null) return;
-								nudgeBtn.setText(R.string.nudged);
-							}
-							@Override public void onError(ErrorResponse error) {
-								if (getActivity() == null) return;
-								if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr
-										&& mr.httpStatus == 422) {
+				showComposeSheet(currentSuggestion.account, (text, mediaId) -> {
+					nudgeBtn.setEnabled(false);
+					new SendNudge(currentSuggestion.account_id, text, mediaId)
+							.setCallback(new Callback<NudgeResult>() {
+								@Override public void onSuccess(NudgeResult result) {
+									if (getActivity() == null) return;
 									nudgeBtn.setText(R.string.nudged);
-								} else {
-									nudgeBtn.setEnabled(true);
-									error.showToast(getActivity());
 								}
-							}
-						})
-						.exec(accountID);
+								@Override public void onError(ErrorResponse error) {
+									if (getActivity() == null) return;
+									if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr
+											&& mr.httpStatus == 422) {
+										nudgeBtn.setText(R.string.nudged);
+									} else {
+										nudgeBtn.setEnabled(true);
+										error.showToast(getActivity());
+									}
+								}
+							})
+							.exec(accountID);
+				});
 			});
 		}
 
@@ -622,7 +687,9 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 				if (currentPartner != null) showQuickSheet(currentPartner);
 			});
 			nudgeBtn.setOnClickListener(v -> {
-				if (currentPartner != null) sendNudgeForPartner(currentPartner);
+				if (currentPartner == null || !currentPartner.can_nudge_back) return;
+				showComposeSheet(currentPartner.account,
+						(text, mediaId) -> sendNudgeForPartner(currentPartner, text, mediaId));
 			});
 		}
 
@@ -741,7 +808,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		public void onSwiped(@NonNull RecyclerView.ViewHolder vh, int direction) {
 			int pos = vh.getAdapterPosition();
 			if (pos >= 0 && pos < items.size() && items.get(pos).partner != null)
-				sendNudgeForPartner(items.get(pos).partner);
+				sendNudgeForPartner(items.get(pos).partner, null, null);
 		}
 
 		@Override

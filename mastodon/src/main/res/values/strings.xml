@@ -1025,6 +1025,13 @@ End-to-end encrypted</string>
     </plurals>
     <string name="nudge_grand_total_title">GRAND TOTAL OF NUDGES</string>
     <string name="nudge_view_profile">View Profile</string>
+    <string name="nudge_compose_title">Nudge @%s</string>
+    <string name="nudge_compose_hint">Add a message… (optional)</string>
+    <string name="nudge_compose_attach_image">Attach image</string>
+    <string name="nudge_compose_word_count">%1$d / 100 words</string>
+    <string name="nudge_compose_word_limit_exceeded">Message too long (max 100 words)</string>
+    <string name="nudge_compose_just_nudge">Just nudge</string>
+    <string name="nudge_compose_send_nudge">Send nudge</string>
     <plurals name="nudge_all_back">
         <item quantity="one">Nudge back 1 person</item>
         <item quantity="other">Nudge back all %d</item>
