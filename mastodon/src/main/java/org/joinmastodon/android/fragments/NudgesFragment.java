@@ -56,16 +56,19 @@ import me.grishka.appkit.views.BottomSheet;
 
 public class NudgesFragment extends android.app.Fragment implements ScrollableToTop {
 
-	private static final int TYPE_HEADER   = 0;
-	private static final int TYPE_SECTION  = 1;
-	private static final int TYPE_PARTNER  = 2;
-	private static final int TYPE_NUDGE_ALL = 3;
+	private static final int TYPE_HEADER        = 0;
+	private static final int TYPE_SECTION       = 1;
+	private static final int TYPE_PARTNER       = 2;
+	private static final int TYPE_NUDGE_ALL     = 3;
+	private static final int TYPE_SHOW_MORE     = 4;
+	private static final int TYPE_SUGGESTION    = 5;
 
 	private static final int MILESTONE_THRESHOLD = 10;
 
 	private String accountID;
 	private NudgePartnersResponse data;
 	private boolean loaded, loading;
+	private boolean showMore = false;
 	private int totalSent, totalReceived;
 	private List<NudgePartner> pendingReceived = new ArrayList<>();
 
@@ -140,33 +143,43 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 					@Override
 					public void onSuccess(NudgePartnersResponse result) {
 						if (getActivity() == null) return;
-						if (result.partners == null || result.partners.isEmpty()) {
+						int suggestionCount = result.suggestions != null ? result.suggestions.size() : 0;
+						if ((result.partners == null || result.partners.isEmpty()) && suggestionCount == 0) {
 							finishLoad(result);
 							return;
 						}
-						AtomicInteger remaining = new AtomicInteger(result.partners.size());
-						for (NudgePartner partner : result.partners) {
-							if (partner.account != null) {
-								try { partner.account.postprocess(); } catch (Exception ignored) {}
-								if (remaining.decrementAndGet() == 0) finishLoad(result);
-								continue;
+						int partnerCount = result.partners != null ? result.partners.size() : 0;
+						AtomicInteger remaining = new AtomicInteger(partnerCount + suggestionCount);
+						Runnable checkDone = () -> {
+							if (remaining.decrementAndGet() == 0 && getActivity() != null) finishLoad(result);
+						};
+						if (result.partners != null) {
+							for (NudgePartner partner : result.partners) {
+								if (partner.account != null) {
+									try { partner.account.postprocess(); } catch (Exception ignored) {}
+									checkDone.run();
+									continue;
+								}
+								new GetAccountByID(partner.account_id)
+										.setCallback(new Callback<Account>() {
+											@Override public void onSuccess(Account account) {
+												partner.account = account;
+												checkDone.run();
+											}
+											@Override public void onError(ErrorResponse error) { checkDone.run(); }
+										})
+										.exec(accountID);
 							}
-							new GetAccountByID(partner.account_id)
-									.setCallback(new Callback<Account>() {
-										@Override
-										public void onSuccess(Account account) {
-											partner.account = account;
-											if (remaining.decrementAndGet() == 0 && getActivity() != null)
-												finishLoad(result);
-										}
-										@Override
-										public void onError(ErrorResponse error) {
-											if (remaining.decrementAndGet() == 0 && getActivity() != null)
-												finishLoad(result);
-										}
-									})
-									.exec(accountID);
 						}
+						if (result.suggestions != null) {
+							for (org.joinmastodon.android.model.NudgeSuggestion s : result.suggestions) {
+								if (s.account != null) {
+									try { s.account.postprocess(); } catch (Exception ignored) {}
+								}
+								checkDone.run();
+							}
+						}
+						if (partnerCount == 0 && suggestionCount == 0) finishLoad(result);
 					}
 
 					@Override
@@ -200,7 +213,10 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 	private void rebuildItems() {
 		items.clear();
 
-		if (data == null || data.partners == null || data.partners.isEmpty()) {
+		boolean hasPartners = data != null && data.partners != null && !data.partners.isEmpty();
+		boolean hasSuggestions = data != null && data.suggestions != null && !data.suggestions.isEmpty();
+
+		if (!hasPartners && !hasSuggestions) {
 			emptyView.setVisibility(View.VISIBLE);
 			refreshLayout.setVisibility(View.GONE);
 			adapter.notifyDataSetChanged();
@@ -210,33 +226,69 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		emptyView.setVisibility(View.GONE);
 		refreshLayout.setVisibility(View.VISIBLE);
 
-		totalSent = 0;
-		totalReceived = 0;
-		for (NudgePartner p : data.partners) {
-			totalSent += p.sent_count;
-			totalReceived += p.received_count;
+		if (hasPartners) {
+			totalSent = data.total_sent > 0 ? data.total_sent : 0;
+			totalReceived = data.total_received > 0 ? data.total_received : 0;
+			if (totalSent == 0 && totalReceived == 0) {
+				for (NudgePartner p : data.partners) {
+					totalSent += p.sent_count;
+					totalReceived += p.received_count;
+				}
+			}
+
+			items.add(new ListItem(TYPE_HEADER, null, null, null, false));
+
+			// Sort by streak desc
+			List<NudgePartner> sorted = new ArrayList<>(data.partners);
+			sorted.sort((a, b) -> Integer.compare(b.streak, a.streak));
+
+			// Top 3 ids
+			java.util.Set<String> topThreeIds = new java.util.HashSet<>();
+			for (int i = 0; i < Math.min(3, sorted.size()); i++) {
+				topThreeIds.add(sorted.get(i).account_id);
+			}
+
+			List<NudgePartner> received  = new ArrayList<>();
+			List<NudgePartner> topStreaks = new ArrayList<>();
+			List<NudgePartner> hidden    = new ArrayList<>();
+
+			java.util.Set<String> shown = new java.util.HashSet<>();
+			for (NudgePartner p : sorted) {
+				if (p.can_nudge_back) { received.add(p); shown.add(p.account_id); }
+			}
+			for (NudgePartner p : sorted) {
+				if (shown.contains(p.account_id)) continue;
+				if (topThreeIds.contains(p.account_id)) { topStreaks.add(p); shown.add(p.account_id); }
+				else { hidden.add(p); }
+			}
+
+			pendingReceived = received;
+
+			if (!received.isEmpty()) {
+				items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null, null, true));
+				if (received.size() >= 2)
+					items.add(new ListItem(TYPE_NUDGE_ALL, null, null, null, true));
+				for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p, null, false));
+			}
+
+			if (!topStreaks.isEmpty()) {
+				items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_top_streaks), null, null, false));
+				for (NudgePartner p : topStreaks) items.add(new ListItem(TYPE_PARTNER, null, p, null, false));
+			}
+
+			if (!hidden.isEmpty()) {
+				if (showMore) {
+					for (NudgePartner p : hidden) items.add(new ListItem(TYPE_PARTNER, null, p, null, false));
+				}
+				items.add(new ListItem(TYPE_SHOW_MORE, null, null, null, false, hidden.size()));
+			}
 		}
 
-		items.add(new ListItem(TYPE_HEADER, null, null, false));
-
-		List<NudgePartner> received = new ArrayList<>();
-		List<NudgePartner> sent = new ArrayList<>();
-		for (NudgePartner p : data.partners) {
-			if (p.can_nudge_back) received.add(p);
-			else sent.add(p);
-		}
-		pendingReceived = received;
-
-		if (!received.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_received), null, true));
-			if (received.size() >= 2)
-				items.add(new ListItem(TYPE_NUDGE_ALL, null, null, true));
-			for (NudgePartner p : received) items.add(new ListItem(TYPE_PARTNER, null, p, false));
-		}
-
-		if (!sent.isEmpty()) {
-			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_sent), null, false));
-			for (NudgePartner p : sent) items.add(new ListItem(TYPE_PARTNER, null, p, false));
+		if (hasSuggestions) {
+			items.add(new ListItem(TYPE_SECTION, getString(R.string.nudge_section_suggestions), null, null, false));
+			for (org.joinmastodon.android.model.NudgeSuggestion s : data.suggestions) {
+				if (s.account != null) items.add(new ListItem(TYPE_SUGGESTION, null, null, s, false));
+			}
 		}
 
 		adapter.notifyDataSetChanged();
@@ -343,12 +395,23 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		final int type;
 		final String label;
 		final NudgePartner partner;
+		final org.joinmastodon.android.model.NudgeSuggestion suggestion;
 		final boolean isReceivedSection;
-		ListItem(int type, String label, NudgePartner partner, boolean isReceivedSection) {
+		final int hiddenCount;
+		ListItem(int type, String label, NudgePartner partner,
+				org.joinmastodon.android.model.NudgeSuggestion suggestion,
+				boolean isReceivedSection) {
+			this(type, label, partner, suggestion, isReceivedSection, 0);
+		}
+		ListItem(int type, String label, NudgePartner partner,
+				org.joinmastodon.android.model.NudgeSuggestion suggestion,
+				boolean isReceivedSection, int hiddenCount) {
 			this.type = type;
 			this.label = label;
 			this.partner = partner;
+			this.suggestion = suggestion;
 			this.isReceivedSection = isReceivedSection;
+			this.hiddenCount = hiddenCount;
 		}
 	}
 
@@ -364,20 +427,24 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 			LayoutInflater inflater = LayoutInflater.from(getActivity());
 			return switch (viewType) {
-				case TYPE_HEADER    -> new HeaderViewHolder(inflater.inflate(R.layout.item_nudge_stats_header, parent, false));
-				case TYPE_SECTION   -> new SectionViewHolder(inflater.inflate(R.layout.item_nudge_section_label, parent, false));
-				case TYPE_NUDGE_ALL -> new NudgeAllViewHolder(inflater.inflate(R.layout.item_nudge_all_back, parent, false));
-				default             -> new PartnerViewHolder(inflater.inflate(R.layout.item_nudge_partner, parent, false));
+				case TYPE_HEADER     -> new HeaderViewHolder(inflater.inflate(R.layout.item_nudge_stats_header, parent, false));
+				case TYPE_SECTION    -> new SectionViewHolder(inflater.inflate(R.layout.item_nudge_section_label, parent, false));
+				case TYPE_NUDGE_ALL  -> new NudgeAllViewHolder(inflater.inflate(R.layout.item_nudge_all_back, parent, false));
+				case TYPE_SHOW_MORE  -> new ShowMoreViewHolder(inflater.inflate(R.layout.item_nudge_section_label, parent, false));
+				case TYPE_SUGGESTION -> new SuggestionViewHolder(inflater.inflate(R.layout.item_nudge_suggestion, parent, false));
+				default              -> new PartnerViewHolder(inflater.inflate(R.layout.item_nudge_partner, parent, false));
 			};
 		}
 
 		@Override
 		public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 			ListItem item = items.get(position);
-			if (holder instanceof HeaderViewHolder h)    h.bind();
-			else if (holder instanceof SectionViewHolder s)   s.bind(item.label, item.isReceivedSection);
-			else if (holder instanceof NudgeAllViewHolder a)  a.bind(pendingReceived.size());
-			else if (holder instanceof PartnerViewHolder p)   p.bind(item.partner);
+			if      (holder instanceof HeaderViewHolder h)      h.bind();
+			else if (holder instanceof SectionViewHolder s)     s.bind(item.label, item.isReceivedSection);
+			else if (holder instanceof NudgeAllViewHolder a)    a.bind(pendingReceived.size());
+			else if (holder instanceof ShowMoreViewHolder sm)   sm.bind(item.hiddenCount);
+			else if (holder instanceof SuggestionViewHolder sv) sv.bind(item.suggestion);
+			else if (holder instanceof PartnerViewHolder p)     p.bind(item.partner);
 		}
 
 		@Override
@@ -442,6 +509,81 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		}
 		void bind(int count) {
 			btn.setText(getResources().getQuantityString(R.plurals.nudge_all_back, count, count));
+		}
+	}
+
+	private class ShowMoreViewHolder extends RecyclerView.ViewHolder {
+		private final TextView label;
+		ShowMoreViewHolder(View view) {
+			super(view);
+			label = view.findViewById(R.id.section_label);
+			label.setTextColor(UiUtils.getThemeColor(view.getContext(), R.attr.colorM3Primary));
+			label.setPadding(label.getPaddingLeft(), V.dp(12), label.getPaddingRight(), V.dp(12));
+			itemView.setOnClickListener(v -> {
+				showMore = !showMore;
+				rebuildItems();
+			});
+		}
+		void bind(int hiddenCount) {
+			label.setText(showMore
+					? getString(R.string.nudge_show_less)
+					: getString(R.string.nudge_show_more, hiddenCount));
+		}
+	}
+
+	private class SuggestionViewHolder extends RecyclerView.ViewHolder {
+		private final ImageView avatar;
+		private final TextView displayName;
+		private final TextView username;
+		private final Button nudgeBtn;
+		private org.joinmastodon.android.model.NudgeSuggestion currentSuggestion;
+
+		SuggestionViewHolder(View view) {
+			super(view);
+			avatar      = view.findViewById(R.id.avatar);
+			displayName = view.findViewById(R.id.display_name);
+			username    = view.findViewById(R.id.username);
+			nudgeBtn    = view.findViewById(R.id.nudge_btn);
+
+			avatar.setOutlineProvider(OutlineProviders.roundedRect(8));
+			avatar.setClipToOutline(true);
+
+			nudgeBtn.setText(R.string.nudge);
+			nudgeBtn.setOnClickListener(v -> {
+				if (currentSuggestion == null || currentSuggestion.account == null) return;
+				nudgeBtn.setEnabled(false);
+				new org.joinmastodon.android.api.requests.accounts.SendNudge(currentSuggestion.account_id)
+						.setCallback(new Callback<org.joinmastodon.android.model.NudgeResult>() {
+							@Override public void onSuccess(org.joinmastodon.android.model.NudgeResult result) {
+								if (getActivity() == null) return;
+								nudgeBtn.setText(R.string.nudged);
+							}
+							@Override public void onError(ErrorResponse error) {
+								if (getActivity() == null) return;
+								if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr
+										&& mr.httpStatus == 422) {
+									nudgeBtn.setText(R.string.nudged);
+								} else {
+									nudgeBtn.setEnabled(true);
+									error.showToast(getActivity());
+								}
+							}
+						})
+						.exec(accountID);
+			});
+		}
+
+		void bind(org.joinmastodon.android.model.NudgeSuggestion suggestion) {
+			currentSuggestion = suggestion;
+			Account acc = suggestion.account;
+			if (acc == null) return;
+			String name = acc.displayName.isEmpty() ? acc.username : acc.displayName;
+			displayName.setText(name);
+			username.setText("@" + acc.acct);
+			String url = GlobalUserPreferences.playGifs ? acc.avatar : acc.avatarStatic;
+			ViewImageLoader.load(avatar, null, new UrlImageLoaderRequest(url, V.dp(46), V.dp(46)));
+			nudgeBtn.setText(R.string.nudge);
+			nudgeBtn.setEnabled(true);
 		}
 	}
 
