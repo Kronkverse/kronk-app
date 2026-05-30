@@ -78,6 +78,7 @@ jobs:
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           scp -i ~/.ssh/deploy_key kronk-dev.apk root@kronk.info:/var/www/kronk.info/dev/kronk.apk
+          scp -i ~/.ssh/deploy_key .github/static/dev-index.html root@kronk.info:/var/www/kronk.info/dev/index.html
 
           scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
           ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
