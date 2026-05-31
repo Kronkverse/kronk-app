@@ -188,6 +188,8 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			mediaPlayer = null;
 		}
 		timerHandler.removeCallbacksAndMessages(null);
+		// Clean up any temp voice file left behind by an in-progress upload
+		if (voiceFile != null) deleteVoiceFile();
 	}
 
 	private void loadThread() {
@@ -450,9 +452,15 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 						public void onError(ErrorResponse error) {
 							if (getActivity() == null) return;
 							voiceUploadInProgress = false;
+							boolean wasSendPending = sendWhenUploadDone;
 							sendWhenUploadDone = false;
 							sendBtn.setEnabled(true);
-							error.showToast(getActivity());
+							if (wasSendPending) {
+								Toast.makeText(getActivity(),
+										R.string.nudge_voice_upload_failed, Toast.LENGTH_SHORT).show();
+							} else {
+								error.showToast(getActivity());
+							}
 						}
 					})
 					.exec(accountID);
@@ -663,6 +671,12 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		}
 
 		@Override
+		public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
+			super.onViewRecycled(holder);
+			if (holder instanceof BubbleViewHolder bh) bh.recycle();
+		}
+
+		@Override
 		public int getItemCount() { return messages.size(); }
 	}
 
@@ -687,7 +701,16 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			audioDuration = v.findViewById(R.id.audio_duration);
 		}
 
+		void recycle() {
+			if (bubblePlayer != null) {
+				bubblePlayer.release();
+				bubblePlayer = null;
+			}
+			if (videoView != null) videoView.stopPlayback();
+		}
+
 		void bind(NudgeThreadMessage msg) {
+			recycle();
 			if (avatarView != null && partnerAccount != null
 					&& partnerAccount.avatar != null) {
 				ViewImageLoader.load(avatarView, null,
