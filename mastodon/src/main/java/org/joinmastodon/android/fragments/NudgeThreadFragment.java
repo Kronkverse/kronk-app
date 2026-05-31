@@ -194,6 +194,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 							if (result.streak > 0) {
 								setTitle(getTitle() + "  ×" + result.streak);
 							}
+							getToolbar().setSubtitle("@" + partnerAccount.acct);
 						}
 						messages.clear();
 						if (result.messages != null) messages.addAll(result.messages);
@@ -448,6 +449,9 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 		mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS);
 		mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+		mediaRecorder.setAudioEncodingBitRate(128_000);
+		mediaRecorder.setAudioSamplingRate(44_100);
+		mediaRecorder.setAudioChannels(1);
 		mediaRecorder.setOutputFile(voiceFile.getAbsolutePath());
 		try {
 			mediaRecorder.prepare();
@@ -705,7 +709,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 
 	private class BubbleViewHolder extends RecyclerView.ViewHolder {
 		TextView textView, timeView, audioDuration;
-		ImageView imageView;
+		ImageView imageView, avatarView;
 		VideoView videoView;
 		View audioContainer;
 		ImageButton audioPlayBtn;
@@ -717,6 +721,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			timeView = v.findViewById(R.id.message_time);
 			imageView = v.findViewById(R.id.message_image);
 			videoView = v.findViewById(R.id.message_video);
+			avatarView = v.findViewById(R.id.partner_avatar); // null for sent layout
 			v.findViewById(R.id.message_video_container);
 			audioContainer = v.findViewById(R.id.message_audio_container);
 			audioPlayBtn = v.findViewById(R.id.audio_play_btn);
@@ -724,6 +729,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		}
 
 		void bind(NudgeThreadMessage msg) {
+			if (avatarView != null && partnerAccount != null
+					&& partnerAccount.avatar != null) {
+				ViewImageLoader.load(avatarView, null,
+						new UrlImageLoaderRequest(partnerAccount.avatar, V.dp(32), V.dp(32)));
+			}
 			// Reset all
 			textView.setVisibility(View.GONE);
 			imageView.setVisibility(View.GONE);
