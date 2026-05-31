@@ -2,7 +2,6 @@ package org.joinmastodon.android.fragments;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
@@ -29,7 +28,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.joinmastodon.android.GlobalUserPreferences;
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.api.requests.accounts.GetNudgeThread;
 import org.joinmastodon.android.api.requests.accounts.SendNudge;
@@ -194,6 +192,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 							if (result.streak > 0) {
 								setTitle(getTitle() + "  ×" + result.streak);
 							}
+							getToolbar().setSubtitle("@" + partnerAccount.acct);
 						}
 						messages.clear();
 						if (result.messages != null) messages.addAll(result.messages);
@@ -244,7 +243,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 					public void onSuccess(Attachment result) {
 						if (getActivity() == null) return;
 						attachBtn.setEnabled(true);
-						showMediaConfirmDialog(uri, result.id, isVideo);
+						// Messenger-style: go directly to compose bar, no confirm dialog
+						pendingMediaId = result.id;
+						pendingMediaUri = uri;
+						pendingMediaIsVideo = isVideo;
+						showMediaPreview();
 					}
 					@Override
 					public void onError(ErrorResponse error) {
@@ -256,108 +259,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 				.exec(accountID);
 	}
 
-	private void showMediaConfirmDialog(Uri uri, String mediaId, boolean isVideo) {
-		Activity activity = getActivity();
-		if (activity == null) return;
-
-		View v = LayoutInflater.from(activity).inflate(R.layout.dialog_nudge_confirm_media, null);
-		ImageView imgView = v.findViewById(R.id.confirm_image);
-		VideoView videoView = v.findViewById(R.id.confirm_video);
-		TextView caption = v.findViewById(R.id.confirm_caption);
-
-		String name = partnerAccount != null
-				? (partnerAccount.displayName.isEmpty() ? partnerAccount.username : partnerAccount.displayName)
-				: partnerAccountId;
-		caption.setText(activity.getString(R.string.nudge_confirm_send_to, name));
-
-		if (isVideo) {
-			videoView.setVisibility(View.VISIBLE);
-			videoView.setVideoURI(uri);
-			videoView.setOnPreparedListener(mp -> {
-				mp.setLooping(false);
-				videoView.start();
-			});
-		} else {
-			imgView.setVisibility(View.VISIBLE);
-			imgView.setImageURI(uri);
-		}
-
-		new AlertDialog.Builder(activity)
-				.setView(v)
-				.setPositiveButton(R.string.nudge_confirm_send, (d, w) -> {
-					if (isVideo) videoView.stopPlayback();
-					pendingMediaId = mediaId;
-					pendingMediaUri = uri;
-					pendingMediaIsVideo = isVideo;
-					showMediaPreview();
-				})
-				.setNegativeButton(android.R.string.cancel, (d, w) -> {
-					if (isVideo) videoView.stopPlayback();
-				})
-				.setOnCancelListener(d -> {
-					if (isVideo) videoView.stopPlayback();
-				})
-				.show();
-	}
-
-	private void showVoiceConfirmDialog() {
-		Activity activity = getActivity();
-		if (activity == null || voiceFile == null) return;
-
-		View v = LayoutInflater.from(activity).inflate(R.layout.dialog_nudge_confirm_media, null);
-		View voiceContainer = v.findViewById(R.id.confirm_voice_container);
-		ImageButton playBtn = v.findViewById(R.id.confirm_voice_play_btn);
-		TextView durationTv = v.findViewById(R.id.confirm_voice_duration);
-		TextView caption = v.findViewById(R.id.confirm_caption);
-
-		voiceContainer.setVisibility(View.VISIBLE);
-		durationTv.setText(activity.getString(R.string.nudge_voice_duration, voiceSeconds));
-
-		String name = partnerAccount != null
-				? (partnerAccount.displayName.isEmpty() ? partnerAccount.username : partnerAccount.displayName)
-				: partnerAccountId;
-		caption.setText(activity.getString(R.string.nudge_confirm_send_to, name));
-
-		final MediaPlayer[] previewPlayer = {null};
-		playBtn.setOnClickListener(btn -> {
-			if (previewPlayer[0] != null && previewPlayer[0].isPlaying()) {
-				previewPlayer[0].pause();
-				playBtn.setImageResource(R.drawable.ic_play_24);
-			} else {
-				if (previewPlayer[0] == null) {
-					previewPlayer[0] = new MediaPlayer();
-					try {
-						previewPlayer[0].setDataSource(voiceFile.getAbsolutePath());
-						previewPlayer[0].prepare();
-					} catch (IOException e) {
-						return;
-					}
-					previewPlayer[0].setOnCompletionListener(mp ->
-							playBtn.setImageResource(R.drawable.ic_play_24));
-				}
-				previewPlayer[0].start();
-				playBtn.setImageResource(R.drawable.ic_pause_24);
-			}
-		});
-
-		final int capturedSeconds = voiceSeconds;
-		new AlertDialog.Builder(activity)
-				.setView(v)
-				.setPositiveButton(R.string.nudge_confirm_send, (d, w) -> {
-					if (previewPlayer[0] != null) { previewPlayer[0].release(); }
-					recordedSeconds = capturedSeconds;
-					showVoicePreview();
-				})
-				.setNegativeButton(android.R.string.cancel, (d, w) -> {
-					if (previewPlayer[0] != null) { previewPlayer[0].release(); }
-					deleteVoiceFile();
-				})
-				.setOnCancelListener(d -> {
-					if (previewPlayer[0] != null) { previewPlayer[0].release(); }
-					deleteVoiceFile();
-				})
-				.show();
-	}
 
 	private void showMediaPreview() {
 		if (pendingMediaUri == null) return;
@@ -448,6 +349,9 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 		mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS);
 		mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+		mediaRecorder.setAudioEncodingBitRate(128_000);
+		mediaRecorder.setAudioSamplingRate(44_100);
+		mediaRecorder.setAudioChannels(1);
 		mediaRecorder.setOutputFile(voiceFile.getAbsolutePath());
 		try {
 			mediaRecorder.prepare();
@@ -497,7 +401,9 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		updateSendButton();
 
 		if (save && voiceFile != null && voiceFile.exists()) {
-			showVoiceConfirmDialog();
+			// Messenger-style: go directly to compose bar, no confirm dialog
+			recordedSeconds = voiceSeconds;
+			showVoicePreview();
 		} else {
 			deleteVoiceFile();
 		}
@@ -705,7 +611,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 
 	private class BubbleViewHolder extends RecyclerView.ViewHolder {
 		TextView textView, timeView, audioDuration;
-		ImageView imageView;
+		ImageView imageView, avatarView;
 		VideoView videoView;
 		View audioContainer;
 		ImageButton audioPlayBtn;
@@ -717,6 +623,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			timeView = v.findViewById(R.id.message_time);
 			imageView = v.findViewById(R.id.message_image);
 			videoView = v.findViewById(R.id.message_video);
+			avatarView = v.findViewById(R.id.partner_avatar); // null for sent layout
 			v.findViewById(R.id.message_video_container);
 			audioContainer = v.findViewById(R.id.message_audio_container);
 			audioPlayBtn = v.findViewById(R.id.audio_play_btn);
@@ -724,6 +631,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		}
 
 		void bind(NudgeThreadMessage msg) {
+			if (avatarView != null && partnerAccount != null
+					&& partnerAccount.avatar != null) {
+				ViewImageLoader.load(avatarView, null,
+						new UrlImageLoaderRequest(partnerAccount.avatar, V.dp(32), V.dp(32)));
+			}
 			// Reset all
 			textView.setVisibility(View.GONE);
 			imageView.setVisibility(View.GONE);
