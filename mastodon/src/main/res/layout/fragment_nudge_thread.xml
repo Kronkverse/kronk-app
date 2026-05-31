@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:fitsSystemWindows="false">
+
+	<!-- Toolbar injected by ToolbarFragment -->
+
+	<ProgressBar
+		android:id="@+id/progress"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center"
+		android:layout_weight="1"
+		android:visibility="gone"/>
+
+	<androidx.recyclerview.widget.RecyclerView
+		android:id="@+id/message_list"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:clipToPadding="false"
+		android:paddingHorizontal="12dp"
+		android:paddingVertical="8dp"
+		android:scrollbars="none"/>
+
+	<!-- Compose area -->
+	<LinearLayout
+		android:id="@+id/compose_area"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:background="?attr/colorM3Surface"
+		android:elevation="4dp">
+
+		<!-- Attachment / voice preview -->
+		<FrameLayout
+			android:id="@+id/media_preview_container"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:paddingHorizontal="12dp"
+			android:paddingTop="8dp"
+			android:visibility="gone">
+
+			<ImageView
+				android:id="@+id/media_preview_image"
+				android:layout_width="100dp"
+				android:layout_height="100dp"
+				android:scaleType="centerCrop"
+				android:background="@drawable/bg_compose_nudge_input"
+				android:clipToOutline="true"
+				android:visibility="gone"/>
+
+			<VideoView
+				android:id="@+id/media_preview_video"
+				android:layout_width="140dp"
+				android:layout_height="100dp"
+				android:visibility="gone"/>
+
+			<ImageButton
+				android:id="@+id/remove_media_btn"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:layout_gravity="top|start"
+				android:layout_marginStart="84dp"
+				android:layout_marginTop="-6dp"
+				android:background="?attr/colorM3Primary"
+				android:src="@drawable/ic_baseline_close_24"
+				android:tint="?attr/colorM3OnPrimary"
+				android:padding="2dp"
+				android:contentDescription="@string/remove"/>
+
+		</FrameLayout>
+
+		<!-- Voice recording preview -->
+		<LinearLayout
+			android:id="@+id/voice_preview_container"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingHorizontal="12dp"
+			android:paddingTop="8dp"
+			android:paddingBottom="4dp"
+			android:visibility="gone">
+
+			<ImageButton
+				android:id="@+id/voice_play_btn"
+				android:layout_width="36dp"
+				android:layout_height="36dp"
+				android:background="?attr/colorM3SecondaryContainer"
+				android:src="@drawable/ic_play_24"
+				android:tint="?attr/colorM3OnSecondaryContainer"
+				android:padding="6dp"
+				android:contentDescription="@string/nudge_play_voice"/>
+
+			<TextView
+				android:id="@+id/voice_preview_duration"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:layout_marginStart="10dp"
+				android:textSize="13sp"
+				android:textColor="?attr/colorM3OnSurface"/>
+
+			<ImageButton
+				android:id="@+id/remove_voice_btn"
+				android:layout_width="32dp"
+				android:layout_height="32dp"
+				android:background="@null"
+				android:src="@drawable/ic_baseline_close_24"
+				android:tint="?attr/colorM3OnSurfaceVariant"
+				android:contentDescription="@string/remove"/>
+
+		</LinearLayout>
+
+		<!-- Recording indicator row -->
+		<LinearLayout
+			android:id="@+id/recording_indicator"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingHorizontal="16dp"
+			android:paddingTop="6dp"
+			android:visibility="gone">
+
+			<View
+				android:id="@+id/record_dot"
+				android:layout_width="8dp"
+				android:layout_height="8dp"
+				android:background="@drawable/bg_record_dot"
+				android:layout_marginEnd="8dp"/>
+
+			<TextView
+				android:id="@+id/voice_timer"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="13sp"
+				android:textColor="?attr/colorM3Error"
+				android:text="0s"/>
+
+			<TextView
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:layout_marginStart="8dp"
+				android:textSize="13sp"
+				android:textColor="?attr/colorM3OnSurfaceVariant"
+				android:text="@string/nudge_recording"/>
+
+		</LinearLayout>
+
+		<!-- Input row -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="bottom"
+			android:paddingHorizontal="8dp"
+			android:paddingVertical="8dp">
+
+			<ImageButton
+				android:id="@+id/attach_btn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/bg_round_ripple"
+				android:src="@drawable/ic_add_photo_alternate_24px"
+				android:tint="?attr/colorM3OnSurfaceVariant"
+				android:contentDescription="@string/nudge_compose_attach_media"
+				android:padding="8dp"/>
+
+			<EditText
+				android:id="@+id/message_input"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:minHeight="40dp"
+				android:maxHeight="120dp"
+				android:background="@drawable/bg_compose_nudge_input"
+				android:paddingHorizontal="14dp"
+				android:paddingVertical="10dp"
+				android:textSize="14sp"
+				android:textColor="?attr/colorM3OnSurface"
+				android:hint="@string/nudge_compose_hint"
+				android:inputType="textMultiLine|textCapSentences"
+				android:maxLines="5"
+				android:gravity="center_vertical"/>
+
+			<ImageButton
+				android:id="@+id/voice_btn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="4dp"
+				android:background="@drawable/bg_round_ripple"
+				android:src="@drawable/ic_mic_24px"
+				android:tint="?attr/colorM3OnSurfaceVariant"
+				android:contentDescription="@string/nudge_thread_record"
+				android:padding="8dp"/>
+
+			<ImageButton
+				android:id="@+id/send_btn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="4dp"
+				android:background="?attr/colorM3Primary"
+				android:src="@drawable/ic_arrow_upward_20px"
+				android:tint="?attr/colorM3OnPrimary"
+				android:contentDescription="@string/nudge_thread_send"
+				android:padding="8dp"/>
+
+		</LinearLayout>
+
+		<!-- Word count row -->
+		<TextView
+			android:id="@+id/word_count"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:paddingHorizontal="16dp"
+			android:paddingBottom="6dp"
+			android:textSize="11sp"
+			android:textColor="?attr/colorM3OnSurfaceVariant"
+			android:gravity="end"
+			android:visibility="gone"/>
+
+	</LinearLayout>
+
+</LinearLayout>
