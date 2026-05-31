@@ -76,6 +76,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private VideoView mediaPreviewVideo;
 	private TextView voicePreviewDuration, voiceTimer, wordCount;
 
+	// Partner banner
+	private View partnerBanner;
+	private ImageView bannerAvatar;
+	private TextView bannerName, bannerAcct, bannerStreak;
+
 	private final List<NudgeThreadMessage> messages = new ArrayList<>();
 	private MessageAdapter adapter;
 	private boolean canNudgeBack;
@@ -89,6 +94,10 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private String pendingVoiceId;
 	private int recordedSeconds;
 	private boolean isPlaying;
+
+	// Optimistic voice upload: starts immediately when recording stops
+	private boolean voiceUploadInProgress = false;
+	private boolean sendWhenUploadDone = false;
 
 	// Recording
 	private MediaRecorder mediaRecorder;
@@ -139,6 +148,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		voicePreviewDuration = view.findViewById(R.id.voice_preview_duration);
 		voiceTimer = view.findViewById(R.id.voice_timer);
 		wordCount = view.findViewById(R.id.word_count);
+		partnerBanner = view.findViewById(R.id.partner_banner);
+		bannerAvatar = view.findViewById(R.id.banner_avatar);
+		bannerName = view.findViewById(R.id.banner_name);
+		bannerAcct = view.findViewById(R.id.banner_acct);
+		bannerStreak = view.findViewById(R.id.banner_streak);
 
 		adapter = new MessageAdapter();
 		LinearLayoutManager llm = new LinearLayoutManager(getActivity());
@@ -187,12 +201,23 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 						if (result.account != null) {
 							try { result.account.postprocess(); } catch (Exception ignored) {}
 							partnerAccount = result.account;
-							setTitle(partnerAccount.displayName.isEmpty()
-									? partnerAccount.username : partnerAccount.displayName);
-							if (result.streak > 0) {
-								setTitle(getTitle() + "  ×" + result.streak);
-							}
+							String displayName = partnerAccount.displayName == null || partnerAccount.displayName.isEmpty()
+									? partnerAccount.username : partnerAccount.displayName;
+							setTitle(displayName);
 							getToolbar().setSubtitle("@" + partnerAccount.acct);
+							bannerName.setText(displayName);
+							bannerAcct.setText("@" + partnerAccount.acct);
+							if (partnerAccount.avatar != null) {
+								ViewImageLoader.load(bannerAvatar, null,
+										new UrlImageLoaderRequest(partnerAccount.avatar, V.dp(40), V.dp(40)));
+							}
+							if (result.streak > 0) {
+								bannerStreak.setText(getString(R.string.nudge_thread_streak, result.streak));
+								bannerStreak.setVisibility(View.VISIBLE);
+							} else {
+								bannerStreak.setVisibility(View.GONE);
+							}
+							partnerBanner.setVisibility(View.VISIBLE);
 						}
 						messages.clear();
 						if (result.messages != null) messages.addAll(result.messages);
@@ -300,6 +325,8 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private void clearVoice() {
 		pendingVoiceId = null;
 		recordedSeconds = 0;
+		voiceUploadInProgress = false;
+		sendWhenUploadDone = false;
 		voicePreviewContainer.setVisibility(View.GONE);
 		if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
 		deleteVoiceFile();
@@ -401,9 +428,34 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		updateSendButton();
 
 		if (save && voiceFile != null && voiceFile.exists()) {
-			// Messenger-style: go directly to compose bar, no confirm dialog
 			recordedSeconds = voiceSeconds;
 			showVoicePreview();
+			// Start uploading in background immediately so Send is instant
+			voiceUploadInProgress = true;
+			final File fileToUpload = voiceFile;
+			new UploadNudgeVoice(fileToUpload)
+					.setCallback(new Callback<Attachment>() {
+						@Override
+						public void onSuccess(Attachment result) {
+							if (getActivity() == null) return;
+							pendingVoiceId = result.id;
+							voiceUploadInProgress = false;
+							if (sendWhenUploadDone) {
+								sendWhenUploadDone = false;
+								String text = messageInput.getText().toString().trim();
+								doSend(text, pendingMediaId, pendingVoiceId);
+							}
+						}
+						@Override
+						public void onError(ErrorResponse error) {
+							if (getActivity() == null) return;
+							voiceUploadInProgress = false;
+							sendWhenUploadDone = false;
+							sendBtn.setEnabled(true);
+							error.showToast(getActivity());
+						}
+					})
+					.exec(accountID);
 		} else {
 			deleteVoiceFile();
 		}
@@ -453,23 +505,28 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		sendBtn.setEnabled(false);
 
 		if (hasVoice && pendingVoiceId == null) {
-			// Upload voice first, then send
-			new UploadNudgeVoice(voiceFile)
-					.setCallback(new Callback<Attachment>() {
-						@Override
-						public void onSuccess(Attachment result) {
-							if (getActivity() == null) return;
-							pendingVoiceId = result.id;
-							doSend(text, pendingMediaId, pendingVoiceId);
-						}
-						@Override
-						public void onError(ErrorResponse error) {
-							if (getActivity() == null) return;
-							sendBtn.setEnabled(true);
-							error.showToast(getActivity());
-						}
-					})
-					.exec(accountID);
+			if (voiceUploadInProgress) {
+				// Background upload still running — queue send for when it completes
+				sendWhenUploadDone = true;
+			} else {
+				// Fallback: upload now (shouldn't normally happen)
+				new UploadNudgeVoice(voiceFile)
+						.setCallback(new Callback<Attachment>() {
+							@Override
+							public void onSuccess(Attachment result) {
+								if (getActivity() == null) return;
+								pendingVoiceId = result.id;
+								doSend(text, pendingMediaId, pendingVoiceId);
+							}
+							@Override
+							public void onError(ErrorResponse error) {
+								if (getActivity() == null) return;
+								sendBtn.setEnabled(true);
+								error.showToast(getActivity());
+							}
+						})
+						.exec(accountID);
+			}
 		} else {
 			doSend(text, pendingMediaId, pendingVoiceId);
 		}
@@ -659,7 +716,10 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 					itemView.findViewById(R.id.message_video_container).setVisibility(View.VISIBLE);
 					videoView.setVisibility(View.VISIBLE);
 					videoView.setVideoPath(msg.media_url);
-					videoView.setOnPreparedListener(mp -> { mp.setLooping(false); videoView.start(); });
+					android.widget.MediaController mc = new android.widget.MediaController(itemView.getContext());
+					mc.setAnchorView(videoView);
+					videoView.setMediaController(mc);
+					videoView.setOnPreparedListener(mp -> mp.setLooping(false));
 				} else {
 					imageView.setVisibility(View.VISIBLE);
 					ViewImageLoader.load(imageView, null,

@@ -15,6 +15,64 @@
 		android:layout_weight="1"
 		android:visibility="gone"/>
 
+	<!-- Partner banner — shown after thread loads -->
+	<LinearLayout
+		android:id="@+id/partner_banner"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:paddingHorizontal="16dp"
+		android:paddingVertical="12dp"
+		android:visibility="gone">
+
+		<ImageView
+			android:id="@+id/banner_avatar"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:scaleType="centerCrop"
+			android:background="@drawable/bg_compose_nudge_input"
+			android:clipToOutline="true"/>
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:orientation="vertical"
+			android:layout_marginStart="12dp">
+
+			<TextView
+				android:id="@+id/banner_name"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="15sp"
+				android:textStyle="bold"
+				android:textColor="?attr/colorM3OnSurface"
+				android:maxLines="1"
+				android:ellipsize="end"/>
+
+			<TextView
+				android:id="@+id/banner_acct"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="13sp"
+				android:textColor="?attr/colorM3OnSurfaceVariant"
+				android:maxLines="1"
+				android:ellipsize="end"/>
+
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/banner_streak"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="15sp"
+			android:textStyle="bold"
+			android:textColor="?attr/colorM3Primary"
+			android:visibility="gone"/>
+
+	</LinearLayout>
+
 	<androidx.recyclerview.widget.RecyclerView
 		android:id="@+id/message_list"
 		android:layout_width="match_parent"
