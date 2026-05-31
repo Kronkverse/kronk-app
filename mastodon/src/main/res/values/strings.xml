@@ -1047,6 +1047,7 @@ End-to-end encrypted</string>
     <string name="nudge_waiting_for_reply">Waiting for them to nudge back first</string>
     <string name="nudge_time_now">now</string>
     <string name="nudge_thread_streak">×%d</string>
+    <string name="nudge_voice_upload_failed">Voice upload failed — please try again</string>
     <!-- Last message previews -->
     <string name="nudge_preview_you">You: </string>
     <string name="nudge_preview_image">Image</string>
