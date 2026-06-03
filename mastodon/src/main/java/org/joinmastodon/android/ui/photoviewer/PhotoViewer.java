@@ -71,6 +71,7 @@ import org.joinmastodon.android.events.StatusCountersUpdatedEvent;
 import org.joinmastodon.android.fragments.BaseStatusListFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
 import org.joinmastodon.android.api.requests.statuses.GetMediaTags;
+import org.joinmastodon.android.ui.sheets.TagPeopleSheet;
 import org.joinmastodon.android.model.Attachment;
 import org.joinmastodon.android.model.MediaTag;
 import org.joinmastodon.android.model.Status;
@@ -145,7 +146,7 @@ public class PhotoViewer implements ZoomPanView.Listener{
 	private TextView altText;
 	private TextView taggedNamesView;
 	private final Map<String, List<MediaTag>> tagCache=new HashMap<>();
-	private ImageButton backButton, downloadButton;
+	private ImageButton backButton, downloadButton, tagButton;
 	private View bottomBar;
 	private View postActions;
 	private View replyBtn, boostBtn, favoriteBtn, shareBtn, bookmarkBtn;
@@ -286,6 +287,8 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		backButton.setOnClickListener(v->onStartSwipeToDismissTransition(0));
 		downloadButton=uiOverlay.findViewById(R.id.btn_download);
 		downloadButton.setOnClickListener(v->saveCurrentFile());
+		tagButton=uiOverlay.findViewById(R.id.btn_tag);
+		tagButton.setOnClickListener(v->openTagSheet());
 		bottomBar=uiOverlay.findViewById(R.id.bottom_bar);
 		postActions=uiOverlay.findViewById(R.id.post_actions);
 		
@@ -427,6 +430,7 @@ public class PhotoViewer implements ZoomPanView.Listener{
 
 	public void removeMenu(){
 		downloadButton.setVisibility(View.GONE);
+		tagButton.setVisibility(View.GONE);
 	}
 
 	@Override
@@ -586,6 +590,17 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		}
 		updateAltText();
 		fetchTagsForAttachment(att);
+	}
+
+	private void openTagSheet(){
+		Attachment att=attachments.get(currentIndex);
+		if(att.id==null) return;
+		TagPeopleSheet sheet=new TagPeopleSheet(activity, att.id, accountID, ()->{
+			// Bust cache and refresh tags for this attachment
+			tagCache.remove(att.id);
+			fetchTagsForAttachment(att);
+		});
+		sheet.show();
 	}
 
 	private void fetchTagsForAttachment(Attachment att){
