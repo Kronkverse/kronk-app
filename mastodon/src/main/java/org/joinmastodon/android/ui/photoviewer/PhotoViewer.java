@@ -70,7 +70,9 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.StatusCountersUpdatedEvent;
 import org.joinmastodon.android.fragments.BaseStatusListFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
+import org.joinmastodon.android.api.requests.statuses.GetMediaTags;
 import org.joinmastodon.android.model.Attachment;
+import org.joinmastodon.android.model.MediaTag;
 import org.joinmastodon.android.model.Status;
 import org.joinmastodon.android.model.StatusPrivacy;
 import org.joinmastodon.android.ui.M3AlertDialogBuilder;
@@ -86,9 +88,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import me.grishka.appkit.api.Callback;
+import me.grishka.appkit.api.ErrorResponse;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -135,6 +143,8 @@ public class PhotoViewer implements ZoomPanView.Listener{
 	private ImageButton videoPlayPauseButton;
 	private View videoControls;
 	private TextView altText;
+	private TextView taggedNamesView;
+	private final Map<String, List<MediaTag>> tagCache=new HashMap<>();
 	private ImageButton backButton, downloadButton;
 	private View bottomBar;
 	private View postActions;
@@ -303,6 +313,8 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		altText=uiOverlay.findViewById(R.id.alt_text);
 		altText.setOnClickListener(v->showAltTextSheet());
 		updateAltText();
+		taggedNamesView=uiOverlay.findViewById(R.id.tagged_names);
+		fetchTagsForAttachment(attachments.get(currentIndex));
 		updateBackgroundColor(currentIndex, 0);
 
 		if(status==null){
@@ -573,6 +585,60 @@ public class PhotoViewer implements ZoomPanView.Listener{
 			updateVideoTimeText(0);
 		}
 		updateAltText();
+		fetchTagsForAttachment(att);
+	}
+
+	private void fetchTagsForAttachment(Attachment att){
+		String mediaId=att.id;
+		if(mediaId==null){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		if(att.type!=Attachment.Type.IMAGE && att.type!=Attachment.Type.GIFV && att.type!=Attachment.Type.VIDEO){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		// Show from cache immediately (or hide if not cached yet)
+		updateTaggedNamesView(tagCache.get(mediaId));
+		if(tagCache.containsKey(mediaId)) return;
+
+		new GetMediaTags(mediaId)
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(List<MediaTag> result){
+						tagCache.put(mediaId, result);
+						Attachment current=attachments.get(currentIndex);
+						if(mediaId.equals(current.id)){
+							updateTaggedNamesView(result);
+						}
+					}
+
+					@Override
+					public void onError(ErrorResponse error){
+						tagCache.put(mediaId, Collections.emptyList());
+					}
+				})
+				.exec(accountID);
+	}
+
+	private void updateTaggedNamesView(List<MediaTag> tags){
+		if(tags==null || tags.isEmpty()){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		String names=tags.stream()
+				.filter(t->t.account!=null)
+				.map(t->{
+					String name=t.account.displayName;
+					return (name!=null && !name.isEmpty()) ? name : t.account.username;
+				})
+				.collect(Collectors.joining(", "));
+		if(names.isEmpty()){
+			taggedNamesView.setVisibility(View.GONE);
+		}else{
+			taggedNamesView.setText("With "+names);
+			taggedNamesView.setVisibility(View.VISIBLE);
+		}
 	}
 
 	private void updateAltText(){
