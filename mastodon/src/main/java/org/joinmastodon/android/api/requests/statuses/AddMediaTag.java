@@ -5,7 +5,7 @@ import org.joinmastodon.android.model.MediaTag;
 
 public class AddMediaTag extends MastodonAPIRequest<MediaTag> {
 	public AddMediaTag(String mediaId, String accountId, double x, double y) {
-		super(HttpMethod.POST, "/media/" + mediaId + "/tag", MediaTag.class);
+		super(HttpMethod.POST, "/media/" + mediaId + "/tags", MediaTag.class);
 		Body body = new Body();
 		body.account_id = accountId;
 		body.x = x;
