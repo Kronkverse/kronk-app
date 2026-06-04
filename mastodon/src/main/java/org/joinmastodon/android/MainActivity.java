@@ -23,12 +23,14 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.fragments.AssistContentProviderFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
 import org.joinmastodon.android.fragments.HomeFragment;
+import org.joinmastodon.android.fragments.NudgeThreadFragment;
 import org.joinmastodon.android.fragments.ProfileFragment;
 import org.joinmastodon.android.fragments.SplashFragment;
 import org.joinmastodon.android.fragments.ThreadFragment;
 import org.joinmastodon.android.fragments.onboarding.AccountActivationFragment;
 import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Notification;
+import org.joinmastodon.android.model.NotificationType;
 import org.joinmastodon.android.model.SearchResults;
 import org.joinmastodon.android.ui.utils.UiUtils;
 import org.joinmastodon.android.updater.GithubSelfUpdater;
@@ -215,7 +217,10 @@ public class MainActivity extends FragmentStackActivity{
 			Log.w("MainActivity", x);
 			return;
 		}
-		if(notification.status!=null){
+		if(notification.type==NotificationType.NUDGE && notification.account!=null){
+			fragment=new NudgeThreadFragment();
+			args.putString("partnerAccountId", notification.account.id);
+		}else if(notification.status!=null){
 			fragment=new ThreadFragment();
 			args.putParcelable("status", Parcels.wrap(notification.status));
 		}else{
