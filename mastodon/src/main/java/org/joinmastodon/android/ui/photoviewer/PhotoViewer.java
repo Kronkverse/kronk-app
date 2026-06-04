@@ -37,7 +37,11 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.util.Property;
 import android.view.ContextThemeWrapper;
@@ -70,6 +74,7 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.StatusCountersUpdatedEvent;
 import org.joinmastodon.android.fragments.BaseStatusListFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
+import org.joinmastodon.android.api.requests.statuses.DeleteMediaTag;
 import org.joinmastodon.android.api.requests.statuses.GetMediaTags;
 import org.joinmastodon.android.ui.sheets.TagPeopleSheet;
 import org.joinmastodon.android.model.Attachment;
@@ -641,19 +646,65 @@ public class PhotoViewer implements ZoomPanView.Listener{
 			taggedNamesView.setVisibility(View.GONE);
 			return;
 		}
-		String names=tags.stream()
-				.filter(t->t.account!=null)
-				.map(t->{
-					String name=t.account.displayName;
-					return (name!=null && !name.isEmpty()) ? name : t.account.username;
-				})
-				.collect(Collectors.joining(", "));
-		if(names.isEmpty()){
+		String selfId=AccountSessionManager.getInstance().getAccount(accountID).self.id;
+		SpannableStringBuilder sb=new SpannableStringBuilder("With ");
+		boolean first=true;
+		for(MediaTag tag:tags){
+			if(tag.account==null) continue;
+			String name=tag.account.displayName;
+			if(name==null || name.isEmpty()) name=tag.account.username;
+			if(name==null || name.isEmpty()) continue;
+			if(!first) sb.append(", ");
+			first=false;
+			sb.append(name);
+			if(tag.accountId.equals(selfId)){
+				sb.append(" ");
+				int start=sb.length();
+				sb.append("×");
+				final String mediaId=attachments.get(currentIndex).id;
+				final String removeAccountId=tag.accountId;
+				sb.setSpan(new ClickableSpan(){
+					@Override
+					public void onClick(@NonNull View widget){
+						removeOwnTag(mediaId, removeAccountId);
+					}
+					@Override
+					public void updateDrawState(@NonNull android.text.TextPaint ds){
+						ds.setColor(ds.linkColor);
+						ds.setUnderlineText(false);
+					}
+				}, start, sb.length(), 0);
+			}
+		}
+		if(sb.length()<=5){
 			taggedNamesView.setVisibility(View.GONE);
 		}else{
-			taggedNamesView.setText("With "+names);
+			taggedNamesView.setMovementMethod(LinkMovementMethod.getInstance());
+			taggedNamesView.setText(sb);
 			taggedNamesView.setVisibility(View.VISIBLE);
 		}
+	}
+
+	private void removeOwnTag(String mediaId, String accountIdToRemove){
+		new DeleteMediaTag(mediaId, accountIdToRemove)
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(Void result){
+						List<MediaTag> updated=tagCache.get(mediaId);
+						if(updated!=null){
+							updated=new ArrayList<>(updated);
+							updated.removeIf(t->t.accountId.equals(accountIdToRemove));
+							tagCache.put(mediaId, updated);
+							Attachment current=attachments.get(currentIndex);
+							if(mediaId.equals(current.id)){
+								updateTaggedNamesView(updated);
+							}
+						}
+					}
+					@Override
+					public void onError(ErrorResponse error){}
+				})
+				.exec(accountID);
 	}
 
 	private void updateAltText(){

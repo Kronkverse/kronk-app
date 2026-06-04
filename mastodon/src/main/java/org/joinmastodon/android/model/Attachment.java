@@ -14,6 +14,8 @@ import org.parceler.Parcel;
 import org.parceler.ParcelConstructor;
 import org.parceler.ParcelProperty;
 
+import java.util.List;
+
 @Parcel
 public class Attachment extends BaseModel{
 	@RequiredField
@@ -28,6 +30,7 @@ public class Attachment extends BaseModel{
 	@ParcelProperty("blurhash")
 	public String blurhash;
 	public Metadata meta;
+	public List<MediaTag> tags;
 
 	public transient Drawable blurhashPlaceholder;
 
