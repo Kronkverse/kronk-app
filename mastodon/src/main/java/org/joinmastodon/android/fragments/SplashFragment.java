@@ -33,8 +33,8 @@ import me.grishka.appkit.views.BottomSheet;
 
 public class SplashFragment extends AppKitFragment{
 
-	// TEMP: staging server for tagging test — revert to mastodon.kronk.info before final merge
-	private static final String DEFAULT_SERVER="dev.mastodon.kronk.info";
+	// Hardcoded to Kronk instance - no other servers allowed
+	private static final String DEFAULT_SERVER="mastodon.kronk.info";
 
 	private SizeListenerFrameLayout contentView;
 	private View artContainer, blueFill, greenFill;
