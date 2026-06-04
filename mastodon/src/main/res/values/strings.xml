@@ -993,6 +993,7 @@ End-to-end encrypted</string>
     <string name="error_loading">Failed to load</string>
 
     <string name="user_nudged_you">%s has nudged you</string>
+    <string name="user_tagged_you_in_photo">%s tagged you in a photo</string>
     <string name="nudge">Nudge</string>
     <string name="nudged">Nudged!</string>
     <string name="nudge_waiting">Waiting…</string>
