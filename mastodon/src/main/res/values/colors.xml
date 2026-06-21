@@ -132,6 +132,7 @@
 	<color name="kronk_nudge_brand_deep">#6364FF</color>     <!-- ui-highlight-color: blurple-500 -->
 	<color name="kronk_nudge_base">#28293C</color>           <!-- ui-base-color: hsl(240,16%,19%) -->
 	<color name="kronk_nudge_base_lighter">#3E3F5A</color>   <!-- lighten(ui-base-color, 8%) -->
+	<color name="kronk_nudge_base_subtle">#2D2E45</color>    <!-- lighten(ui-base-color, 2%) — subtle card -->
 	<color name="kronk_nudge_base_darker">#1F2030</color>    <!-- darken(ui-base-color, 4%) (sent bubble text) -->
 	<color name="kronk_nudge_text">#FFFFFF</color>
 	<color name="kronk_nudge_text_muted">#9A9BB5</color>     <!-- dark-text-color -->
