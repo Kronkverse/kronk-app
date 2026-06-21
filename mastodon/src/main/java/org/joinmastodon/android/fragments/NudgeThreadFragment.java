@@ -83,9 +83,9 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private ImageView bannerAvatar;
 	private TextView bannerName, bannerAcct;
 
-	// Pair header (Kronk logo + per-partner sent/received counters)
+	// Pair header (per-partner sent / received / streak)
 	private View pairHeader;
-	private TextView pairSent, pairReceived;
+	private TextView pairSent, pairReceived, pairStreak;
 
 	// Post share card
 	private View postShareCard;
@@ -158,6 +158,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		pairHeader = view.findViewById(R.id.pair_header);
 		pairSent = view.findViewById(R.id.pair_sent);
 		pairReceived = view.findViewById(R.id.pair_received);
+		pairStreak = view.findViewById(R.id.pair_streak);
 
 		postShareCard = view.findViewById(R.id.post_share_card);
 		postShareAvatar = view.findViewById(R.id.post_share_avatar);
@@ -328,6 +329,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 						if (getActivity() == null || pairHeader == null) return;
 						pairSent.setText(getString(R.string.nudge_pair_sent, result.sent_count));
 						pairReceived.setText(getString(R.string.nudge_pair_received, result.received_count));
+						pairStreak.setText(getString(R.string.nudge_pair_streak, result.streak));
 						pairHeader.setVisibility(View.VISIBLE);
 					}
 					@Override
