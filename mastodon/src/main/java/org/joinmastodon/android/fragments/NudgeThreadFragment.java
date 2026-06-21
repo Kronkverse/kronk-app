@@ -60,7 +60,8 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private static final int MAX_WORDS = 100;
 
 	private static final String[] REACTION_EMOJIS = {"💛", "⭐", "😊"};
-	private static final Set<Integer> MILESTONES = new HashSet<>(Arrays.asList(10, 25, 50, 100));
+	private static final Set<Integer> MILESTONES = new HashSet<>(Arrays.asList(250, 500, 1000, 2000, 4000, 8000, 10000));
+	private static final String MILESTONE_PREFS = "kronk_nudge_milestones_seen";
 
 	private String accountID;       // logged-in user account id
 	private String partnerAccountId;
@@ -99,7 +100,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private final List<NudgeThreadMessage> messages = new ArrayList<>();
 	private MessageAdapter adapter;
 	private int streak;
-	private int lastNotifiedMilestone;
 
 	// Compose state
 	private String pendingMediaId;
@@ -133,7 +133,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	public void onViewCreated(View view, Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		setTitle(partnerAccountId);
+		setTitle("");
 
 		progress = view.findViewById(R.id.progress);
 		messageList = view.findViewById(R.id.message_list);
@@ -281,8 +281,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 							partnerAccount = result.account;
 							String displayName = partnerAccount.displayName == null || partnerAccount.displayName.isEmpty()
 									? partnerAccount.username : partnerAccount.displayName;
-							setTitle(displayName);
-							getToolbar().setSubtitle("@" + partnerAccount.acct);
 							bannerName.setText(displayName);
 							bannerAcct.setText("@" + partnerAccount.acct);
 							if (partnerAccount.avatar != null) {
@@ -322,8 +320,13 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private void maybeShowMilestone(int prev, int next) {
 		if (next <= prev) return;
 		if (!MILESTONES.contains(next)) return;
-		if (lastNotifiedMilestone == next) return;
-		lastNotifiedMilestone = next;
+		if (getActivity() == null) return;
+		android.content.SharedPreferences prefs = getActivity()
+				.getSharedPreferences(MILESTONE_PREFS, android.content.Context.MODE_PRIVATE);
+		String key = accountID + ":" + next;
+		if (prefs.getBoolean(key, false)) return;
+		prefs.edit().putBoolean(key, true).apply();
+
 		milestoneText.setText(getString(R.string.nudge_milestone, next));
 		milestoneBanner.setVisibility(View.VISIBLE);
 		milestoneBanner.setAlpha(0f);
