@@ -140,6 +140,19 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 
 		setTitle("");
 
+		// Shrink the toolbar — the back arrow is the only thing in it,
+		// so a 40dp bar (vs the default 56dp) saves visible space.
+		android.widget.Toolbar toolbar = getToolbar();
+		if (toolbar != null) {
+			android.view.ViewGroup.LayoutParams tlp = toolbar.getLayoutParams();
+			tlp.height = V.dp(40);
+			toolbar.setLayoutParams(tlp);
+			toolbar.setMinimumHeight(V.dp(40));
+			toolbar.setPadding(0, 0, 0, 0);
+			toolbar.setContentInsetsAbsolute(0, 0);
+			toolbar.setContentInsetStartWithNavigation(0);
+		}
+
 		progress = view.findViewById(R.id.progress);
 		messageList = view.findViewById(R.id.message_list);
 		messageInput = view.findViewById(R.id.message_input);
