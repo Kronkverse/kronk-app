@@ -1055,6 +1055,21 @@ End-to-end encrypted</string>
     <string name="nudge_preview_video">Video</string>
     <string name="nudge_preview_voice">Voice memo</string>
     <string name="nudge_preview_plain">Nudged</string>
+    <!-- Polish: ticks, expiry, replies, reactions, post share, milestones -->
+    <string name="nudge_seen">Seen</string>
+    <string name="nudge_expired">This message has expired</string>
+    <string name="nudge_expiry_hours">%dh left</string>
+    <string name="nudge_expiry_minutes">%dm left</string>
+    <string name="nudge_milestone">%d nudges!</string>
+    <string name="nudge_sharing_post">Sharing post</string>
+    <string name="nudge_reply_voice_label">Voice message</string>
+    <string name="nudge_reply_image_label">Image</string>
+    <string name="nudge_reply_default_label">Nudge</string>
+    <string name="nudge_reply">Reply</string>
+    <string name="nudge_cancel_reply">Cancel reply</string>
+    <string name="nudge_remove_attachment">Remove</string>
+    <string name="nudge_remove_post">Remove post</string>
+    <string name="nudge_about_post">Nudge about this post</string>
     <string name="kommons_the_forest">The Forest</string>
     <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
     <string name="space_bar_asked_question">asked a question</string>
