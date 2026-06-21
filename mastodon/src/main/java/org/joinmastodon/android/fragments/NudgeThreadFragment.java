@@ -81,7 +81,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	// Partner banner
 	private View partnerBanner;
 	private ImageView bannerAvatar;
-	private TextView bannerName, bannerAcct, bannerStreak;
+	private TextView bannerName, bannerAcct;
 
 	// Pair header (Kronk logo + per-partner sent/received counters)
 	private View pairHeader;
@@ -154,7 +154,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		bannerAvatar = view.findViewById(R.id.banner_avatar);
 		bannerName = view.findViewById(R.id.banner_name);
 		bannerAcct = view.findViewById(R.id.banner_acct);
-		bannerStreak = view.findViewById(R.id.banner_streak);
 
 		pairHeader = view.findViewById(R.id.pair_header);
 		pairSent = view.findViewById(R.id.pair_sent);
@@ -296,12 +295,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 							if (partnerAccount.avatar != null) {
 								ViewImageLoader.load(bannerAvatar, null,
 										new UrlImageLoaderRequest(partnerAccount.avatar, V.dp(40), V.dp(40)));
-							}
-							if (result.streak > 0) {
-								bannerStreak.setText(getString(R.string.nudge_thread_streak, result.streak));
-								bannerStreak.setVisibility(View.VISIBLE);
-							} else {
-								bannerStreak.setVisibility(View.GONE);
 							}
 							partnerBanner.setVisibility(View.VISIBLE);
 						}

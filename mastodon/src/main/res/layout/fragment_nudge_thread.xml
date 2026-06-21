@@ -28,20 +28,11 @@
 		android:paddingBottom="6dp"
 		android:visibility="gone">
 
-		<ImageView
-			android:id="@+id/pair_logo"
-			android:layout_width="28dp"
-			android:layout_height="28dp"
-			android:scaleType="fitCenter"
-			android:src="@drawable/kronk_logo"
-			android:contentDescription="Kronk"/>
-
 		<LinearLayout
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal"
-			android:gravity="center_vertical"
-			android:layout_marginTop="6dp">
+			android:gravity="center_vertical">
 
 			<TextView
 				android:id="@+id/pair_sent"
@@ -120,20 +111,6 @@
 
 		</LinearLayout>
 
-		<!-- Streak pill — brand-coloured chip -->
-		<TextView
-			android:id="@+id/banner_streak"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:minHeight="26dp"
-			android:gravity="center"
-			android:paddingHorizontal="12dp"
-			android:paddingVertical="3dp"
-			android:textSize="13sp"
-			android:textStyle="bold"
-			android:textColor="@color/kronk_nudge_base_darker"
-			android:background="@drawable/bg_nudge_streak_pill"
-			android:visibility="gone"/>
 
 	</LinearLayout>
 
