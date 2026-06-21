@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.joinmastodon.android.R;
+import org.joinmastodon.android.api.requests.accounts.GetNudgeStreak;
 import org.joinmastodon.android.api.requests.accounts.GetNudgeThread;
 import org.joinmastodon.android.api.requests.accounts.SendNudge;
 import org.joinmastodon.android.api.requests.notifications.NudgeReact;
@@ -81,6 +82,10 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private View partnerBanner;
 	private ImageView bannerAvatar;
 	private TextView bannerName, bannerAcct, bannerStreak;
+
+	// Pair header (Kronk logo + per-partner sent/received counters)
+	private View pairHeader;
+	private TextView pairSent, pairReceived;
 
 	// Post share card
 	private View postShareCard;
@@ -150,6 +155,10 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		bannerName = view.findViewById(R.id.banner_name);
 		bannerAcct = view.findViewById(R.id.banner_acct);
 		bannerStreak = view.findViewById(R.id.banner_streak);
+
+		pairHeader = view.findViewById(R.id.pair_header);
+		pairSent = view.findViewById(R.id.pair_sent);
+		pairReceived = view.findViewById(R.id.pair_received);
 
 		postShareCard = view.findViewById(R.id.post_share_card);
 		postShareAvatar = view.findViewById(R.id.post_share_avatar);
@@ -271,6 +280,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private void loadThread() {
 		progress.setVisibility(View.VISIBLE);
 		messageList.setVisibility(View.GONE);
+		loadPairCounts();
 		new GetNudgeThread(partnerAccountId)
 				.setCallback(new Callback<NudgeThreadResponse>() {
 					@Override
@@ -312,6 +322,24 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 						progress.setVisibility(View.GONE);
 						messageList.setVisibility(View.VISIBLE);
 						error.showToast(getActivity());
+					}
+				})
+				.exec(accountID);
+	}
+
+	private void loadPairCounts() {
+		new GetNudgeStreak(partnerAccountId)
+				.setCallback(new Callback<NudgeResult>() {
+					@Override
+					public void onSuccess(NudgeResult result) {
+						if (getActivity() == null || pairHeader == null) return;
+						pairSent.setText(getString(R.string.nudge_pair_sent, result.sent_count));
+						pairReceived.setText(getString(R.string.nudge_pair_received, result.received_count));
+						pairHeader.setVisibility(View.VISIBLE);
+					}
+					@Override
+					public void onError(ErrorResponse error) {
+						// silent — pair header just stays hidden
 					}
 				})
 				.exec(accountID);

@@ -16,6 +16,63 @@
 		android:layout_weight="1"
 		android:visibility="gone"/>
 
+	<!-- Kronk logo + per-partner counter strip -->
+	<LinearLayout
+		android:id="@+id/pair_header"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:gravity="center_horizontal"
+		android:paddingHorizontal="16dp"
+		android:paddingTop="12dp"
+		android:paddingBottom="6dp"
+		android:visibility="gone">
+
+		<ImageView
+			android:id="@+id/pair_logo"
+			android:layout_width="28dp"
+			android:layout_height="28dp"
+			android:scaleType="fitCenter"
+			android:src="@drawable/kronk_logo"
+			android:contentDescription="Kronk"/>
+
+		<LinearLayout
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:layout_marginTop="6dp">
+
+			<TextView
+				android:id="@+id/pair_sent"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="11sp"
+				android:textStyle="bold"
+				android:letterSpacing="0.04"
+				android:textColor="@color/kronk_nudge_brand"/>
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:paddingHorizontal="8dp"
+				android:textSize="11sp"
+				android:textColor="@color/kronk_nudge_text_muted"
+				android:text="·"/>
+
+			<TextView
+				android:id="@+id/pair_received"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="11sp"
+				android:textStyle="bold"
+				android:letterSpacing="0.04"
+				android:textColor="@color/kronk_nudge_gold"/>
+
+		</LinearLayout>
+
+	</LinearLayout>
+
 	<!-- Partner banner — shown after thread loads -->
 	<LinearLayout
 		android:id="@+id/partner_banner"

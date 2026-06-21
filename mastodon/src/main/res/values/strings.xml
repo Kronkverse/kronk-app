@@ -1070,6 +1070,8 @@ End-to-end encrypted</string>
     <string name="nudge_remove_attachment">Remove</string>
     <string name="nudge_remove_post">Remove post</string>
     <string name="nudge_about_post">Nudge about this post</string>
+    <string name="nudge_pair_sent">%d sent</string>
+    <string name="nudge_pair_received">%d received</string>
     <string name="kommons_the_forest">The Forest</string>
     <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
     <string name="space_bar_asked_question">asked a question</string>
