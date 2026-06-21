@@ -12,34 +12,36 @@
 		android:layout_height="wrap_content"
 		android:orientation="vertical"
 		android:paddingHorizontal="16dp"
-		android:paddingVertical="14dp"
+		android:paddingVertical="16dp"
 		android:background="@drawable/bg_nudge_stats_card">
 
 		<TextView
-			android:layout_width="wrap_content"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
+			android:gravity="center"
 			android:textSize="11sp"
 			android:letterSpacing="0.07"
 			android:textStyle="bold"
-			android:textColor="?colorM3OnSurfaceVariant"
+			android:textColor="@color/kronk_nudge_text_muted"
 			android:text="@string/nudge_grand_total_title"/>
 
 		<TextView
 			android:id="@+id/grand_total_number"
-			android:layout_width="wrap_content"
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="2dp"
-			android:textSize="30sp"
+			android:layout_marginTop="4dp"
+			android:gravity="center"
+			android:textSize="34sp"
 			android:textStyle="bold"
-			android:lineHeight="30sp"
-			android:textColor="?attr/colorM3Primary"/>
+			android:lineHeight="36sp"
+			android:textColor="@color/kronk_nudge_brand"/>
 
 		<View
 			android:layout_width="match_parent"
 			android:layout_height="1dp"
-			android:layout_marginTop="10dp"
-			android:layout_marginBottom="10dp"
-			android:background="?attr/colorM3OutlineVariant"/>
+			android:layout_marginTop="12dp"
+			android:layout_marginBottom="12dp"
+			android:background="@color/kronk_nudge_base_lighter"/>
 
 		<LinearLayout
 			android:layout_width="match_parent"
@@ -56,21 +58,23 @@
 
 				<TextView
 					android:id="@+id/total_sent_number"
-					android:layout_width="wrap_content"
+					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
+					android:gravity="center"
 					android:textSize="22sp"
 					android:textStyle="bold"
-					android:lineHeight="22sp"
-					android:textColor="?attr/colorM3Primary"/>
+					android:lineHeight="24sp"
+					android:textColor="@color/kronk_nudge_brand"/>
 
 				<TextView
-					android:layout_width="wrap_content"
+					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:layout_marginTop="3dp"
+					android:gravity="center"
 					android:textSize="11sp"
 					android:letterSpacing="0.08"
 					android:textStyle="bold"
-					android:textColor="?colorM3OnSurfaceVariant"
+					android:textColor="@color/kronk_nudge_text_muted"
 					android:text="@string/nudge_total_sent"/>
 
 			</LinearLayout>
@@ -78,7 +82,7 @@
 			<View
 				android:layout_width="1dp"
 				android:layout_height="36dp"
-				android:background="?attr/colorM3OutlineVariant"
+				android:background="@color/kronk_nudge_base_lighter"
 				android:layout_marginHorizontal="8dp"/>
 
 			<LinearLayout
@@ -90,21 +94,23 @@
 
 				<TextView
 					android:id="@+id/total_received_number"
-					android:layout_width="wrap_content"
+					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
+					android:gravity="center"
 					android:textSize="22sp"
 					android:textStyle="bold"
-					android:lineHeight="22sp"
-					android:textColor="?attr/colorM3Primary"/>
+					android:lineHeight="24sp"
+					android:textColor="@color/kronk_nudge_brand"/>
 
 				<TextView
-					android:layout_width="wrap_content"
+					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:layout_marginTop="3dp"
+					android:gravity="center"
 					android:textSize="11sp"
 					android:letterSpacing="0.08"
 					android:textStyle="bold"
-					android:textColor="?colorM3OnSurfaceVariant"
+					android:textColor="@color/kronk_nudge_text_muted"
 					android:text="@string/nudge_total_received"/>
 
 			</LinearLayout>
@@ -115,12 +121,13 @@
 			android:id="@+id/pending_hint"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="10dp"
+			android:layout_gravity="center_horizontal"
+			android:layout_marginTop="12dp"
 			android:paddingHorizontal="10dp"
 			android:paddingVertical="4dp"
 			android:textSize="12sp"
 			android:textStyle="bold"
-			android:textColor="?attr/colorM3OnTertiaryContainer"
+			android:textColor="@color/kronk_nudge_base_darker"
 			android:background="@drawable/bg_nudge_pending_badge"
 			android:visibility="gone"/>
 

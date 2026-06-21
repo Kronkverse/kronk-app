@@ -46,7 +46,7 @@
 			android:layout_height="wrap_content"
 			android:textSize="15sp"
 			android:textStyle="bold"
-			android:textColor="?attr/colorM3OnSurface"
+			android:textColor="@color/kronk_nudge_text"
 			android:singleLine="true"
 			android:ellipsize="end"/>
 
@@ -55,7 +55,7 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:textSize="13sp"
-			android:textColor="?colorM3OnSurfaceVariant"
+			android:textColor="@color/kronk_nudge_text_muted"
 			android:singleLine="true"
 			android:ellipsize="end"/>
 
@@ -71,7 +71,7 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:textSize="12sp"
-				android:textColor="?attr/colorM3Primary"/>
+				android:textColor="@color/kronk_nudge_brand"/>
 
 			<TextView
 				android:id="@+id/streak_received"
@@ -79,7 +79,7 @@
 				android:layout_height="wrap_content"
 				android:layout_marginStart="10dp"
 				android:textSize="12sp"
-				android:textColor="?attr/colorM3Tertiary"/>
+				android:textColor="@color/kronk_nudge_brand"/>
 
 		</LinearLayout>
 
@@ -89,7 +89,7 @@
 			android:layout_height="wrap_content"
 			android:layout_marginTop="1dp"
 			android:textSize="11sp"
-			android:textColor="?colorM3OnSurfaceVariant"
+			android:textColor="@color/kronk_nudge_text_muted"
 			android:alpha="0.65"
 			android:visibility="gone"/>
 
@@ -99,7 +99,7 @@
 			android:layout_height="wrap_content"
 			android:layout_marginTop="3dp"
 			android:textSize="12sp"
-			android:textColor="?colorM3OnSurfaceVariant"
+			android:textColor="@color/kronk_nudge_text_muted"
 			android:singleLine="true"
 			android:ellipsize="end"
 			android:visibility="gone"/>
