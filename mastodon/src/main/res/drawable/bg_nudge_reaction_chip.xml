@@ -2,16 +2,16 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 	<item android:state_selected="true">
 		<shape>
-			<solid android:color="?attr/colorM3PrimaryContainer"/>
+			<solid android:color="@color/kronk_nudge_brand_tint"/>
 			<corners android:radius="10dp"/>
-			<stroke android:width="1dp" android:color="?attr/colorM3Primary"/>
+			<stroke android:width="1dp" android:color="@color/kronk_nudge_brand"/>
 		</shape>
 	</item>
 	<item>
 		<shape>
-			<solid android:color="?attr/colorM3SurfaceVariant"/>
+			<solid android:color="@color/kronk_nudge_base_lighter"/>
 			<corners android:radius="10dp"/>
-			<stroke android:width="1dp" android:color="?attr/colorM3OutlineVariant"/>
+			<stroke android:width="1dp" android:color="@color/kronk_nudge_base"/>
 		</shape>
 	</item>
 </selector>
