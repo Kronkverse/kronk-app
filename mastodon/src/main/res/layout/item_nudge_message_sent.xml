@@ -66,17 +66,6 @@
 				android:lineSpacingMultiplier="1.3"
 				android:visibility="gone"/>
 
-			<TextView
-				android:id="@+id/message_expired"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textSize="13sp"
-				android:textStyle="italic"
-				android:textColor="@color/kronk_nudge_base_darker"
-				android:alpha="0.7"
-				android:text="@string/nudge_expired"
-				android:visibility="gone"/>
-
 			<ImageView
 				android:id="@+id/message_image"
 				android:layout_width="220dp"
@@ -125,16 +114,6 @@
 					android:textSize="11sp"
 					android:alpha="0.7"
 					android:textColor="@color/kronk_nudge_base_darker"/>
-
-				<TextView
-					android:id="@+id/message_expiry"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:layout_marginStart="6dp"
-					android:textSize="10sp"
-					android:alpha="0.85"
-					android:textColor="@color/kronk_nudge_gold"
-					android:visibility="gone"/>
 
 				<TextView
 					android:id="@+id/message_status"

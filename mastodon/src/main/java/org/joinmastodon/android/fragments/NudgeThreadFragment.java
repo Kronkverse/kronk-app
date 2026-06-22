@@ -546,24 +546,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		}
 	}
 
-	private String formatExpiry(String isoStr) {
-		if (isoStr == null) return "";
-		Date d = parseIso(isoStr);
-		if (d == null) return "";
-		long ms = d.getTime() - System.currentTimeMillis();
-		if (ms <= 0) return getString(R.string.nudge_expired);
-		long h = ms / 3_600_000L;
-		long m = (ms % 3_600_000L) / 60_000L;
-		if (h > 0) return getString(R.string.nudge_expiry_hours, (int) h);
-		return getString(R.string.nudge_expiry_minutes, Math.max(1, (int) m));
-	}
-
-	private boolean isExpired(String isoStr) {
-		if (isoStr == null) return false;
-		Date d = parseIso(isoStr);
-		return d != null && d.getTime() <= System.currentTimeMillis();
-	}
-
 	private Date parseIso(String isoStr) {
 		try {
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
@@ -674,7 +656,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	}
 
 	private class BubbleViewHolder extends RecyclerView.ViewHolder {
-		TextView textView, timeView, expiredView, expiryView, statusView, replyQuoteIcon, replyQuoteBody, voiceLegacyView;
+		TextView textView, timeView, statusView, replyQuoteIcon, replyQuoteBody, voiceLegacyView;
 		ImageView imageView, avatarView;
 		VideoView videoView;
 		View replyQuote, reactionsRow;
@@ -688,8 +670,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			videoView = v.findViewById(R.id.message_video);
 			avatarView = v.findViewById(R.id.partner_avatar); // null for sent layout
 			voiceLegacyView = v.findViewById(R.id.message_voice_legacy);
-			expiredView = v.findViewById(R.id.message_expired);
-			expiryView = v.findViewById(R.id.message_expiry);
 			statusView = v.findViewById(R.id.message_status); // null for received layout
 			replyQuote = v.findViewById(R.id.reply_quote);
 			replyQuoteIcon = v.findViewById(R.id.reply_quote_icon);
@@ -714,8 +694,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			// Reset all
 			textView.setVisibility(View.GONE);
 			imageView.setVisibility(View.GONE);
-			expiredView.setVisibility(View.GONE);
-			expiryView.setVisibility(View.GONE);
 			if (statusView != null) statusView.setVisibility(View.GONE);
 			replyQuote.setVisibility(View.GONE);
 			if (voiceLegacyView != null) voiceLegacyView.setVisibility(View.GONE);
@@ -725,8 +703,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 				if (v(R.id.message_video_container) != null)
 					v(R.id.message_video_container).setVisibility(View.GONE);
 			}
-
-			boolean expired = isExpired(msg.expires_at);
 
 			// Reply quote (above content)
 			if (msg.in_reply_to != null) {
@@ -749,44 +725,34 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 				replyQuoteBody.setText(body);
 			}
 
-			if (expired) {
-				expiredView.setVisibility(View.VISIBLE);
-			} else {
-				if (msg.body != null && !msg.body.isEmpty()) {
-					textView.setText(msg.body);
-					textView.setVisibility(View.VISIBLE);
-				}
+			if (msg.body != null && !msg.body.isEmpty()) {
+				textView.setText(msg.body);
+				textView.setVisibility(View.VISIBLE);
+			}
 
-				if (msg.media_url != null) {
-					boolean isVideo = msg.media_content_type != null
-							&& msg.media_content_type.startsWith("video/");
-					if (isVideo && videoView != null) {
-						itemView.findViewById(R.id.message_video_container).setVisibility(View.VISIBLE);
-						videoView.setVisibility(View.VISIBLE);
-						videoView.setVideoPath(msg.media_url);
-						android.widget.MediaController mc = new android.widget.MediaController(itemView.getContext());
-						mc.setAnchorView(videoView);
-						videoView.setMediaController(mc);
-						videoView.setOnPreparedListener(mp -> mp.setLooping(false));
-					} else {
-						imageView.setVisibility(View.VISIBLE);
-						ViewImageLoader.load(imageView, null,
-								new UrlImageLoaderRequest(msg.media_url, V.dp(220), V.dp(180)));
-					}
+			if (msg.media_url != null) {
+				boolean isVideo = msg.media_content_type != null
+						&& msg.media_content_type.startsWith("video/");
+				if (isVideo && videoView != null) {
+					itemView.findViewById(R.id.message_video_container).setVisibility(View.VISIBLE);
+					videoView.setVisibility(View.VISIBLE);
+					videoView.setVideoPath(msg.media_url);
+					android.widget.MediaController mc = new android.widget.MediaController(itemView.getContext());
+					mc.setAnchorView(videoView);
+					videoView.setMediaController(mc);
+					videoView.setOnPreparedListener(mp -> mp.setLooping(false));
+				} else {
+					imageView.setVisibility(View.VISIBLE);
+					ViewImageLoader.load(imageView, null,
+							new UrlImageLoaderRequest(msg.media_url, V.dp(220), V.dp(180)));
 				}
+			}
 
-				if (msg.voice_url != null && voiceLegacyView != null) {
-					voiceLegacyView.setVisibility(View.VISIBLE);
-				}
+			if (msg.voice_url != null && voiceLegacyView != null) {
+				voiceLegacyView.setVisibility(View.VISIBLE);
 			}
 
 			timeView.setText(formatTime(msg.created_at));
-
-			// Expiry indicator
-			if (msg.expires_at != null && !expired) {
-				expiryView.setText(formatExpiry(msg.expires_at));
-				expiryView.setVisibility(View.VISIBLE);
-			}
 
 			// Status tick / Seen (sent layout only)
 			if (statusView != null && "sent".equals(msg.direction)) {

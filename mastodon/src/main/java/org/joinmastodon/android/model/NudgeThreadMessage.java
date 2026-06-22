@@ -11,7 +11,6 @@ public class NudgeThreadMessage extends BaseModel {
 	public String media_content_type;
 	public String voice_url;
 	public String read_at;
-	public String expires_at;
 	public InReplyTo in_reply_to;
 	public Map<String, Reaction> reactions;
 

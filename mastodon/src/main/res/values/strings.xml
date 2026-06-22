@@ -1057,9 +1057,6 @@ End-to-end encrypted</string>
     <string name="nudge_preview_plain">Nudged</string>
     <!-- Polish: ticks, expiry, replies, reactions, post share, milestones -->
     <string name="nudge_seen">Seen</string>
-    <string name="nudge_expired">This message has expired</string>
-    <string name="nudge_expiry_hours">%dh left</string>
-    <string name="nudge_expiry_minutes">%dm left</string>
     <string name="nudge_milestone">%d nudges!</string>
     <string name="nudge_sharing_post">Sharing post</string>
     <string name="nudge_reply_voice_label">Voice message</string>
