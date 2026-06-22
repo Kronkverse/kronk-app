@@ -126,4 +126,17 @@
 	<color name="ext_rich_text_decoration_dark">#7A4152</color>
 
 	<item name="overlay_ripple_alpha" format="float" type="dimen">0.12</item>
+
+	<!-- Kronk nudge palette (mirrors web — _variables.scss) -->
+	<color name="kronk_nudge_brand">#8284FF</color>          <!-- highlight-text-color: lighten(blurple-500, 8%) -->
+	<color name="kronk_nudge_brand_deep">#6364FF</color>     <!-- ui-highlight-color: blurple-500 -->
+	<color name="kronk_nudge_base">#28293C</color>           <!-- ui-base-color: hsl(240,16%,19%) -->
+	<color name="kronk_nudge_base_lighter">#3E3F5A</color>   <!-- lighten(ui-base-color, 8%) -->
+	<color name="kronk_nudge_base_subtle">#2D2E45</color>    <!-- lighten(ui-base-color, 2%) — subtle card -->
+	<color name="kronk_nudge_base_darker">#1F2030</color>    <!-- darken(ui-base-color, 4%) (sent bubble text) -->
+	<color name="kronk_nudge_text">#FFFFFF</color>
+	<color name="kronk_nudge_text_muted">#9A9BB5</color>     <!-- dark-text-color -->
+	<color name="kronk_nudge_gold">#CA8F04</color>           <!-- gold-star (expiry) -->
+	<color name="kronk_nudge_brand_translucent">#33FFFFFF</color> <!-- sent reply-quote bg -->
+	<color name="kronk_nudge_brand_tint">#268284FF</color>   <!-- ~15% brand on dark for reaction-me / received reply quote -->
 </resources>

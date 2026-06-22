@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- Top shadow (gradient fading from translucent black to transparent) -->
+	<item android:top="0dp" android:bottom="0dp">
+		<shape>
+			<gradient
+				android:startColor="#33000000"
+				android:endColor="#00000000"
+				android:angle="270"
+				android:type="linear"/>
+			<size android:height="6dp"/>
+		</shape>
+	</item>
+	<!-- Lighter surface that sits on top of the shadow -->
+	<item android:top="6dp">
+		<shape>
+			<solid android:color="@color/kronk_nudge_base_lighter"/>
+		</shape>
+	</item>
+</layer-list>

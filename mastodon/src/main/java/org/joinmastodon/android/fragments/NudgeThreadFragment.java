@@ -1,11 +1,8 @@
 package org.joinmastodon.android.fragments;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
-import android.media.MediaRecorder;
+import android.graphics.Canvas;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,17 +18,19 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.joinmastodon.android.R;
+import org.joinmastodon.android.api.requests.accounts.GetNudgeStreak;
 import org.joinmastodon.android.api.requests.accounts.GetNudgeThread;
 import org.joinmastodon.android.api.requests.accounts.SendNudge;
-import org.joinmastodon.android.api.requests.accounts.UploadNudgeVoice;
+import org.joinmastodon.android.api.requests.notifications.NudgeReact;
+import org.joinmastodon.android.api.requests.notifications.NudgeUnreact;
 import org.joinmastodon.android.api.requests.statuses.UploadAttachment;
 import org.joinmastodon.android.model.Account;
 import org.joinmastodon.android.model.Attachment;
@@ -40,13 +39,14 @@ import org.joinmastodon.android.model.NudgeThreadMessage;
 import org.joinmastodon.android.model.NudgeThreadResponse;
 import org.joinmastodon.android.ui.utils.UiUtils;
 
-import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TimeZone;
 
 import me.grishka.appkit.api.Callback;
@@ -58,9 +58,11 @@ import me.grishka.appkit.utils.V;
 public class NudgeThreadFragment extends MastodonToolbarFragment {
 
 	private static final int MEDIA_PICK_REQUEST = 1001;
-	private static final int RECORD_AUDIO_PERMISSION = 1002;
-	private static final int MAX_VOICE_SECONDS = 60;
 	private static final int MAX_WORDS = 100;
+
+	private static final String[] REACTION_EMOJIS = {"💛", "⭐", "😊"};
+	private static final Set<Integer> MILESTONES = new HashSet<>(Arrays.asList(250, 500, 1000, 2000, 4000, 8000, 10000));
+	private static final String MILESTONE_PREFS = "kronk_nudge_milestones_seen";
 
 	private String accountID;       // logged-in user account id
 	private String partnerAccountId;
@@ -69,44 +71,51 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private RecyclerView messageList;
 	private ProgressBar progress;
 	private EditText messageInput;
-	private ImageButton attachBtn, voiceBtn, sendBtn;
-	private ImageButton removeMediaBtn, removeVoiceBtn, voicePlayBtn;
-	private View mediaPreviewContainer, voicePreviewContainer, recordingIndicator;
+	private ImageButton attachBtn, sendBtn;
+	private ImageButton removeMediaBtn;
+	private View mediaPreviewContainer;
 	private ImageView mediaPreviewImage;
 	private VideoView mediaPreviewVideo;
-	private TextView voicePreviewDuration, voiceTimer, wordCount;
+	private TextView wordCount;
 
 	// Partner banner
 	private View partnerBanner;
 	private ImageView bannerAvatar;
-	private TextView bannerName, bannerAcct, bannerStreak;
+	private TextView bannerName, bannerAcct;
+
+	// Pair header (per-partner sent / received / streak)
+	private View pairHeader;
+	private TextView pairSent, pairReceived, pairStreak;
+
+	// Post share card
+	private View postShareCard;
+	private ImageView postShareAvatar;
+	private TextView postShareName, postShareAcct, postShareBody, postShareUrl;
+	private ImageButton postShareDismiss;
+
+	// Reply banner
+	private View replyBanner;
+	private TextView replyBannerBody;
+	private ImageButton replyBannerDismiss;
+
+	// Milestone banner
+	private View milestoneBanner;
+	private TextView milestoneText;
 
 	private final List<NudgeThreadMessage> messages = new ArrayList<>();
 	private MessageAdapter adapter;
-	private boolean canNudgeBack;
 	private int streak;
 
 	// Compose state
 	private String pendingMediaId;
 	private Uri pendingMediaUri;
 	private boolean pendingMediaIsVideo;
-	private File voiceFile;
-	private String pendingVoiceId;
-	private int recordedSeconds;
-	private boolean isPlaying;
 
-	// Optimistic voice upload: starts immediately when recording stops
-	private boolean voiceUploadInProgress = false;
-	private boolean sendWhenUploadDone = false;
+	// Post share + reply state
+	private String postShareUrlStr;
+	private NudgeThreadMessage replyTo;
 
-	// Recording
-	private MediaRecorder mediaRecorder;
-	private int voiceSeconds;
 	private Handler timerHandler;
-	private Runnable timerRunnable;
-
-	// Voice playback
-	private MediaPlayer mediaPlayer;
 
 	public NudgeThreadFragment() {
 		super();
@@ -129,30 +138,55 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	public void onViewCreated(View view, Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		setTitle(partnerAccountId);
+		setTitle("");
+
+		// Shrink the toolbar — the back arrow is the only thing in it,
+		// so a 40dp bar (vs the default 56dp) saves visible space.
+		android.widget.Toolbar toolbar = getToolbar();
+		if (toolbar != null) {
+			android.view.ViewGroup.LayoutParams tlp = toolbar.getLayoutParams();
+			tlp.height = V.dp(40);
+			toolbar.setLayoutParams(tlp);
+			toolbar.setMinimumHeight(V.dp(40));
+			toolbar.setPadding(0, 0, 0, 0);
+			toolbar.setContentInsetsAbsolute(0, 0);
+			toolbar.setContentInsetStartWithNavigation(0);
+		}
 
 		progress = view.findViewById(R.id.progress);
 		messageList = view.findViewById(R.id.message_list);
 		messageInput = view.findViewById(R.id.message_input);
 		attachBtn = view.findViewById(R.id.attach_btn);
-		voiceBtn = view.findViewById(R.id.voice_btn);
 		sendBtn = view.findViewById(R.id.send_btn);
 		removeMediaBtn = view.findViewById(R.id.remove_media_btn);
-		removeVoiceBtn = view.findViewById(R.id.remove_voice_btn);
-		voicePlayBtn = view.findViewById(R.id.voice_play_btn);
 		mediaPreviewContainer = view.findViewById(R.id.media_preview_container);
-		voicePreviewContainer = view.findViewById(R.id.voice_preview_container);
-		recordingIndicator = view.findViewById(R.id.recording_indicator);
 		mediaPreviewImage = view.findViewById(R.id.media_preview_image);
 		mediaPreviewVideo = view.findViewById(R.id.media_preview_video);
-		voicePreviewDuration = view.findViewById(R.id.voice_preview_duration);
-		voiceTimer = view.findViewById(R.id.voice_timer);
 		wordCount = view.findViewById(R.id.word_count);
 		partnerBanner = view.findViewById(R.id.partner_banner);
 		bannerAvatar = view.findViewById(R.id.banner_avatar);
 		bannerName = view.findViewById(R.id.banner_name);
 		bannerAcct = view.findViewById(R.id.banner_acct);
-		bannerStreak = view.findViewById(R.id.banner_streak);
+
+		pairHeader = view.findViewById(R.id.pair_header);
+		pairSent = view.findViewById(R.id.pair_sent);
+		pairReceived = view.findViewById(R.id.pair_received);
+		pairStreak = view.findViewById(R.id.pair_streak);
+
+		postShareCard = view.findViewById(R.id.post_share_card);
+		postShareAvatar = view.findViewById(R.id.post_share_avatar);
+		postShareName = view.findViewById(R.id.post_share_name);
+		postShareAcct = view.findViewById(R.id.post_share_acct);
+		postShareBody = view.findViewById(R.id.post_share_body);
+		postShareUrl = view.findViewById(R.id.post_share_url);
+		postShareDismiss = view.findViewById(R.id.post_share_dismiss);
+
+		replyBanner = view.findViewById(R.id.reply_banner);
+		replyBannerBody = view.findViewById(R.id.reply_banner_body);
+		replyBannerDismiss = view.findViewById(R.id.reply_banner_dismiss);
+
+		milestoneBanner = view.findViewById(R.id.milestone_banner);
+		milestoneText = view.findViewById(R.id.milestone_text);
 
 		adapter = new MessageAdapter();
 		LinearLayoutManager llm = new LinearLayoutManager(getActivity());
@@ -160,12 +194,34 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		messageList.setLayoutManager(llm);
 		messageList.setAdapter(adapter);
 
+		// Swipe-to-reply
+		ItemTouchHelper.SimpleCallback swipeCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.START | ItemTouchHelper.END) {
+			@Override
+			public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh, @NonNull RecyclerView.ViewHolder tgt) { return false; }
+			@Override
+			public void onSwiped(@NonNull RecyclerView.ViewHolder vh, int dir) {
+				int pos = vh.getBindingAdapterPosition();
+				if (pos >= 0 && pos < messages.size()) {
+					NudgeThreadMessage msg = messages.get(pos);
+					if (msg.notification_id != null) setReplyTo(msg);
+				}
+				adapter.notifyItemChanged(pos);
+			}
+			@Override
+			public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh,
+					float dX, float dY, int actionState, boolean isCurrentlyActive) {
+				// Limit drag distance so it springs back
+				float limited = Math.max(-V.dp(72), Math.min(V.dp(72), dX));
+				super.onChildDraw(c, rv, vh, limited, dY, actionState, isCurrentlyActive);
+			}
+		};
+		new ItemTouchHelper(swipeCallback).attachToRecyclerView(messageList);
+
 		attachBtn.setOnClickListener(v -> openMediaPicker());
-		voiceBtn.setOnClickListener(v -> onVoiceBtnClick());
 		sendBtn.setOnClickListener(v -> sendMessage());
 		removeMediaBtn.setOnClickListener(v -> clearMedia());
-		removeVoiceBtn.setOnClickListener(v -> clearVoice());
-		voicePlayBtn.setOnClickListener(v -> toggleVoicePlayback());
+		postShareDismiss.setOnClickListener(v -> clearPostShare());
+		replyBannerDismiss.setOnClickListener(v -> setReplyTo(null));
 
 		messageInput.addTextChangedListener(new TextWatcher() {
 			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -176,25 +232,68 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			}
 		});
 
+		applyPostShareFromArgs();
+
 		loadThread();
+	}
+
+	private void applyPostShareFromArgs() {
+		Bundle args = getArguments();
+		if (args == null) return;
+		String url = args.getString("postShareUrl");
+		if (url == null || url.isEmpty()) return;
+		postShareUrlStr = url;
+		String name = args.getString("postShareAuthorName");
+		String acct = args.getString("postShareAuthorAcct");
+		String avatar = args.getString("postShareAuthorAvatar");
+		String body = args.getString("postShareBody");
+		postShareCard.setVisibility(View.VISIBLE);
+		postShareName.setText(name == null ? "" : name);
+		postShareAcct.setText(acct == null ? "" : "@" + acct);
+		postShareUrl.setText(url);
+		if (body != null && !body.isEmpty()) {
+			postShareBody.setText(body);
+			postShareBody.setVisibility(View.VISIBLE);
+		} else {
+			postShareBody.setVisibility(View.GONE);
+		}
+		if (avatar != null && !avatar.isEmpty()) {
+			ViewImageLoader.load(postShareAvatar, null,
+					new UrlImageLoaderRequest(avatar, V.dp(22), V.dp(22)));
+		}
+	}
+
+	private void clearPostShare() {
+		postShareUrlStr = null;
+		postShareCard.setVisibility(View.GONE);
+	}
+
+	private void setReplyTo(NudgeThreadMessage msg) {
+		replyTo = msg;
+		if (msg == null) {
+			replyBanner.setVisibility(View.GONE);
+			return;
+		}
+		replyBanner.setVisibility(View.VISIBLE);
+		String label;
+		if (msg.voice_url != null) label = getString(R.string.nudge_reply_voice_label);
+		else if (msg.media_url != null) label = getString(R.string.nudge_reply_image_label);
+		else if (msg.body != null && !msg.body.isEmpty()) label = msg.body;
+		else label = getString(R.string.nudge_reply_default_label);
+		replyBannerBody.setText(label);
+		messageInput.requestFocus();
 	}
 
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
-		stopRecording(false);
-		if (mediaPlayer != null) {
-			mediaPlayer.release();
-			mediaPlayer = null;
-		}
 		timerHandler.removeCallbacksAndMessages(null);
-		// Clean up any temp voice file left behind by an in-progress upload
-		if (voiceFile != null) deleteVoiceFile();
 	}
 
 	private void loadThread() {
 		progress.setVisibility(View.VISIBLE);
 		messageList.setVisibility(View.GONE);
+		loadPairCounts();
 		new GetNudgeThread(partnerAccountId)
 				.setCallback(new Callback<NudgeThreadResponse>() {
 					@Override
@@ -205,31 +304,24 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 							partnerAccount = result.account;
 							String displayName = partnerAccount.displayName == null || partnerAccount.displayName.isEmpty()
 									? partnerAccount.username : partnerAccount.displayName;
-							setTitle(displayName);
-							getToolbar().setSubtitle("@" + partnerAccount.acct);
 							bannerName.setText(displayName);
 							bannerAcct.setText("@" + partnerAccount.acct);
 							if (partnerAccount.avatar != null) {
 								ViewImageLoader.load(bannerAvatar, null,
 										new UrlImageLoaderRequest(partnerAccount.avatar, V.dp(40), V.dp(40)));
 							}
-							if (result.streak > 0) {
-								bannerStreak.setText(getString(R.string.nudge_thread_streak, result.streak));
-								bannerStreak.setVisibility(View.VISIBLE);
-							} else {
-								bannerStreak.setVisibility(View.GONE);
-							}
 							partnerBanner.setVisibility(View.VISIBLE);
 						}
+						int prevStreak = streak;
 						messages.clear();
 						if (result.messages != null) messages.addAll(result.messages);
-						canNudgeBack = result.can_nudge_back;
 						streak = result.streak;
 						progress.setVisibility(View.GONE);
 						messageList.setVisibility(View.VISIBLE);
 						adapter.notifyDataSetChanged();
-						messageList.scrollToPosition(messages.size() - 1);
+						if (!messages.isEmpty()) messageList.scrollToPosition(messages.size() - 1);
 						updateSendButton();
+						maybeShowMilestone(prevStreak, streak);
 					}
 					@Override
 					public void onError(ErrorResponse error) {
@@ -240,6 +332,46 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 					}
 				})
 				.exec(accountID);
+	}
+
+	private void loadPairCounts() {
+		new GetNudgeStreak(partnerAccountId)
+				.setCallback(new Callback<NudgeResult>() {
+					@Override
+					public void onSuccess(NudgeResult result) {
+						if (getActivity() == null || pairHeader == null) return;
+						pairSent.setText(getString(R.string.nudge_pair_sent, result.sent_count));
+						pairReceived.setText(getString(R.string.nudge_pair_received, result.received_count));
+						pairStreak.setText(getString(R.string.nudge_pair_streak, result.streak));
+						pairHeader.setVisibility(View.VISIBLE);
+					}
+					@Override
+					public void onError(ErrorResponse error) {
+						// silent — pair header just stays hidden
+					}
+				})
+				.exec(accountID);
+	}
+
+	private void maybeShowMilestone(int prev, int next) {
+		if (next <= prev) return;
+		if (!MILESTONES.contains(next)) return;
+		if (getActivity() == null) return;
+		android.content.SharedPreferences prefs = getActivity()
+				.getSharedPreferences(MILESTONE_PREFS, android.content.Context.MODE_PRIVATE);
+		String key = accountID + ":" + next;
+		if (prefs.getBoolean(key, false)) return;
+		prefs.edit().putBoolean(key, true).apply();
+
+		milestoneText.setText(getString(R.string.nudge_milestone, next));
+		milestoneBanner.setVisibility(View.VISIBLE);
+		milestoneBanner.setAlpha(0f);
+		milestoneBanner.animate().alpha(1f).setDuration(180).start();
+		timerHandler.postDelayed(() -> {
+			if (milestoneBanner == null) return;
+			milestoneBanner.animate().alpha(0f).setDuration(200)
+					.withEndAction(() -> milestoneBanner.setVisibility(View.GONE)).start();
+		}, 3000);
 	}
 
 	private void openMediaPicker() {
@@ -270,7 +402,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 					public void onSuccess(Attachment result) {
 						if (getActivity() == null) return;
 						attachBtn.setEnabled(true);
-						// Messenger-style: go directly to compose bar, no confirm dialog
 						pendingMediaId = result.id;
 						pendingMediaUri = uri;
 						pendingMediaIsVideo = isVideo;
@@ -299,15 +430,6 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			mediaPreviewImage.setVisibility(View.VISIBLE);
 			mediaPreviewImage.setImageURI(pendingMediaUri);
 		}
-		voiceBtn.setVisibility(View.GONE);
-		updateSendButton();
-	}
-
-	private void showVoicePreview() {
-		voicePreviewContainer.setVisibility(View.VISIBLE);
-		voicePreviewDuration.setText(getString(R.string.nudge_voice_duration, recordedSeconds));
-		attachBtn.setEnabled(false);
-		voiceBtn.setVisibility(View.GONE);
 		updateSendButton();
 	}
 
@@ -319,184 +441,8 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		mediaPreviewImage.setVisibility(View.GONE);
 		mediaPreviewVideo.setVisibility(View.GONE);
 		mediaPreviewVideo.stopPlayback();
-		voiceBtn.setVisibility(View.VISIBLE);
 		attachBtn.setEnabled(true);
 		updateSendButton();
-	}
-
-	private void clearVoice() {
-		pendingVoiceId = null;
-		recordedSeconds = 0;
-		voiceUploadInProgress = false;
-		sendWhenUploadDone = false;
-		voicePreviewContainer.setVisibility(View.GONE);
-		if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
-		deleteVoiceFile();
-		attachBtn.setEnabled(true);
-		voiceBtn.setVisibility(View.VISIBLE);
-		updateSendButton();
-	}
-
-	private void deleteVoiceFile() {
-		if (voiceFile != null) { voiceFile.delete(); voiceFile = null; }
-	}
-
-	// ── Voice recording ───────────────────────────────────────────────────────
-
-	private void onVoiceBtnClick() {
-		if (mediaRecorder != null) {
-			stopRecording(true);
-		} else {
-			if (getActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-					== PackageManager.PERMISSION_GRANTED) {
-				startRecording();
-			} else {
-				requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},
-						RECORD_AUDIO_PERMISSION);
-			}
-		}
-	}
-
-	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		if (requestCode == RECORD_AUDIO_PERMISSION
-				&& grantResults.length > 0
-				&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-			startRecording();
-		}
-	}
-
-	private void startRecording() {
-		try {
-			voiceFile = File.createTempFile("nudge_voice_", ".aac", getActivity().getCacheDir());
-		} catch (IOException e) {
-			return;
-		}
-
-		mediaRecorder = new MediaRecorder();
-		mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-		mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS);
-		mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-		mediaRecorder.setAudioEncodingBitRate(128_000);
-		mediaRecorder.setAudioSamplingRate(44_100);
-		mediaRecorder.setAudioChannels(1);
-		mediaRecorder.setOutputFile(voiceFile.getAbsolutePath());
-		try {
-			mediaRecorder.prepare();
-			mediaRecorder.start();
-		} catch (IOException e) {
-			mediaRecorder.release();
-			mediaRecorder = null;
-			deleteVoiceFile();
-			return;
-		}
-
-		voiceSeconds = 0;
-		recordingIndicator.setVisibility(View.VISIBLE);
-		voiceBtn.setImageResource(R.drawable.ic_close_20px);
-		voiceBtn.setImageTintList(android.content.res.ColorStateList.valueOf(
-				UiUtils.getThemeColor(getActivity(), R.attr.colorM3Error)));
-		attachBtn.setEnabled(false);
-		sendBtn.setEnabled(false);
-
-		timerRunnable = new Runnable() {
-			@Override
-			public void run() {
-				voiceSeconds++;
-				voiceTimer.setText(voiceSeconds + "s");
-				if (voiceSeconds >= MAX_VOICE_SECONDS) {
-					stopRecording(true);
-				} else {
-					timerHandler.postDelayed(this, 1000);
-				}
-			}
-		};
-		timerHandler.postDelayed(timerRunnable, 1000);
-	}
-
-	private void stopRecording(boolean save) {
-		if (mediaRecorder == null) return;
-		timerHandler.removeCallbacks(timerRunnable);
-		try { mediaRecorder.stop(); } catch (RuntimeException ignored) {}
-		mediaRecorder.release();
-		mediaRecorder = null;
-
-		recordingIndicator.setVisibility(View.GONE);
-		voiceBtn.setImageResource(R.drawable.ic_mic_24px);
-		voiceBtn.setImageTintList(android.content.res.ColorStateList.valueOf(
-				UiUtils.getThemeColor(getActivity(), R.attr.colorM3OnSurfaceVariant)));
-		attachBtn.setEnabled(true);
-		updateSendButton();
-
-		if (save && voiceFile != null && voiceFile.exists()) {
-			recordedSeconds = voiceSeconds;
-			showVoicePreview();
-			// Start uploading in background immediately so Send is instant
-			voiceUploadInProgress = true;
-			final File fileToUpload = voiceFile;
-			new UploadNudgeVoice(fileToUpload)
-					.setCallback(new Callback<Attachment>() {
-						@Override
-						public void onSuccess(Attachment result) {
-							if (getActivity() == null) return;
-							pendingVoiceId = result.id;
-							voiceUploadInProgress = false;
-							if (sendWhenUploadDone) {
-								sendWhenUploadDone = false;
-								String text = messageInput.getText().toString().trim();
-								doSend(text, pendingMediaId, pendingVoiceId);
-							}
-						}
-						@Override
-						public void onError(ErrorResponse error) {
-							if (getActivity() == null) return;
-							voiceUploadInProgress = false;
-							boolean wasSendPending = sendWhenUploadDone;
-							sendWhenUploadDone = false;
-							sendBtn.setEnabled(true);
-							if (wasSendPending) {
-								Toast.makeText(getActivity(),
-										R.string.nudge_voice_upload_failed, Toast.LENGTH_SHORT).show();
-							} else {
-								error.showToast(getActivity());
-							}
-						}
-					})
-					.exec(accountID);
-		} else {
-			deleteVoiceFile();
-		}
-	}
-
-	// ── Voice playback (preview in compose) ──────────────────────────────────
-
-	private void toggleVoicePlayback() {
-		if (voiceFile == null || !voiceFile.exists()) return;
-		if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-			mediaPlayer.pause();
-			voicePlayBtn.setImageResource(R.drawable.ic_play_24);
-			isPlaying = false;
-		} else {
-			if (mediaPlayer == null) {
-				mediaPlayer = new MediaPlayer();
-				try {
-					mediaPlayer.setDataSource(voiceFile.getAbsolutePath());
-					mediaPlayer.prepare();
-				} catch (IOException e) {
-					mediaPlayer.release();
-					mediaPlayer = null;
-					return;
-				}
-				mediaPlayer.setOnCompletionListener(mp -> {
-					voicePlayBtn.setImageResource(R.drawable.ic_play_24);
-					isPlaying = false;
-				});
-			}
-			mediaPlayer.start();
-			voicePlayBtn.setImageResource(R.drawable.ic_pause_24);
-			isPlaying = true;
-		}
 	}
 
 	// ── Sending ───────────────────────────────────────────────────────────────
@@ -504,70 +450,41 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private void sendMessage() {
 		if (getActivity() == null) return;
 		String text = messageInput.getText().toString().trim();
-		boolean hasText = !text.isEmpty();
-		boolean hasMedia = pendingMediaId != null;
-		boolean hasVoice = voiceFile != null;
-
-		if (!hasText && !hasMedia && !hasVoice && !canNudgeBack) return;
 
 		sendBtn.setEnabled(false);
-
-		if (hasVoice && pendingVoiceId == null) {
-			if (voiceUploadInProgress) {
-				// Background upload still running — queue send for when it completes
-				sendWhenUploadDone = true;
-			} else {
-				// Fallback: upload now (shouldn't normally happen)
-				new UploadNudgeVoice(voiceFile)
-						.setCallback(new Callback<Attachment>() {
-							@Override
-							public void onSuccess(Attachment result) {
-								if (getActivity() == null) return;
-								pendingVoiceId = result.id;
-								doSend(text, pendingMediaId, pendingVoiceId);
-							}
-							@Override
-							public void onError(ErrorResponse error) {
-								if (getActivity() == null) return;
-								sendBtn.setEnabled(true);
-								error.showToast(getActivity());
-							}
-						})
-						.exec(accountID);
-			}
-		} else {
-			doSend(text, pendingMediaId, pendingVoiceId);
-		}
+		doSend(text, pendingMediaId);
 	}
 
-	private void doSend(String text, String mediaId, String voiceId) {
+	private void doSend(String text, String mediaId) {
+		String finalText = composeOutgoingText(text);
+		String inReplyTo = replyTo != null ? replyTo.notification_id : null;
 		new SendNudge(partnerAccountId,
-				text.isEmpty() ? null : text,
+				finalText == null || finalText.isEmpty() ? null : finalText,
 				mediaId,
-				voiceId)
+				null,
+				inReplyTo)
 				.setCallback(new Callback<NudgeResult>() {
 					@Override
 					public void onSuccess(NudgeResult result) {
 						if (getActivity() == null) return;
 						clearCompose();
 						streak = result.streak;
-						canNudgeBack = result.can_nudge;
 						loadThread();
 					}
 					@Override
 					public void onError(ErrorResponse error) {
 						if (getActivity() == null) return;
 						sendBtn.setEnabled(true);
-						if (error instanceof org.joinmastodon.android.api.MastodonErrorResponse mr
-								&& mr.httpStatus == 422) {
-							Toast.makeText(getActivity(),
-									R.string.nudge_waiting_for_reply, Toast.LENGTH_SHORT).show();
-						} else {
-							error.showToast(getActivity());
-						}
+						error.showToast(getActivity());
 					}
 				})
 				.exec(accountID);
+	}
+
+	private String composeOutgoingText(String text) {
+		if (postShareUrlStr == null || postShareUrlStr.isEmpty()) return text;
+		if (text == null || text.isEmpty()) return postShareUrlStr;
+		return text + "\n" + postShareUrlStr;
 	}
 
 	private void clearCompose() {
@@ -575,16 +492,12 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		pendingMediaId = null;
 		pendingMediaUri = null;
 		pendingMediaIsVideo = false;
-		pendingVoiceId = null;
-		recordedSeconds = 0;
-		deleteVoiceFile();
-		if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
 		mediaPreviewContainer.setVisibility(View.GONE);
 		mediaPreviewImage.setVisibility(View.GONE);
 		mediaPreviewVideo.setVisibility(View.GONE);
-		voicePreviewContainer.setVisibility(View.GONE);
 		attachBtn.setEnabled(true);
-		voiceBtn.setVisibility(View.VISIBLE);
+		setReplyTo(null);
+		clearPostShare();
 		updateWordCount();
 		updateSendButton();
 	}
@@ -607,9 +520,8 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		String text = messageInput.getText().toString().trim();
 		int wc = text.isEmpty() ? 0 : text.split("\\s+").length;
 		boolean overLimit = wc > MAX_WORDS;
-		boolean hasContent = !text.isEmpty() || pendingMediaId != null || voiceFile != null;
-		boolean canSend = !overLimit && (hasContent || canNudgeBack);
-		sendBtn.setEnabled(canSend && mediaRecorder == null);
+		boolean hasContent = !text.isEmpty() || pendingMediaId != null || postShareUrlStr != null;
+		sendBtn.setEnabled(!overLimit);
 
 		if (hasContent) {
 			sendBtn.setImageResource(R.drawable.ic_arrow_upward_20px);
@@ -623,9 +535,7 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	private String formatTime(String isoStr) {
 		if (isoStr == null) return "";
 		try {
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-			Date d = sdf.parse(isoStr);
+			Date d = parseIso(isoStr);
 			if (d == null) return "";
 			long diff = System.currentTimeMillis() - d.getTime();
 			if (diff < 60_000) return getString(R.string.nudge_time_now);
@@ -636,11 +546,76 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 		}
 	}
 
+	private Date parseIso(String isoStr) {
+		try {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+			return sdf.parse(isoStr);
+		} catch (Exception e) {
+			try {
+				SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+				sdf2.setTimeZone(TimeZone.getTimeZone("UTC"));
+				return sdf2.parse(isoStr);
+			} catch (Exception e2) { return null; }
+		}
+	}
+
+	// ── Reactions ─────────────────────────────────────────────────────────────
+
+	private void onReactionClick(NudgeThreadMessage msg, String emoji) {
+		if (msg.notification_id == null) return;
+		if (msg.reactions == null) msg.reactions = new java.util.HashMap<>();
+		NudgeThreadMessage.Reaction current = msg.reactions.get(emoji);
+		boolean wasMine = current != null && current.me;
+		// Optimistic update: clear any existing "me" reaction first, then toggle
+		if (!wasMine) {
+			for (NudgeThreadMessage.Reaction r : msg.reactions.values()) {
+				if (r.me) {
+					r.me = false;
+					r.count = Math.max(0, r.count - 1);
+				}
+			}
+		}
+		if (current == null) {
+			current = new NudgeThreadMessage.Reaction();
+			msg.reactions.put(emoji, current);
+		}
+		if (wasMine) {
+			current.me = false;
+			current.count = Math.max(0, current.count - 1);
+		} else {
+			current.me = true;
+			current.count += 1;
+		}
+		int pos = messages.indexOf(msg);
+		if (pos >= 0) adapter.notifyItemChanged(pos);
+
+		if (wasMine) {
+			new NudgeUnreact(msg.notification_id).setCallback(new Callback<Object>() {
+				@Override public void onSuccess(Object o) {}
+				@Override public void onError(ErrorResponse e) { if (getActivity() != null) loadThread(); }
+			}).exec(accountID);
+		} else {
+			new NudgeReact(msg.notification_id, emoji).setCallback(new Callback<Object>() {
+				@Override public void onSuccess(Object o) {}
+				@Override public void onError(ErrorResponse e) { if (getActivity() != null) loadThread(); }
+			}).exec(accountID);
+		}
+	}
+
 	// ── RecyclerView adapter ──────────────────────────────────────────────────
 
 	private static final int TYPE_SENT     = 0;
 	private static final int TYPE_RECEIVED = 1;
 	private static final int TYPE_PING     = 2;
+
+	private NudgeThreadMessage lastSentMessage() {
+		for (int i = messages.size() - 1; i >= 0; i--) {
+			NudgeThreadMessage m = messages.get(i);
+			if ("sent".equals(m.direction)) return m;
+		}
+		return null;
+	}
 
 	private class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -681,12 +656,11 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 	}
 
 	private class BubbleViewHolder extends RecyclerView.ViewHolder {
-		TextView textView, timeView, audioDuration;
+		TextView textView, timeView, statusView, replyQuoteIcon, replyQuoteBody, voiceLegacyView;
 		ImageView imageView, avatarView;
 		VideoView videoView;
-		View audioContainer;
-		ImageButton audioPlayBtn;
-		MediaPlayer bubblePlayer;
+		View replyQuote, reactionsRow;
+		TextView[] reactionBtns = new TextView[3];
 
 		BubbleViewHolder(View v) {
 			super(v);
@@ -695,17 +669,18 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			imageView = v.findViewById(R.id.message_image);
 			videoView = v.findViewById(R.id.message_video);
 			avatarView = v.findViewById(R.id.partner_avatar); // null for sent layout
-			v.findViewById(R.id.message_video_container);
-			audioContainer = v.findViewById(R.id.message_audio_container);
-			audioPlayBtn = v.findViewById(R.id.audio_play_btn);
-			audioDuration = v.findViewById(R.id.audio_duration);
+			voiceLegacyView = v.findViewById(R.id.message_voice_legacy);
+			statusView = v.findViewById(R.id.message_status); // null for received layout
+			replyQuote = v.findViewById(R.id.reply_quote);
+			replyQuoteIcon = v.findViewById(R.id.reply_quote_icon);
+			replyQuoteBody = v.findViewById(R.id.reply_quote_body);
+			reactionsRow = v.findViewById(R.id.reactions_row);
+			reactionBtns[0] = v.findViewById(R.id.reaction_btn_0);
+			reactionBtns[1] = v.findViewById(R.id.reaction_btn_1);
+			reactionBtns[2] = v.findViewById(R.id.reaction_btn_2);
 		}
 
 		void recycle() {
-			if (bubblePlayer != null) {
-				bubblePlayer.release();
-				bubblePlayer = null;
-			}
 			if (videoView != null) videoView.stopPlayback();
 		}
 
@@ -719,13 +694,36 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 			// Reset all
 			textView.setVisibility(View.GONE);
 			imageView.setVisibility(View.GONE);
+			if (statusView != null) statusView.setVisibility(View.GONE);
+			replyQuote.setVisibility(View.GONE);
+			if (voiceLegacyView != null) voiceLegacyView.setVisibility(View.GONE);
 			if (videoView != null) {
 				videoView.stopPlayback();
 				videoView.setVisibility(View.GONE);
 				if (v(R.id.message_video_container) != null)
 					v(R.id.message_video_container).setVisibility(View.GONE);
 			}
-			audioContainer.setVisibility(View.GONE);
+
+			// Reply quote (above content)
+			if (msg.in_reply_to != null) {
+				replyQuote.setVisibility(View.VISIBLE);
+				String icon = "";
+				if (msg.in_reply_to.voice) icon = "🎤";
+				else if (msg.in_reply_to.image) icon = "🖼️";
+				if (!icon.isEmpty()) {
+					replyQuoteIcon.setText(icon);
+					replyQuoteIcon.setVisibility(View.VISIBLE);
+				} else {
+					replyQuoteIcon.setVisibility(View.GONE);
+				}
+				String body = msg.in_reply_to.body;
+				if (body == null || body.isEmpty()) {
+					if (msg.in_reply_to.voice) body = getString(R.string.nudge_reply_voice_label);
+					else if (msg.in_reply_to.image) body = getString(R.string.nudge_reply_image_label);
+					else body = getString(R.string.nudge_reply_default_label);
+				}
+				replyQuoteBody.setText(body);
+			}
 
 			if (msg.body != null && !msg.body.isEmpty()) {
 				textView.setText(msg.body);
@@ -750,36 +748,47 @@ public class NudgeThreadFragment extends MastodonToolbarFragment {
 				}
 			}
 
-			if (msg.voice_url != null) {
-				audioContainer.setVisibility(View.VISIBLE);
-				audioDuration.setText(R.string.nudge_voice_memo);
-				audioPlayBtn.setOnClickListener(btn -> {
-					if (bubblePlayer != null && bubblePlayer.isPlaying()) {
-						bubblePlayer.pause();
-						audioPlayBtn.setImageResource(R.drawable.ic_play_24);
-					} else {
-						if (bubblePlayer == null) {
-							bubblePlayer = new MediaPlayer();
-							try {
-								bubblePlayer.setDataSource(msg.voice_url);
-								bubblePlayer.prepareAsync();
-								bubblePlayer.setOnPreparedListener(MediaPlayer::start);
-							} catch (IOException e) {
-								bubblePlayer.release();
-								bubblePlayer = null;
-								return;
-							}
-							bubblePlayer.setOnCompletionListener(mp ->
-									audioPlayBtn.setImageResource(R.drawable.ic_play_24));
-						} else {
-							bubblePlayer.start();
-						}
-						audioPlayBtn.setImageResource(R.drawable.ic_pause_24);
-					}
-				});
+			if (msg.voice_url != null && voiceLegacyView != null) {
+				voiceLegacyView.setVisibility(View.VISIBLE);
 			}
 
 			timeView.setText(formatTime(msg.created_at));
+
+			// Status tick / Seen (sent layout only)
+			if (statusView != null && "sent".equals(msg.direction)) {
+				NudgeThreadMessage lastSent = lastSentMessage();
+				if (lastSent != null && msg == lastSent) {
+					statusView.setVisibility(View.VISIBLE);
+					if (msg.read_at != null) {
+						statusView.setText(R.string.nudge_seen);
+						statusView.setAlpha(1f);
+					} else {
+						statusView.setText("✓");
+						statusView.setAlpha(0.7f);
+					}
+				}
+			}
+
+			// Reactions row
+			boolean hasAny = false;
+			for (int i = 0; i < REACTION_EMOJIS.length; i++) {
+				String emoji = REACTION_EMOJIS[i];
+				NudgeThreadMessage.Reaction r = msg.reactions == null ? null : msg.reactions.get(emoji);
+				int count = r == null ? 0 : r.count;
+				boolean mine = r != null && r.me;
+				if (count > 0) hasAny = true;
+				String label = count > 0 ? emoji + " " + count : emoji;
+				reactionBtns[i].setText(label);
+				reactionBtns[i].setSelected(mine);
+				final String emojiF = emoji;
+				reactionBtns[i].setOnClickListener(btn -> onReactionClick(msg, emojiF));
+			}
+			reactionsRow.setVisibility(hasAny ? View.VISIBLE : View.GONE);
+			// Long-press the bubble to reveal reactions even when none yet
+			itemView.setOnLongClickListener(v -> {
+				reactionsRow.setVisibility(View.VISIBLE);
+				return true;
+			});
 		}
 
 		private View v(int id) { return itemView.findViewById(id); }
