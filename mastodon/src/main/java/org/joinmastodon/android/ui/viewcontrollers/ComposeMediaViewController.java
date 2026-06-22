@@ -41,6 +41,8 @@ import org.joinmastodon.android.api.requests.statuses.UploadAttachment;
 import org.joinmastodon.android.fragments.ComposeFragment;
 import org.joinmastodon.android.fragments.ComposeImageDescriptionFragment;
 import org.joinmastodon.android.model.Attachment;
+import org.joinmastodon.android.ui.M3AlertDialogBuilder;
+import org.joinmastodon.android.ui.sheets.TagPeopleSheet;
 import org.joinmastodon.android.model.Instance;
 import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.drawables.EmptyDrawable;
@@ -499,6 +501,17 @@ public class ComposeMediaViewController{
 		if(!areThereAnyUploadingAttachments())
 			uploadNextQueuedAttachment();
 		fragment.updatePublishButtonState();
+		if(attachment.serverAttachment!=null && attachment.serverAttachment.type!=null && attachment.serverAttachment.type.isImage())
+			showTagPrompt(attachment.serverAttachment);
+	}
+
+	private void showTagPrompt(Attachment attachment){
+		new M3AlertDialogBuilder(fragment.getActivity())
+				.setTitle("Tag someone?")
+				.setMessage("Would you like to tag someone in this photo?")
+				.setPositiveButton("Tag", (d, w)->new TagPeopleSheet(fragment.getActivity(), attachment.id, fragment.getAccountID(), null).show())
+				.setNegativeButton("Skip", null)
+				.show();
 	}
 
 	private void uploadNextQueuedAttachment(){

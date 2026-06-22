@@ -37,7 +37,11 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.util.Property;
 import android.view.ContextThemeWrapper;
@@ -70,7 +74,11 @@ import org.joinmastodon.android.api.session.AccountSessionManager;
 import org.joinmastodon.android.events.StatusCountersUpdatedEvent;
 import org.joinmastodon.android.fragments.BaseStatusListFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
+import org.joinmastodon.android.api.requests.statuses.DeleteMediaTag;
+import org.joinmastodon.android.api.requests.statuses.GetMediaTags;
+import org.joinmastodon.android.ui.sheets.TagPeopleSheet;
 import org.joinmastodon.android.model.Attachment;
+import org.joinmastodon.android.model.MediaTag;
 import org.joinmastodon.android.model.Status;
 import org.joinmastodon.android.model.StatusPrivacy;
 import org.joinmastodon.android.ui.M3AlertDialogBuilder;
@@ -86,9 +94,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import me.grishka.appkit.api.Callback;
+import me.grishka.appkit.api.ErrorResponse;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -135,7 +149,9 @@ public class PhotoViewer implements ZoomPanView.Listener{
 	private ImageButton videoPlayPauseButton;
 	private View videoControls;
 	private TextView altText;
-	private ImageButton backButton, downloadButton;
+	private TextView taggedNamesView;
+	private final Map<String, List<MediaTag>> tagCache=new HashMap<>();
+	private ImageButton backButton, downloadButton, tagButton;
 	private View bottomBar;
 	private View postActions;
 	private View replyBtn, boostBtn, favoriteBtn, shareBtn, bookmarkBtn;
@@ -276,6 +292,8 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		backButton.setOnClickListener(v->onStartSwipeToDismissTransition(0));
 		downloadButton=uiOverlay.findViewById(R.id.btn_download);
 		downloadButton.setOnClickListener(v->saveCurrentFile());
+		tagButton=uiOverlay.findViewById(R.id.btn_tag);
+		tagButton.setOnClickListener(v->openTagSheet());
 		bottomBar=uiOverlay.findViewById(R.id.bottom_bar);
 		postActions=uiOverlay.findViewById(R.id.post_actions);
 		
@@ -303,6 +321,8 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		altText=uiOverlay.findViewById(R.id.alt_text);
 		altText.setOnClickListener(v->showAltTextSheet());
 		updateAltText();
+		taggedNamesView=uiOverlay.findViewById(R.id.tagged_names);
+		fetchTagsForAttachment(attachments.get(currentIndex));
 		updateBackgroundColor(currentIndex, 0);
 
 		if(status==null){
@@ -415,6 +435,7 @@ public class PhotoViewer implements ZoomPanView.Listener{
 
 	public void removeMenu(){
 		downloadButton.setVisibility(View.GONE);
+		tagButton.setVisibility(View.GONE);
 	}
 
 	@Override
@@ -573,6 +594,117 @@ public class PhotoViewer implements ZoomPanView.Listener{
 			updateVideoTimeText(0);
 		}
 		updateAltText();
+		fetchTagsForAttachment(att);
+	}
+
+	private void openTagSheet(){
+		Attachment att=attachments.get(currentIndex);
+		if(att.id==null) return;
+		TagPeopleSheet sheet=new TagPeopleSheet(activity, att.id, accountID, ()->{
+			// Bust cache and refresh tags for this attachment
+			tagCache.remove(att.id);
+			fetchTagsForAttachment(att);
+		});
+		sheet.show();
+	}
+
+	private void fetchTagsForAttachment(Attachment att){
+		String mediaId=att.id;
+		if(mediaId==null){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		if(att.type!=Attachment.Type.IMAGE && att.type!=Attachment.Type.GIFV && att.type!=Attachment.Type.VIDEO){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		// Show from cache immediately (or hide if not cached yet)
+		updateTaggedNamesView(tagCache.get(mediaId));
+		if(tagCache.containsKey(mediaId)) return;
+
+		new GetMediaTags(mediaId)
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(List<MediaTag> result){
+						tagCache.put(mediaId, result);
+						Attachment current=attachments.get(currentIndex);
+						if(mediaId.equals(current.id)){
+							updateTaggedNamesView(result);
+						}
+					}
+
+					@Override
+					public void onError(ErrorResponse error){
+						tagCache.put(mediaId, Collections.emptyList());
+					}
+				})
+				.exec(accountID);
+	}
+
+	private void updateTaggedNamesView(List<MediaTag> tags){
+		if(tags==null || tags.isEmpty()){
+			taggedNamesView.setVisibility(View.GONE);
+			return;
+		}
+		String selfId=AccountSessionManager.getInstance().getAccount(accountID).self.id;
+		SpannableStringBuilder sb=new SpannableStringBuilder("With ");
+		boolean first=true;
+		for(MediaTag tag:tags){
+			if(tag.account==null) continue;
+			String name=tag.account.displayName;
+			if(name==null || name.isEmpty()) name=tag.account.username;
+			if(name==null || name.isEmpty()) continue;
+			if(!first) sb.append(", ");
+			first=false;
+			sb.append(name);
+			if(tag.accountId.equals(selfId)){
+				sb.append(" ");
+				int start=sb.length();
+				sb.append("×");
+				final String mediaId=attachments.get(currentIndex).id;
+				final String removeAccountId=tag.accountId;
+				sb.setSpan(new ClickableSpan(){
+					@Override
+					public void onClick(@NonNull View widget){
+						removeOwnTag(mediaId, removeAccountId);
+					}
+					@Override
+					public void updateDrawState(@NonNull android.text.TextPaint ds){
+						ds.setColor(ds.linkColor);
+						ds.setUnderlineText(false);
+					}
+				}, start, sb.length(), 0);
+			}
+		}
+		if(sb.length()<=5){
+			taggedNamesView.setVisibility(View.GONE);
+		}else{
+			taggedNamesView.setMovementMethod(LinkMovementMethod.getInstance());
+			taggedNamesView.setText(sb);
+			taggedNamesView.setVisibility(View.VISIBLE);
+		}
+	}
+
+	private void removeOwnTag(String mediaId, String accountIdToRemove){
+		new DeleteMediaTag(mediaId, accountIdToRemove)
+				.setCallback(new Callback<>(){
+					@Override
+					public void onSuccess(Void result){
+						List<MediaTag> updated=tagCache.get(mediaId);
+						if(updated!=null){
+							updated=new ArrayList<>(updated);
+							updated.removeIf(t->t.accountId.equals(accountIdToRemove));
+							tagCache.put(mediaId, updated);
+							Attachment current=attachments.get(currentIndex);
+							if(mediaId.equals(current.id)){
+								updateTaggedNamesView(updated);
+							}
+						}
+					}
+					@Override
+					public void onError(ErrorResponse error){}
+				})
+				.exec(accountID);
 	}
 
 	private void updateAltText(){

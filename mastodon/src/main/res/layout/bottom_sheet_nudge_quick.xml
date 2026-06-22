@@ -23,7 +23,7 @@
 		android:layout_marginTop="12dp"
 		android:textSize="18sp"
 		android:textStyle="bold"
-		android:textColor="?attr/colorM3OnSurface"
+		android:textColor="@color/kronk_nudge_text"
 		android:gravity="center"/>
 
 	<TextView
@@ -32,7 +32,7 @@
 		android:layout_height="wrap_content"
 		android:layout_marginTop="2dp"
 		android:textSize="14sp"
-		android:textColor="?colorM3OnSurfaceVariant"
+		android:textColor="@color/kronk_nudge_text_muted"
 		android:gravity="center"/>
 
 	<LinearLayout
@@ -47,7 +47,7 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:textSize="13sp"
-			android:textColor="?attr/colorM3Primary"/>
+			android:textColor="@color/kronk_nudge_brand"/>
 
 		<TextView
 			android:id="@+id/sheet_streak_received"
@@ -55,7 +55,7 @@
 			android:layout_height="wrap_content"
 			android:layout_marginStart="12dp"
 			android:textSize="13sp"
-			android:textColor="?attr/colorM3Tertiary"/>
+			android:textColor="@color/kronk_nudge_brand"/>
 
 	</LinearLayout>
 

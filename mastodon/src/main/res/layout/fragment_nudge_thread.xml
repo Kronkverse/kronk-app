@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:background="@color/kronk_nudge_base"
+	android:fitsSystemWindows="false">
+
+	<!-- Toolbar injected by ToolbarFragment -->
+
+	<ProgressBar
+		android:id="@+id/progress"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center"
+		android:layout_weight="1"
+		android:visibility="gone"/>
+
+	<!-- Compact unified header (avatar + name + stats) — sits directly under the toolbar -->
+	<LinearLayout
+		android:id="@+id/partner_banner"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:gravity="center_horizontal"
+		android:paddingHorizontal="16dp"
+		android:paddingTop="10dp"
+		android:paddingBottom="10dp"
+		android:background="@color/kronk_nudge_base"
+		android:visibility="gone">
+
+		<!-- Identity row -->
+		<LinearLayout
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical">
+
+			<ImageView
+				android:id="@+id/banner_avatar"
+				android:layout_width="32dp"
+				android:layout_height="32dp"
+				android:scaleType="centerCrop"
+				android:background="@drawable/bg_compose_nudge_input"
+				android:clipToOutline="true"/>
+
+			<LinearLayout
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:orientation="vertical"
+				android:layout_marginStart="10dp">
+
+				<TextView
+					android:id="@+id/banner_name"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="15sp"
+					android:textStyle="bold"
+					android:textColor="@color/kronk_nudge_text"
+					android:maxLines="1"
+					android:ellipsize="end"/>
+
+				<TextView
+					android:id="@+id/banner_acct"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="12sp"
+					android:textColor="@color/kronk_nudge_text_muted"
+					android:maxLines="1"
+					android:ellipsize="end"/>
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+		<!-- Stats container — hidden until counts load -->
+		<LinearLayout
+			android:id="@+id/pair_header"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:gravity="center_horizontal"
+			android:layout_marginTop="6dp"
+			android:visibility="gone">
+
+			<!-- Sent · Received row -->
+			<LinearLayout
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical">
+
+				<TextView
+					android:id="@+id/pair_sent"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="11sp"
+					android:textStyle="bold"
+					android:letterSpacing="0.04"
+					android:textColor="@color/kronk_nudge_brand"/>
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:paddingHorizontal="8dp"
+					android:textSize="11sp"
+					android:textColor="@color/kronk_nudge_text_muted"
+					android:text="·"/>
+
+				<TextView
+					android:id="@+id/pair_received"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="11sp"
+					android:textStyle="bold"
+					android:letterSpacing="0.04"
+					android:textColor="@color/kronk_nudge_gold"/>
+
+			</LinearLayout>
+
+			<!-- Streak row -->
+			<TextView
+				android:id="@+id/pair_streak"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="2dp"
+				android:textSize="11sp"
+				android:textStyle="bold"
+				android:letterSpacing="0.04"
+				android:textColor="@color/kronk_nudge_text_muted"/>
+
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<!-- Divider under the compact header -->
+	<View
+		android:id="@+id/header_divider"
+		android:layout_width="match_parent"
+		android:layout_height="1dp"
+		android:background="#33FFFFFF"/>
+
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1">
+
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/message_list"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:clipToPadding="false"
+			android:paddingHorizontal="12dp"
+			android:paddingVertical="8dp"
+			android:scrollbars="none"/>
+
+		<!-- Milestone celebration banner (transient overlay) -->
+		<LinearLayout
+			android:id="@+id/milestone_banner"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="top|center_horizontal"
+			android:layout_marginTop="12dp"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:background="@drawable/bg_nudge_wave_badge_milestone"
+			android:paddingHorizontal="14dp"
+			android:paddingVertical="8dp"
+			android:elevation="6dp"
+			android:visibility="gone">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="16sp"
+				android:layout_marginEnd="6dp"
+				android:text="🎉"/>
+
+			<TextView
+				android:id="@+id/milestone_text"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textSize="14sp"
+				android:textStyle="bold"
+				android:textColor="@color/kronk_nudge_base_darker"/>
+
+		</LinearLayout>
+
+	</FrameLayout>
+
+	<!-- Compose area -->
+	<LinearLayout
+		android:id="@+id/compose_area"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:background="@drawable/bg_nudge_compose_lift"
+		android:paddingTop="6dp"
+		android:elevation="4dp">
+
+		<!-- Post share card (when nudging from a post) -->
+		<LinearLayout
+			android:id="@+id/post_share_card"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:layout_marginHorizontal="8dp"
+			android:layout_marginTop="6dp"
+			android:background="@drawable/bg_nudge_post_share_card"
+			android:padding="10dp"
+			android:visibility="gone">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical">
+
+				<ImageView
+					android:id="@+id/post_share_avatar"
+					android:layout_width="22dp"
+					android:layout_height="22dp"
+					android:scaleType="centerCrop"
+					android:background="@drawable/bg_compose_nudge_input"
+					android:clipToOutline="true"
+					android:layout_marginEnd="8dp"/>
+
+				<LinearLayout
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:orientation="vertical">
+
+					<TextView
+						android:id="@+id/post_share_name"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:textSize="12sp"
+						android:textStyle="bold"
+						android:textColor="@color/kronk_nudge_text"
+						android:maxLines="1"
+						android:ellipsize="end"/>
+
+					<TextView
+						android:id="@+id/post_share_acct"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:textSize="11sp"
+						android:textColor="@color/kronk_nudge_text_muted"
+						android:maxLines="1"
+						android:ellipsize="end"/>
+
+				</LinearLayout>
+
+				<ImageButton
+					android:id="@+id/post_share_dismiss"
+					android:layout_width="28dp"
+					android:layout_height="28dp"
+					android:background="@drawable/bg_round_ripple"
+					android:src="@drawable/ic_baseline_close_24"
+					android:tint="@color/kronk_nudge_text_muted"
+					android:contentDescription="@string/nudge_remove_post"
+					android:padding="4dp"/>
+
+			</LinearLayout>
+
+			<TextView
+				android:id="@+id/post_share_body"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="4dp"
+				android:textSize="12sp"
+				android:textColor="@color/kronk_nudge_text_muted"
+				android:maxLines="2"
+				android:ellipsize="end"
+				android:visibility="gone"/>
+
+			<TextView
+				android:id="@+id/post_share_url"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="2dp"
+				android:textSize="10sp"
+				android:textColor="@color/kronk_nudge_brand"
+				android:alpha="0.7"
+				android:maxLines="1"
+				android:ellipsize="end"/>
+
+		</LinearLayout>
+
+		<!-- Reply banner (when replying to a message) -->
+		<LinearLayout
+			android:id="@+id/reply_banner"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingHorizontal="12dp"
+			android:paddingVertical="6dp"
+			android:background="@color/kronk_nudge_base_lighter"
+			android:visibility="gone">
+
+			<View
+				android:layout_width="3dp"
+				android:layout_height="match_parent"
+				android:layout_marginEnd="8dp"
+				android:background="@color/kronk_nudge_brand"/>
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:orientation="vertical">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textSize="11sp"
+					android:textStyle="bold"
+					android:textColor="@color/kronk_nudge_brand"
+					android:text="@string/nudge_reply"/>
+
+				<TextView
+					android:id="@+id/reply_banner_body"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:textSize="12sp"
+					android:textColor="@color/kronk_nudge_text_muted"
+					android:maxLines="1"
+					android:ellipsize="end"/>
+
+			</LinearLayout>
+
+			<ImageButton
+				android:id="@+id/reply_banner_dismiss"
+				android:layout_width="28dp"
+				android:layout_height="28dp"
+				android:background="@drawable/bg_round_ripple"
+				android:src="@drawable/ic_baseline_close_24"
+				android:tint="@color/kronk_nudge_text_muted"
+				android:contentDescription="@string/nudge_cancel_reply"
+				android:padding="4dp"/>
+
+		</LinearLayout>
+
+		<!-- Attachment / voice preview -->
+		<FrameLayout
+			android:id="@+id/media_preview_container"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:paddingHorizontal="12dp"
+			android:paddingTop="8dp"
+			android:visibility="gone">
+
+			<ImageView
+				android:id="@+id/media_preview_image"
+				android:layout_width="100dp"
+				android:layout_height="100dp"
+				android:scaleType="centerCrop"
+				android:background="@drawable/bg_compose_nudge_input"
+				android:clipToOutline="true"
+				android:visibility="gone"/>
+
+			<VideoView
+				android:id="@+id/media_preview_video"
+				android:layout_width="140dp"
+				android:layout_height="100dp"
+				android:visibility="gone"/>
+
+			<ImageButton
+				android:id="@+id/remove_media_btn"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:layout_gravity="top|start"
+				android:layout_marginStart="84dp"
+				android:layout_marginTop="-6dp"
+				android:background="@color/kronk_nudge_brand"
+				android:src="@drawable/ic_baseline_close_24"
+				android:tint="@color/kronk_nudge_base_darker"
+				android:padding="2dp"
+				android:contentDescription="@string/remove"/>
+
+		</FrameLayout>
+
+		<!-- Input row -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="bottom"
+			android:paddingHorizontal="8dp"
+			android:paddingVertical="8dp">
+
+			<ImageButton
+				android:id="@+id/attach_btn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="@drawable/bg_round_ripple"
+				android:src="@drawable/ic_add_photo_alternate_24px"
+				android:tint="@color/kronk_nudge_text_muted"
+				android:contentDescription="@string/nudge_compose_attach_media"
+				android:padding="8dp"/>
+
+			<EditText
+				android:id="@+id/message_input"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:minHeight="40dp"
+				android:maxHeight="120dp"
+				android:background="@drawable/bg_compose_nudge_input"
+				android:paddingHorizontal="14dp"
+				android:paddingVertical="10dp"
+				android:textSize="14sp"
+				android:textColor="@color/kronk_nudge_text"
+				android:textColorHint="@color/kronk_nudge_text_muted"
+				android:hint="@string/nudge_compose_hint"
+				android:inputType="textMultiLine|textCapSentences"
+				android:maxLines="5"
+				android:gravity="center_vertical"/>
+
+			<ImageButton
+				android:id="@+id/send_btn"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="4dp"
+				android:background="@color/kronk_nudge_brand"
+				android:src="@drawable/ic_arrow_upward_20px"
+				android:tint="@color/kronk_nudge_base_darker"
+				android:contentDescription="@string/nudge_thread_send"
+				android:padding="8dp"/>
+
+		</LinearLayout>
+
+		<!-- Word count row -->
+		<TextView
+			android:id="@+id/word_count"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:paddingHorizontal="16dp"
+			android:paddingBottom="6dp"
+			android:textSize="11sp"
+			android:textColor="@color/kronk_nudge_text_muted"
+			android:gravity="end"
+			android:visibility="gone"/>
+
+	</LinearLayout>
+
+</LinearLayout>
