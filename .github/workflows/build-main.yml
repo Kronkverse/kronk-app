@@ -25,6 +25,22 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Install nothing extra. The action's default package list is
+          # `tools platform-tools`, and `tools` is a package Google retired —
+          # on the current runner image sdkmanager rejects it ("Wrong version
+          # in preinstalled sdkmanager"), fails to accept 6 of 7 licences, and
+          # exits 1 before a line of Kotlin is compiled. The runner image
+          # already ships platform-tools and a range of platforms/build-tools,
+          # and Gradle fetches anything else it needs.
+          #
+          # This is why the last green build in this repo was 2026-06-22: the
+          # workflow did not change, the runner image did.
+          #
+          # Note this must name a real package rather than being empty — an
+          # empty input falls back to the action's default, which is the very
+          # list we are trying to avoid.
+          packages: platform-tools
 
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
