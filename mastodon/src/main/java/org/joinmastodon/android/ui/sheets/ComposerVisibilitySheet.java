@@ -170,6 +170,16 @@ public class ComposerVisibilitySheet extends BottomSheet{
 				quotePolicySpinnerLayout.setAlpha(0.5f);
 				quotePolicySpinnerLayout.setErrorTextAsDescription(getContext().getString(R.string.quote_policy_for_direct_explanation));
 			}
+			// Kronk's reach values. The sheet cannot select them, but the
+			// composer can open holding one if that is the account's default,
+			// and nothing narrower than followers may be quoted.
+			default -> {
+				quotePolicySpinner.setEnabled(false);
+				userSelectedPolicy=StatusQuotePolicy.values()[quotePolicySpinner.getSelectedItemPosition()];
+				quotePolicySpinner.setSelection(StatusQuotePolicy.NOBODY.ordinal());
+				quotePolicySpinnerLayout.setAlpha(0.5f);
+				quotePolicySpinnerLayout.setErrorTextAsDescription(getContext().getString(R.string.quote_policy_for_private_explanation));
+			}
 		}
 	}
 

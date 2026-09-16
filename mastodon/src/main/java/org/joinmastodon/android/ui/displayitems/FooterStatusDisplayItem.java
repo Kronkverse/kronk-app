@@ -138,10 +138,14 @@ public class FooterStatusDisplayItem extends StatusDisplayItem{
 			boolean isOwn=item.status.account.id.equals(AccountSessionManager.getInstance().getAccount(item.accountID).self.id);
 			boostBtn.setEnabled(item.status.visibility==StatusPrivacy.PUBLIC || item.status.visibility==StatusPrivacy.UNLISTED
 					|| (item.status.visibility==StatusPrivacy.PRIVATE && isOwn));
+			// `default` is not decoration: the server owns this enum and adds to
+			// it. Before the reach ladder existed this switch was exhaustive and
+			// crashed on anything new — including null, which is what GSON hands
+			// back for a value the app has never heard of.
 			Drawable d=itemView.getResources().getDrawable(switch(item.status.visibility){
 				case PUBLIC, UNLISTED -> R.drawable.ic_boost;
 				case PRIVATE -> isOwn ? R.drawable.ic_boost_private : R.drawable.ic_boost_disabled_24px;
-				case DIRECT -> R.drawable.ic_boost_disabled_24px;
+				default -> R.drawable.ic_boost_disabled_24px;
 			}, itemView.getContext().getTheme());
 			d.setBounds(0, 0, V.dp(20), V.dp(20));
 			boost.setCompoundDrawablesRelative(d, null, null, null);
