@@ -28,7 +28,7 @@ Android SDK is pre-installed on the dev server at `/opt/android-sdk/` with `ANDR
 
 ## Key Customizations
 
-- **Deep links:** `kronk-auth://callback` for OAuth, `https://mastodon.kronk.info/@*` and `/invite/*` for app links
+- **Deep links:** `kronk-auth://callback` for OAuth, `https://kronk.info/@*` and `/invite/*` for app links (the production host is moving from `mastodon.kronk.info` to `kronk.info` as part of the 2.0 rebrand — the deep-link intent-filter needs to cover both during the transition)
 - **Self-updating:** App checks `kronk.info/version.json` for new versions
 - **Account approval notifications:** `AccountApprovalCheckReceiver` polls for approval status
 - **Kronk branding:** Custom app name, icons, colors
