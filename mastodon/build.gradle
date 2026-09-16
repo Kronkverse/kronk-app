@@ -80,35 +80,36 @@ android {
 	namespace 'org.joinmastodon.android'
 }
 
+// All dependency versions live in gradle/libs.versions.toml. Bump
+// there, not here — every consumer reads from the same catalog.
 dependencies {
-	api 'androidx.annotation:annotation:1.3.0'
-	implementation 'com.squareup.okhttp3:okhttp:3.14.9'
-	implementation 'me.grishka.litex:recyclerview:1.2.1.1'
-	implementation 'me.grishka.litex:swiperefreshlayout:1.2.0-beta01'
-	implementation 'me.grishka.litex:browser:1.4.0'
-	implementation 'me.grishka.litex:dynamicanimation:1.1.0-alpha03'
-	implementation 'me.grishka.litex:viewpager:1.0.0'
-	implementation 'me.grishka.litex:viewpager2:1.0.0'
-	implementation 'me.grishka.litex:palette:1.0.0'
-	implementation 'me.grishka.appkit:appkit:1.4.8'
-	implementation 'com.google.code.gson:gson:2.8.9'
-	implementation 'org.jsoup:jsoup:1.14.3'
-	implementation 'com.squareup:otto:1.3.8'
-	implementation 'de.psdev:async-otto:1.0.3'
-	implementation 'com.google.zxing:core:3.5.3'
-	implementation 'org.microg:safe-parcel:1.5.0'
-	implementation 'org.parceler:parceler-api:1.1.12'
-	annotationProcessor 'org.parceler:parceler:1.1.12'
-	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+	api libs.androidx.annotation
+	implementation libs.okhttp
+	implementation libs.litex.recyclerview
+	implementation libs.litex.swiperefreshlayout
+	implementation libs.litex.browser
+	implementation libs.litex.dynamicanimation
+	implementation libs.litex.viewpager
+	implementation libs.litex.viewpager2
+	implementation libs.litex.palette
+	implementation libs.appkit
+	implementation libs.gson
+	implementation libs.jsoup
+	implementation libs.otto
+	implementation libs.async.otto
+	implementation libs.zxing.core
+	implementation libs.safe.parcel
+	implementation libs.parceler.api
+	annotationProcessor libs.parceler
+	coreLibraryDesugaring libs.desugar.jdk.libs
 
-	def appCenterSdkVersion = "5.0.4"
-	appcenterPrivateBetaImplementation "com.microsoft.appcenter:appcenter-crashes:${appCenterSdkVersion}"
-	appcenterPrivateBetaImplementation "com.microsoft.appcenter:appcenter-distribute:${appCenterSdkVersion}"
-	appcenterPublicBetaImplementation "com.microsoft.appcenter:appcenter-crashes:${appCenterSdkVersion}"
-	appcenterPublicBetaImplementation "com.microsoft.appcenter:appcenter-distribute:${appCenterSdkVersion}"
+	appcenterPrivateBetaImplementation libs.appcenter.crashes
+	appcenterPrivateBetaImplementation libs.appcenter.distribute
+	appcenterPublicBetaImplementation libs.appcenter.crashes
+	appcenterPublicBetaImplementation libs.appcenter.distribute
 
-	androidTestImplementation 'androidx.test:core:1.5.0'
-	androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-	androidTestImplementation 'androidx.test:runner:1.5.2'
-	androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+	androidTestImplementation libs.androidx.test.core
+	androidTestImplementation libs.androidx.test.junit
+	androidTestImplementation libs.androidx.test.runner
+	androidTestImplementation libs.espresso.core
 }
