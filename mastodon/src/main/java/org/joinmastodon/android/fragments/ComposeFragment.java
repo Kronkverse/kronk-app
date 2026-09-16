@@ -1192,6 +1192,9 @@ public class ComposeFragment extends MastodonToolbarFragment implements ComposeE
 				};
 				case PRIVATE -> R.string.visibility_followers_only;
 				case DIRECT -> R.string.visibility_private;
+				case ORBIT -> R.string.visibility_orbit;
+				case MATES -> R.string.visibility_mates;
+				case SELF_ONLY -> R.string.visibility_self_only;
 			});
 		}else{
 			visibilityText.setText(switch(statusVisibility){
@@ -1199,13 +1202,21 @@ public class ComposeFragment extends MastodonToolbarFragment implements ComposeE
 				case UNLISTED -> R.string.visibility_unlisted;
 				case PRIVATE -> R.string.visibility_followers_only;
 				case DIRECT -> R.string.visibility_private;
+				case ORBIT -> R.string.visibility_orbit;
+				case MATES -> R.string.visibility_mates;
+				case SELF_ONLY -> R.string.visibility_self_only;
 			});
 		}
+		// The reach values borrow the closest existing glyph rather than
+		// inventing one — the composer cannot author them, so this only ever
+		// renders when the account's server-side default is a reach value.
 		Drawable icon=getResources().getDrawable(switch(statusVisibility){
 			case PUBLIC -> R.drawable.ic_public_20px;
 			case UNLISTED -> R.drawable.ic_clear_night_20px;
-			case PRIVATE -> R.drawable.ic_group_20px;
+			case PRIVATE, MATES -> R.drawable.ic_group_20px;
+			case ORBIT -> R.drawable.ic_public_20px;
 			case DIRECT -> R.drawable.ic_alternate_email_20px;
+			case SELF_ONLY -> R.drawable.ic_lock_fill1_20px;
 		}, getActivity().getTheme()).mutate();
 		icon.setBounds(0, 0, V.dp(18), V.dp(18));
 		icon.setTint(UiUtils.getThemeColor(getActivity(), R.attr.colorM3OnSurfaceVariant));

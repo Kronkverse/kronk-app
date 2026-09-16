@@ -748,7 +748,7 @@ public class PhotoViewer implements ZoomPanView.Listener{
 		Drawable d=activity.getResources().getDrawable(switch(status.visibility){
 			case PUBLIC, UNLISTED -> R.drawable.ic_boost;
 			case PRIVATE -> isOwn ? R.drawable.ic_boost_private : R.drawable.ic_boost_disabled_24px;
-			case DIRECT -> R.drawable.ic_boost_disabled_24px;
+			default -> R.drawable.ic_boost_disabled_24px;
 		}, activity.getTheme());
 		d.setBounds(0, 0, V.dp(20), V.dp(20));
 		boostText.setCompoundDrawablesRelative(d, null, null, null);

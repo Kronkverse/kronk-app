@@ -176,6 +176,11 @@
 	<string name="visibility_public">Public</string>
 	<string name="visibility_followers_only">Followers</string>
 	<string name="visibility_private">Private mention</string>
+	<!-- Kronk reach ladder. The composer cannot author these; they appear on
+	     posts made in the web app. -->
+	<string name="visibility_orbit">Orbit</string>
+	<string name="visibility_mates">Mates</string>
+	<string name="visibility_self_only">Only me</string>
 	<string name="recent_searches">Recents</string>
 	<string name="notification_type_follow">New followers</string>
 	<string name="notification_type_favorite">Froths</string>
