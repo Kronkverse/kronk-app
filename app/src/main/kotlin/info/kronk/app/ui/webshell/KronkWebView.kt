@@ -205,6 +205,13 @@ private class KronkWebViewClient(
         // Install the media-play/pause monitor so the native audio
         // service can start/stop with WebView playback. Idempotent.
         view.evaluateJavascript(MEDIA_MONITOR_JS, null)
+        // Force Service Worker registration so we get offline
+        // caching. Kronk's SPA gates registration on isProduction()
+        // AND a signed-in `me`; for the shell we want the SW active
+        // regardless so a first-launch cold-start still primes
+        // the cache. Idempotent — SW.register is a no-op if the
+        // scope already has one.
+        view.evaluateJavascript(FORCE_SW_REGISTRATION_JS, null)
         // Extract the SPA's access token out of initial-state.
         // Mastodon injects it into `<script id="initial-state">…`
         // on every signed-in page render; sign-out pages carry
@@ -293,6 +300,23 @@ private const val HIDE_WEB_BOTTOM_BAR_JS = """
 // bottom-band-hider. MutationObserver re-injects if the SPA rerenders
 // <head> on route change and wipes the tag (React can drop DOM head
 // modifications when the top-level route swaps).
+// Register Kronk's Workbox service worker unconditionally. Kronk's
+// main.tsx gates SW registration behind `isProduction() && me`,
+// which means shadow-hosted debug builds + the pre-sign-in state
+// never register a SW and get no offline caching. The shell wants
+// the SW active in every state so browsing what's already been
+// loaded stays available on flaky/offline connections. The SW itself
+// (Workbox 7.2, /sw.js) does the actual caching once installed.
+private const val FORCE_SW_REGISTRATION_JS = """
+(function() {
+  if (window.__kronkSwRegistered) return;
+  window.__kronkSwRegistered = true;
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .catch(function() { /* swallow — some hosts don't serve /sw.js */ });
+})();
+"""
+
 // Listens on the document for HTMLMediaElement play/pause events
 // and pipes them to the native KronkJsBridge, which increments /
 // decrements a counter that gates the foreground audio service.
