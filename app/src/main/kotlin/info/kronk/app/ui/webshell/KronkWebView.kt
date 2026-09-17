@@ -266,18 +266,25 @@ private const val HIDE_WEB_BOTTOM_BAR_JS = """
 // kronk_menu.tsx) isn't hidden behind the native BottomTabBar. The
 // native bar is ~52dp core height + navigation-bar inset; 88px is a
 // pragmatic conservative value. Uses the same CSP nonce path as the
-// bottom-band-hider.
+// bottom-band-hider. MutationObserver re-injects if the SPA rerenders
+// <head> on route change and wipes the tag (React can drop DOM head
+// modifications when the top-level route swaps).
 private const val PUSH_STAGE_ABOVE_NATIVE_BAR_JS = """
 (function() {
-  if (window.__kronkAppShellPadded) return;
-  window.__kronkAppShellPadded = true;
+  if (window.__kronkAppShellPaddedInstalled) return;
+  window.__kronkAppShellPaddedInstalled = true;
   var nonceMeta = document.querySelector('meta[name="style-nonce"]');
   var nonce = nonceMeta ? nonceMeta.getAttribute('content') : null;
-  var s = document.createElement('style');
-  s.id = 'kronk-app-shell-pad';
-  if (nonce) s.setAttribute('nonce', nonce);
-  s.textContent = 'body { padding-bottom: 88px !important; } ' +
-                  '.kronk-menu { bottom: 96px !important; }';
-  (document.head || document.documentElement).appendChild(s);
+  var inject = function() {
+    if (document.getElementById('kronk-app-shell-pad')) return;
+    var s = document.createElement('style');
+    s.id = 'kronk-app-shell-pad';
+    if (nonce) s.setAttribute('nonce', nonce);
+    s.textContent = 'body { padding-bottom: 88px !important; } ' +
+                    '.kronk-menu { bottom: 96px !important; }';
+    (document.head || document.documentElement).appendChild(s);
+  };
+  inject();
+  new MutationObserver(inject).observe(document.documentElement, { childList: true, subtree: true });
 })();
 """

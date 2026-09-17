@@ -3,6 +3,7 @@ package info.kronk.app
 import android.app.Application
 import android.webkit.WebView
 import dagger.hilt.android.HiltAndroidApp
+import info.kronk.core.common.KronkHost
 
 // Hilt entry point. Must be registered in AndroidManifest.xml's
 // application android:name attribute.
@@ -15,6 +16,12 @@ import dagger.hilt.android.HiltAndroidApp
 class KronkApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        // Wire the build-variant host into :core:common. Must happen
+        // before any consumer (Retrofit factory, WebView loadUrl,
+        // intent resolver) reads KronkHost — application onCreate
+        // runs before Activity onCreate so any composition triggered
+        // by MainActivity sees the correct value.
+        KronkHost.initFromApp(BuildConfig.KRONK_HOST)
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true)
         }

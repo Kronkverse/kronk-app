@@ -16,18 +16,26 @@ package info.kronk.core.common
 // kronk.info").
 
 object KronkHost {
-    // Points at shadow during the 2.0 rebuild — shadow is the rebuild
-    // line and carries every 2.0 surface (Hub grid, Kommons tokens,
-    // reach ladder, etc.). Production (`mastodon.kronk.info`) still
-    // runs 1.x and doesn't have `/api/v1/korners`, `/@:user/mates`, or
-    // the rebuild UI. Flip this back to production once the rebuild
-    // has cut over there (Kronkverse/kronk#1859).
-    const val value: String = "shadow.kronk.info"
+    // Populated by the :app module's KronkHostInit on first read.
+    // Debug builds get shadow.kronk.info; release builds get
+    // kronk.info (post-cutover Kronkverse/kronk#1859). :core:common
+    // is Android-independent so it can't read BuildConfig itself —
+    // :app writes the concrete value in via `initFromApp`.
+    @Volatile
+    private var _value: String = "shadow.kronk.info"
+
+    val value: String get() = _value
 
     // Full origin including scheme, for building URLs to hand off to
     // Chrome Custom Tab (OAuth authorize URL, korner Custom Tab
     // fallback URLs).
-    const val origin: String = "https://$value"
+    val origin: String get() = "https://$_value"
+
+    // Called by KronkApplication.onCreate — must run before any
+    // consumer reads KronkHost. Idempotent.
+    fun initFromApp(host: String) {
+        _value = host
+    }
 
     // The auth callback scheme the app claims via intent-filter.
     // Fixed regardless of host — the OAuth redirect_uri stays

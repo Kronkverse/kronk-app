@@ -36,6 +36,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Release builds target production (cutover-flipped in
+            // Kronkverse/kronk#1859). Reads via BuildConfig.KRONK_HOST
+            // through :core:common's KronkHost.
+            buildConfigField("String", "KRONK_HOST", "\"kronk.info\"")
         }
         debug {
             isDebuggable = true
@@ -43,6 +47,10 @@ android {
             // during Phase 1–6 without touching real user installs.
             applicationIdSuffix = ".next.debug"
             versionNameSuffix = "-debug"
+            // Debug builds target shadow so testers see the rebuild
+            // line (Hub grid, Kommons, reach ladder) that production
+            // doesn't ship until cutover.
+            buildConfigField("String", "KRONK_HOST", "\"shadow.kronk.info\"")
         }
     }
 
