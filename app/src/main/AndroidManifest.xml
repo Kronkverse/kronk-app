@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Nudges voice messages + Moments voice recording. Requested at
+         first-use, not on install; users who never touch a voice input
+         are never prompted. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Camera intents ACTION_IMAGE_CAPTURE / ACTION_VIDEO_CAPTURE
+         don't need this permission themselves, but getUserMedia({video:
+         true}) from the WebView (Huddle, future live-video features)
+         does. Requested at first-use. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Camera / video capture requests use ACTION_IMAGE_CAPTURE and
          ACTION_VIDEO_CAPTURE which don't need the CAMERA permission

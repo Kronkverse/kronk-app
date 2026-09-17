@@ -1,11 +1,15 @@
 package info.kronk.app.ui.shell
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -44,6 +48,16 @@ import info.kronk.core.designsystem.primitive.BottomTabBar
 import info.kronk.core.designsystem.primitive.BottomTabItem
 import info.kronk.core.designsystem.theme.KronkTheme
 import kotlinx.coroutines.launch
+
+// Map from the webkit resource identifier the WebView sends to the
+// Android runtime permission it needs. Only mic + camera today; if a
+// later WebView surface asks for MIDI or protected media the request
+// falls through (we deny by returning null here).
+private fun androidPermFor(webResource: String): String? = when (webResource) {
+    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+    PermissionRequest.RESOURCE_VIDEO_CAPTURE -> Manifest.permission.CAMERA
+    else -> null
+}
 
 // Top-level app scaffold. Five WebViews (one per pillar) mounted in a
 // HorizontalPager with `beyondBoundsPageCount = 4` so every tab is
@@ -96,6 +110,27 @@ fun ShellHost(modifier: Modifier = Modifier) {
         pendingCaptureUri = null
     }
 
+    // getUserMedia({audio:true}) / getUserMedia({video:true}) plumbing.
+    // WebView's onPermissionRequest fires when the SPA asks for mic or
+    // camera; we translate its webkit resource names to the underlying
+    // Android runtime permissions, prompt if not held, then grant back
+    // to the WebView. Single-slot: only one WebView permission request
+    // in flight at a time (matches the WebView contract).
+    var pendingWebPermission by remember { mutableStateOf<PermissionRequest?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        val req = pendingWebPermission ?: return@rememberLauncherForActivityResult
+        val webResourcesToGrant = req.resources.filter { resource ->
+            val androidPerm = androidPermFor(resource) ?: return@filter false
+            grants[androidPerm] == true ||
+                ContextCompat.checkSelfPermission(context, androidPerm) ==
+                PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+        if (webResourcesToGrant.isNotEmpty()) req.grant(webResourcesToGrant) else req.deny()
+        pendingWebPermission = null
+    }
+
     // Create one WebView per pillar. Kept in `remember` so they survive
     // recomposition and stay warm across tab swaps. URL loading is
     // deferred to first activation (LaunchedEffect below) so a
@@ -123,6 +158,27 @@ fun ShellHost(modifier: Modifier = Modifier) {
                         pendingCaptureUri = null
                         callback.onReceiveValue(emptyArray())
                         false
+                    }
+                },
+                onPermissionRequest = { req ->
+                    val needed = req.resources
+                        .mapNotNull { androidPermFor(it) }
+                        .filter { p ->
+                            ContextCompat.checkSelfPermission(context, p) !=
+                                PackageManager.PERMISSION_GRANTED
+                        }
+                        .distinct()
+                        .toTypedArray()
+                    if (needed.isEmpty()) {
+                        // All Android perms already granted — grant the
+                        // webkit resources we know how to translate.
+                        val grantable = req.resources
+                            .filter { androidPermFor(it) != null }
+                            .toTypedArray()
+                        if (grantable.isNotEmpty()) req.grant(grantable) else req.deny()
+                    } else {
+                        pendingWebPermission = req
+                        permissionLauncher.launch(needed)
                     }
                 },
             )

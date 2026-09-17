@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.net.Uri
 import android.webkit.CookieManager
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -58,6 +59,7 @@ fun createKronkWebView(
     state: WebState,
     toolbarColorArgb: Int,
     onShowFileChooser: (ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean,
+    onPermissionRequest: (PermissionRequest) -> Unit,
 ): WebView {
     val view = WebView(context)
     // Match Kronk's surfacePrimary (#191b22) so the load transition
@@ -99,6 +101,14 @@ fun createKronkWebView(
             filePathCallback: ValueCallback<Array<Uri>>,
             fileChooserParams: FileChooserParams,
         ): Boolean = onShowFileChooser(filePathCallback, fileChooserParams)
+
+        // Getters like getUserMedia({audio:true}) call this. We
+        // delegate to ShellHost which owns the Android permission
+        // launcher — if the app doesn't have RECORD_AUDIO / CAMERA
+        // yet, the launcher prompts before the WebView is granted.
+        override fun onPermissionRequest(request: PermissionRequest) {
+            onPermissionRequest(request)
+        }
     }
     // No initial loadUrl — ShellHost lazy-loads each tab on first
     // activation so tabs the user never opens don't spin up
