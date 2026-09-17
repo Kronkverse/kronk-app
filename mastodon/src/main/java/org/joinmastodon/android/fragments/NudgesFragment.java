@@ -37,6 +37,7 @@ import org.joinmastodon.android.model.NudgePartnersResponse;
 import org.joinmastodon.android.model.NudgeResult;
 import org.joinmastodon.android.ui.OutlineProviders;
 import org.joinmastodon.android.ui.utils.UiUtils;
+import org.parceler.Parcels;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -595,6 +596,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 		private final TextView streakSent;
 		private final TextView streakReceived;
 		private final TextView nudgeTimestamp;
+		private final TextView lastMsgPreview;
 		private final Button nudgeBtn;
 		private NudgePartner currentPartner;
 
@@ -607,6 +609,7 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			streakSent     = view.findViewById(R.id.streak_sent);
 			streakReceived = view.findViewById(R.id.streak_received);
 			nudgeTimestamp = view.findViewById(R.id.nudge_timestamp);
+			lastMsgPreview = view.findViewById(R.id.last_message_preview);
 			nudgeBtn       = view.findViewById(R.id.nudge_btn);
 
 			avatar.setOutlineProvider(OutlineProviders.roundedRect(8));
@@ -615,11 +618,14 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			waveIcon.setImageTintList(ColorStateList.valueOf(
 					UiUtils.getThemeColor(view.getContext(), R.attr.colorM3Primary)));
 
-			avatar.setOnClickListener(v -> {
-				if (currentPartner != null) showQuickSheet(currentPartner);
-			});
-			displayName.setOnClickListener(v -> {
-				if (currentPartner != null) showQuickSheet(currentPartner);
+			// Tap row → open thread
+			itemView.setOnClickListener(v -> {
+				if (currentPartner == null || currentPartner.account == null) return;
+				Bundle args = new Bundle();
+				args.putString("account", accountID);
+				args.putString("partnerAccountId", currentPartner.account_id);
+				args.putParcelable("partnerAccount", Parcels.wrap(currentPartner.account));
+				Nav.go(getActivity(), NudgeThreadFragment.class, args);
 			});
 			nudgeBtn.setOnClickListener(v -> {
 				if (currentPartner != null) sendNudgeForPartner(currentPartner);
@@ -643,9 +649,24 @@ public class NudgesFragment extends android.app.Fragment implements ScrollableTo
 			streakReceived.setText(getString(R.string.nudge_streak_received, partner.received_count));
 
 			bindTimestamp(partner.last_nudge_at);
+			bindLastMessage(partner.last_message);
 			bindMilestoneBadge(partner);
 			updateRowBackground(partner.can_nudge_back);
 			updateButton(partner.can_nudge_back);
+		}
+
+		private void bindLastMessage(NudgePartner.LastMessage msg) {
+			if (msg == null) { lastMsgPreview.setVisibility(View.GONE); return; }
+			String prefix = "sent".equals(msg.direction) ? getString(R.string.nudge_preview_you) : "";
+			String body = switch (msg.type == null ? "plain" : msg.type) {
+				case "text"  -> prefix + (msg.body != null ? msg.body : "");
+				case "image" -> prefix + getString(R.string.nudge_preview_image);
+				case "video" -> prefix + getString(R.string.nudge_preview_video);
+				case "voice" -> prefix + getString(R.string.nudge_preview_voice);
+				default      -> prefix + getString(R.string.nudge_preview_plain);
+			};
+			lastMsgPreview.setText(body);
+			lastMsgPreview.setVisibility(View.VISIBLE);
 		}
 
 		private void bindTimestamp(String lastNudgeAt) {

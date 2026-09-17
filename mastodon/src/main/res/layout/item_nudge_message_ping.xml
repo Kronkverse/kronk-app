@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="horizontal"
+	android:gravity="center"
+	android:paddingVertical="6dp">
+
+	<LinearLayout
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:background="@drawable/bg_nudge_stats_card"
+		android:paddingHorizontal="12dp"
+		android:paddingVertical="5dp">
+
+		<ImageView
+			android:layout_width="14dp"
+			android:layout_height="14dp"
+			android:src="@drawable/ic_partner_exchange_24px"
+			android:tint="?attr/colorM3OnSurfaceVariant"
+			android:importantForAccessibility="no"
+			android:alpha="0.7"/>
+
+		<TextView
+			android:id="@+id/ping_label"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="6dp"
+			android:textSize="12sp"
+			android:textColor="?attr/colorM3OnSurfaceVariant"/>
+
+		<TextView
+			android:id="@+id/ping_time"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="6dp"
+			android:textSize="11sp"
+			android:textColor="?attr/colorM3OnSurfaceVariant"
+			android:alpha="0.6"/>
+
+	</LinearLayout>
+
+</LinearLayout>

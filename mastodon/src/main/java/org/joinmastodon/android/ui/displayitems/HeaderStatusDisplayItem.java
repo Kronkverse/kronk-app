@@ -34,6 +34,7 @@ import org.joinmastodon.android.events.StatusUpdatedEvent;
 import org.joinmastodon.android.fragments.AddAccountToListsFragment;
 import org.joinmastodon.android.fragments.ComposeFragment;
 import org.joinmastodon.android.fragments.NotificationsListFragment;
+import org.joinmastodon.android.fragments.NudgeThreadFragment;
 import org.joinmastodon.android.fragments.ProfileFragment;
 import org.joinmastodon.android.fragments.report.ReportReasonChoiceFragment;
 import org.joinmastodon.android.model.Account;
@@ -207,6 +208,18 @@ public class HeaderStatusDisplayItem extends StatusDisplayItem{
 					AccountSessionManager.getInstance().getAccount(item.accountID).getStatusInteractionController().setBookmarked(item.status, !item.status.bookmarked);
 				}else if(id==R.id.share){
 					UiUtils.openSystemShareSheet(activity, item.status);
+				}else if(id==R.id.nudge_about_post){
+					Bundle nargs=new Bundle();
+					nargs.putString("account", item.accountID);
+					nargs.putString("partnerAccountId", account.id);
+					nargs.putString("postShareUrl", item.status.url);
+					String raw=item.status.content==null ? "" : android.text.Html.fromHtml(item.status.content, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim();
+					if(raw.length()>80) raw=raw.substring(0, 80)+"…";
+					nargs.putString("postShareBody", raw);
+					nargs.putString("postShareAuthorName", account.displayName==null || account.displayName.isEmpty() ? account.username : account.displayName);
+					nargs.putString("postShareAuthorAcct", account.acct);
+					nargs.putString("postShareAuthorAvatar", account.avatar);
+					Nav.go(activity, NudgeThreadFragment.class, nargs);
 				}else if(id==R.id.translate){
 					item.callbacks.togglePostTranslation(item.status, item.parentID);
 				}else if(id==R.id.add_to_list){

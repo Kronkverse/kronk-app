@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="match_parent"
-	android:layout_height="match_parent">
+	android:layout_height="match_parent"
+	android:background="@color/kronk_nudge_base">
 
 	<ProgressBar
 		android:id="@+id/progress"
@@ -39,7 +40,7 @@
 			android:scaleType="centerInside"
 			android:importantForAccessibility="no"
 			android:src="@drawable/ic_partner_exchange_24px"
-			android:tint="?attr/colorM3Primary"
+			android:tint="@color/kronk_nudge_brand"
 			android:alpha="0.6"/>
 
 		<TextView
@@ -49,7 +50,7 @@
 			android:layout_marginTop="16dp"
 			android:textSize="18sp"
 			android:textStyle="bold"
-			android:textColor="?attr/colorM3OnSurface"
+			android:textColor="@color/kronk_nudge_text"
 			android:gravity="center"
 			android:text="@string/nudge_empty_title"/>
 
@@ -59,7 +60,7 @@
 			android:layout_height="wrap_content"
 			android:layout_marginTop="8dp"
 			android:textSize="14sp"
-			android:textColor="?colorM3OnSurfaceVariant"
+			android:textColor="@color/kronk_nudge_text_muted"
 			android:gravity="center"
 			android:lineSpacingMultiplier="1.3"
 			android:text="@string/nudge_empty_subtitle"/>

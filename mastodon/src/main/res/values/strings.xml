@@ -993,6 +993,7 @@ End-to-end encrypted</string>
     <string name="error_loading">Failed to load</string>
 
     <string name="user_nudged_you">%s has nudged you</string>
+    <string name="user_tagged_you_in_photo">%s tagged you in a photo</string>
     <string name="nudge">Nudge</string>
     <string name="nudged">Nudged!</string>
     <string name="nudge_waiting">Waiting…</string>
@@ -1030,6 +1031,45 @@ End-to-end encrypted</string>
         <item quantity="other">Nudge back all %d</item>
     </plurals>
     <string name="notification_type_nudge">Nudges</string>
+    <!-- Nudge thread -->
+    <string name="nudge_thread_send">Send</string>
+    <string name="nudge_thread_record">Record voice memo</string>
+    <string name="nudge_thread_stop">Stop recording</string>
+    <string name="nudge_thread_you_nudged">You nudged</string>
+    <string name="nudge_thread_nudged_you">Nudged you</string>
+    <string name="nudge_play_voice">Play voice memo</string>
+    <string name="nudge_recording">Recording…</string>
+    <string name="nudge_voice_memo">Voice memo</string>
+    <string name="nudge_voice_duration">%ds voice memo</string>
+    <string name="nudge_confirm_send_to">Send to %s?</string>
+    <string name="nudge_confirm_send">Send</string>
+    <string name="nudge_compose_attach_media">Attach image or video</string>
+    <string name="nudge_compose_hint">Add a message… (optional)</string>
+    <string name="nudge_waiting_for_reply">Waiting for them to nudge back first</string>
+    <string name="nudge_time_now">now</string>
+    <string name="nudge_thread_streak">×%d</string>
+    <string name="nudge_voice_upload_failed">Voice upload failed — please try again</string>
+    <!-- Last message previews -->
+    <string name="nudge_preview_you">You: </string>
+    <string name="nudge_preview_image">Image</string>
+    <string name="nudge_preview_video">Video</string>
+    <string name="nudge_preview_voice">Voice memo</string>
+    <string name="nudge_preview_plain">Nudged</string>
+    <!-- Polish: ticks, expiry, replies, reactions, post share, milestones -->
+    <string name="nudge_seen">Seen</string>
+    <string name="nudge_milestone">%d nudges!</string>
+    <string name="nudge_sharing_post">Sharing post</string>
+    <string name="nudge_reply_voice_label">Voice message</string>
+    <string name="nudge_reply_image_label">Image</string>
+    <string name="nudge_reply_default_label">Nudge</string>
+    <string name="nudge_reply">Reply</string>
+    <string name="nudge_cancel_reply">Cancel reply</string>
+    <string name="nudge_remove_attachment">Remove</string>
+    <string name="nudge_remove_post">Remove post</string>
+    <string name="nudge_about_post">Nudge about this post</string>
+    <string name="nudge_pair_sent">%d sent</string>
+    <string name="nudge_pair_received">%d received</string>
+    <string name="nudge_pair_streak">Streak ×%d</string>
     <string name="kommons_the_forest">The Forest</string>
     <string name="kommons_forest_intro">Proposals, decisions, and collective thinking.</string>
     <string name="space_bar_asked_question">asked a question</string>

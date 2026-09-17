@@ -30,7 +30,9 @@ public enum NotificationType{
 	@SerializedName("quoted_update")
 	QUOTED_UPDATE,
 	@SerializedName("nudge")
-	NUDGE;
+	NUDGE,
+	@SerializedName("media_tag")
+	MEDIA_TAG;
 
 	public boolean canBeGrouped(){
 		return this==REBLOG || this==FAVORITE || this==FOLLOW;

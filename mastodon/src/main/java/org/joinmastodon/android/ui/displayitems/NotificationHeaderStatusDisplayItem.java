@@ -93,6 +93,7 @@ public class NotificationHeaderStatusDisplayItem extends StatusDisplayItem{
 					case UPDATE -> R.string.user_edited_post;
 					case QUOTED_UPDATE -> R.string.user_edited_quoted_post;
 					case NUDGE -> R.string.user_nudged_you;
+					case MEDIA_TAG -> R.string.user_tagged_you_in_photo;
 					default -> throw new IllegalStateException("Unexpected value: "+notification.notification.type);
 				}, "{{name}}");
 			}

@@ -2,11 +2,13 @@ package org.joinmastodon.android.ui.displayitems;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.text.TextUtils;
 import android.util.Pair;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,7 @@ import android.widget.TextView;
 
 import org.joinmastodon.android.R;
 import org.joinmastodon.android.model.Attachment;
+import org.joinmastodon.android.model.MediaTag;
 import org.joinmastodon.android.model.Status;
 import org.joinmastodon.android.model.Translation;
 import org.joinmastodon.android.ui.OutlineProviders;
@@ -102,6 +105,7 @@ public class MediaGridStatusDisplayItem extends StatusDisplayItem{
 		private static final ColorDrawable drawableForWhenThereIsNoBlurhash=new ColorDrawable(0xffffffff);
 		private final TextView hideSensitiveButton;
 		private final TextView sensitiveText;
+		private final TextView tagCaptionView;
 		private boolean thereAreFailedImages;
 
 		public Holder(Activity activity, ViewGroup parent){
@@ -134,6 +138,14 @@ public class MediaGridStatusDisplayItem extends StatusDisplayItem{
 			hideSensitiveButton.setOnClickListener(v->hideSensitive());
 
 			sensitiveText=findViewById(R.id.sensitive_text);
+
+			tagCaptionView=new TextView(activity);
+			tagCaptionView.setTextColor(Color.WHITE);
+			tagCaptionView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+			tagCaptionView.setPaddingRelative(V.dp(8), V.dp(3), V.dp(8), V.dp(3));
+			tagCaptionView.setBackground(new ColorDrawable(0xA0000000));
+			tagCaptionView.setVisibility(View.GONE);
+			overlays.addView(tagCaptionView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
 		}
 
 		@Override
@@ -204,6 +216,14 @@ public class MediaGridStatusDisplayItem extends StatusDisplayItem{
 				sensitiveText.setText(item.sensitiveTitle);
 			else
 				sensitiveText.setText(R.string.sensitive_content_explain);
+
+			String tagNames=buildTagNames(item.attachments);
+			if(tagNames!=null && item.sensitiveRevealed){
+				tagCaptionView.setText("With "+tagNames);
+				tagCaptionView.setVisibility(View.VISIBLE);
+			}else{
+				tagCaptionView.setVisibility(View.GONE);
+			}
 		}
 
 		@Override
@@ -281,6 +301,21 @@ public class MediaGridStatusDisplayItem extends StatusDisplayItem{
 
 		public View getSensitiveOverlay(){
 			return sensitiveOverlay;
+		}
+
+		private static String buildTagNames(List<Attachment> attachments){
+			java.util.LinkedHashSet<String> seen=new java.util.LinkedHashSet<>();
+			for(Attachment att:attachments){
+				if(att.tags==null) continue;
+				for(MediaTag tag:att.tags){
+					if(tag.account==null) continue;
+					String name=tag.account.displayName;
+					if(name==null || name.isEmpty()) name=tag.account.username;
+					if(name!=null && !name.isEmpty()) seen.add(name);
+				}
+			}
+			if(seen.isEmpty()) return null;
+			return String.join(", ", seen);
 		}
 	}
 }
