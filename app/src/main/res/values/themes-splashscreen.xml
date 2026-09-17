@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        Kronk splash — the Android 12+ SplashScreen API + compat.
+
+        Shows the rose emblem at cold launch, then hands off to
+        `Theme.Kronk2` once the Compose tree paints its first frame.
+        Icon background is transparent so the rose renders directly on
+        the Kronk surface colour; the emblem itself is painted purple
+        via the drawable's tint state.
+
+        Compat: on API < 31 the androidx.core:core-splashscreen library
+        pulls the same look from these values, so a Pixel 4a and a
+        Pixel 9 see the same launch experience.
+    -->
+    <style name="Theme.Kronk2.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/surface_primary_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_rose</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Kronk2</item>
+    </style>
+
+    <!--
+        Post-splash Activity theme. Solid Kronk dark on the window,
+        edge-to-edge handled by MainActivity.enableEdgeToEdge().
+    -->
+    <style name="Theme.Kronk2" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/surface_primary_dark</item>
+        <item name="android:statusBarColor">@color/surface_primary_dark</item>
+        <item name="android:navigationBarColor">@color/surface_primary_dark</item>
+    </style>
+</resources>

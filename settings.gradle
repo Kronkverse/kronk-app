@@ -4,7 +4,37 @@ dependencyResolutionManagement {
 		google()
 		mavenCentral()
 		mavenLocal()
+		// UnifiedPush connector — published on JitPack per
+		// developer.unifiedpush.org/docs/spec/embed_connector/. Scoped
+		// to the UnifiedPush group only so a rogue JitPack package
+		// can't shadow anything else.
+		maven {
+			url 'https://jitpack.io'
+			content {
+				includeGroup 'com.github.UnifiedPush'
+			}
+		}
 	}
 }
 rootProject.name = "Mastodon"
 include ':mastodon'
+
+// 2.0 rewrite (see docs/rebuild/plan.md).
+// :core:common       — Kotlin utilities (Result types, dispatchers).
+// :core:model        — Domain types (Account, Status, Reach, Krew, ...);
+//                      Kotlin-only, no Android or Compose deps.
+// :core:network      — Retrofit + kotlinx-serialization; API interfaces
+//                      + wire DTOs + Retrofit factory.
+// :core:designsystem — Compose theme + primitives (KronkTheme, Stage,
+//                      MembraneNav, KornerGlyph, StatusKornerCard, ...).
+// :app               — Kronk 2.0 composition root. Debug builds
+//                      side-load with applicationIdSuffix ".next" so
+//                      they don't collide with the shipping app during
+//                      development; release builds carry the shipping
+//                      applicationId at cutover (Phase 7).
+include ':core:common'
+include ':core:model'
+include ':core:network'
+include ':core:designsystem'
+include ':feature:auth'
+include ':app'

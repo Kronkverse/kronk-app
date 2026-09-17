@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material icon "taunt" for korner tiles. Mirrored from
+     kronk/app/javascript/material-icons/400-24px/taunt.svg.
+     Group translateY=960 reconciles SVG viewBox="0 -960 960 960"
+     with Android's origin-anchored viewport. fillColor is black so
+     a Compose Icon tint at the call site paints it in Kronk purple. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="@android:color/black"
+            android:pathData="M218-381q-24 13-51 5.5T126-406q-17-29-6-60t43-42l337-112 36 71-318 168Zm22 261v-227l349-184-17-35 228-114 36 72-276 208v280H240Zm-39-481q-41-41-41-99t41-99q41-41 99-41t99 41q41 41 41 99t-41 99q-41 41-99 41t-99-41Z" />
+    </group>
+</vector>

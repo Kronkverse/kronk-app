@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        App label deliberately reads "Kronk 2.0" during the Phase-1..6
+        transition so users can tell the new Compose app apart from
+        the legacy one when both are installed. Reverts to "Kronk" at
+        cutover (Phase 7).
+    -->
+    <string name="app_name">Kronk 2.0</string>
+    <string name="welcome_title">Welcome Home</string>
+    <string name="welcome_body">
+        We\u2019re glad you\u2019ve found your way here, things are getting
+        a little weird out there and we reckon the best way to navigate
+        it is together. The people who care are starting to gather,
+        we\u2019re choosing hope and we are laying the foundations of a
+        better world. Welcome to Kronk.
+    </string>
+
+    <!-- Bottom-nav pillar names, mirroring hub_switcher.tsx.
+         Visually hidden on the mobile tab-bar (icons only per
+         Tal 2026-08-28) but used as accessibility labels on tiles
+         and as page titles on the placeholder screens. -->
+    <string name="pillar_me">Me</string>
+    <string name="pillar_home">Home</string>
+    <string name="pillar_awawb">Always was, always will be</string>
+    <string name="pillar_hub">Hub</string>
+    <string name="pillar_nudges">Nudges</string>
+    <string name="pillar_coming_soon">Coming soon.</string>
+    <string name="retry">Retry</string>
+</resources>
