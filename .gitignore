@@ -4,6 +4,8 @@
 /.idea
 .DS_Store
 /build
+# Module-level build/ outputs (:core:*, :app in the 2.0 rewrite).
+**/build/
 /captures
 .externalNativeBuild
 .cxx
