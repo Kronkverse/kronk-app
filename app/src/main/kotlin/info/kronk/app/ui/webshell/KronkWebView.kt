@@ -64,6 +64,7 @@ fun createKronkWebView(
     context: Context,
     state: WebState,
     toolbarColorArgb: Int,
+    pillarKey: info.kronk.app.ui.shell.PillarKey,
     onShowFileChooser: (ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean,
     onPermissionRequest: (PermissionRequest) -> Unit,
 ): WebView {
@@ -99,6 +100,7 @@ fun createKronkWebView(
         onHistoryChange = {
             state.canGoBack = view.canGoBack()
             state.currentUrl = view.url
+            view.url?.let { PillarUrlStore.save(context, pillarKey, it) }
         },
         onError = { message -> state.lastError = message },
         onSuccess = { state.lastError = null },

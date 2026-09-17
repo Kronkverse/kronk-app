@@ -44,6 +44,7 @@ import info.kronk.app.R
 import info.kronk.app.push.SessionTracker
 import info.kronk.app.ui.webshell.IntentEvents
 import info.kronk.app.ui.webshell.KronkIntent
+import info.kronk.app.ui.webshell.PillarUrlStore
 import info.kronk.app.ui.webshell.WebState
 import info.kronk.app.ui.webshell.buildFileChooserIntent
 import info.kronk.app.ui.webshell.createKronkWebView
@@ -148,6 +149,7 @@ fun ShellHost(modifier: Modifier = Modifier) {
                 context = context,
                 state = states[pillar]!!,
                 toolbarColorArgb = toolbarColorArgb,
+                pillarKey = pillar,
                 onShowFileChooser = { callback, params ->
                     pendingFileCallback = callback
                     val capture = buildFileChooserIntent(context, params)
@@ -190,13 +192,15 @@ fun ShellHost(modifier: Modifier = Modifier) {
         }
     }
 
-    // Lazy load: on first activation of a tab, load its URL. Later
-    // re-visits keep whatever the WebView last navigated to (tab
-    // history persists).
+    // Lazy load: on first activation of a tab, load its URL — the
+    // saved last-visited URL for that pillar if any, else the
+    // pillar's canonical entry point. Later re-visits keep whatever
+    // the WebView last navigated to (tab history persists in-process
+    // via the WebView; across process death via PillarUrlStore).
     LaunchedEffect(pagerState.currentPage) {
         val view = webViews[currentPillar]!!
         if (view.url == null) {
-            view.loadUrl(KronkHost.origin + currentPillar.webPath)
+            view.loadUrl(PillarUrlStore.urlFor(context, currentPillar))
         }
     }
 
