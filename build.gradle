@@ -13,6 +13,10 @@ buildscript {
 		// classpath above; both are kotlin-owned artifacts released
 		// in lockstep.
 		classpath "org.jetbrains.kotlin:kotlin-serialization:1.9.22"
+		// Hilt + KSP for :feature:auth and later feature modules.
+		// KSP replaces kapt for annotation processing (2-3x faster).
+		classpath "com.google.dagger:hilt-android-gradle-plugin:2.51.1"
+		classpath "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:1.9.22-1.0.17"
 		// NOTE: Do not place your application dependencies here; they belong
 		// in the individual module build.gradle files
 	}
