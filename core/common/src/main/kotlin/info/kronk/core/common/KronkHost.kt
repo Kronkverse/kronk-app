@@ -16,10 +16,13 @@ package info.kronk.core.common
 // kronk.info").
 
 object KronkHost {
-    // The current live API host. Flip to "kronk.info" at cutover
-    // (Kronkverse/kronk#1859). Debug builds might override via a
-    // separate constant later; for now, dev + release share this.
-    const val value: String = "mastodon.kronk.info"
+    // Points at shadow during the 2.0 rebuild — shadow is the rebuild
+    // line and carries every 2.0 surface (Hub grid, Kommons tokens,
+    // reach ladder, etc.). Production (`mastodon.kronk.info`) still
+    // runs 1.x and doesn't have `/api/v1/korners`, `/@:user/mates`, or
+    // the rebuild UI. Flip this back to production once the rebuild
+    // has cut over there (Kronkverse/kronk#1859).
+    const val value: String = "shadow.kronk.info"
 
     // Full origin including scheme, for building URLs to hand off to
     // Chrome Custom Tab (OAuth authorize URL, korner Custom Tab

@@ -57,6 +57,10 @@ android {
 
     buildFeatures {
         compose = true
+        // KronkApplication reads BuildConfig.DEBUG to toggle
+        // WebView.setWebContentsDebuggingEnabled — enables
+        // chrome://inspect for debugging the in-app WebViews.
+        buildConfig = true
     }
 
     composeOptions {
@@ -70,7 +74,6 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:network"))
     implementation(project(":feature:auth"))
-    implementation(project(":feature:home"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

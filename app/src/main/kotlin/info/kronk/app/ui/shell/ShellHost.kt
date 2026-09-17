@@ -1,56 +1,52 @@
 package info.kronk.app.ui.shell
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import info.kronk.app.ui.hub.HubScreen
+import info.kronk.app.ui.webshell.KronkWebView
 import info.kronk.core.designsystem.primitive.BottomTabBar
 import info.kronk.core.designsystem.primitive.BottomTabItem
-import info.kronk.feature.home.ui.HomeScreen
+import kotlinx.coroutines.launch
 
-// Top-level app scaffold after sign-in. Owns:
-//   - the NavHost (one destination per PillarKey),
-//   - the BottomTabBar wired to the current back-stack entry,
-//   - the safe-area padding around the primary content zone.
+// Top-level app scaffold. Five WebViews (one per pillar) mounted in a
+// HorizontalPager with `beyondBoundsPageCount = 4` so every tab is
+// composed and kept warm — tab-swap is instant, no reload, no lost
+// scroll position, no lost form state. The pager itself is
+// non-swipeable (Tal 2026-08-13: no side-scroll on phone); tabs move
+// only through the BottomTabBar.
 //
-// Nav choice — bottom-bar tabs use `launchSingleTop` + `saveState` /
-// `restoreState` so re-tapping a tab returns to that tab's back stack
-// intact rather than pushing another copy. `popUpTo(startDestination)`
-// keeps the back stack shallow so the system Back button always leads
-// out through Home, not through a chain of tab switches.
+// Each pillar loads its web path (Me → /@me, Home → /home,
+// AWAWB → /awawb, Hub → /hub, Nudges → /nudges) inside the WebView.
+// The web app is the single source of truth for content; the native
+// shell owns only the bottom nav + auth token storage (kept for future
+// push-notification registration).
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShellHost(modifier: Modifier = Modifier) {
-    val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: PillarKey.Home.route
+    val scope = rememberCoroutineScope()
+    val pillars = PillarKey.values()
+    val pagerState = rememberPagerState(initialPage = PillarKey.Home.ordinal) { pillars.size }
 
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            val items = PillarKey.values().map { pillar ->
+            val items = pillars.map { pillar ->
                 BottomTabItem(
                     icon = painterResource(pillar.iconRes),
                     contentDescription = stringResource(pillar.labelRes),
-                    selected = currentRoute == pillar.route,
+                    selected = pagerState.currentPage == pillar.ordinal,
                     onSelect = {
-                        if (currentRoute != pillar.route) {
-                            navController.navigate(pillar.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                        if (pagerState.currentPage != pillar.ordinal) {
+                            scope.launch { pagerState.scrollToPage(pillar.ordinal) }
                         }
                     },
                 )
@@ -58,17 +54,15 @@ fun ShellHost(modifier: Modifier = Modifier) {
             BottomTabBar(items = items)
         },
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = PillarKey.Home.route,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            composable(PillarKey.Me.route) { PlaceholderScreen(PillarKey.Me) }
-            composable(PillarKey.Home.route) { HomeScreen() }
-            composable(PillarKey.Awawb.route) { PlaceholderScreen(PillarKey.Awawb) }
-            composable(PillarKey.Hub.route) { HubScreen() }
-            composable(PillarKey.Nudges.route) { PlaceholderScreen(PillarKey.Nudges) }
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = false,
+            beyondBoundsPageCount = pillars.size - 1,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) { page ->
+            KronkWebView(path = pillars[page].webPath)
         }
     }
 }
-

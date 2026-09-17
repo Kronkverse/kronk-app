@@ -1,27 +1,20 @@
 package info.kronk.app.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import info.kronk.app.ui.shell.ShellHost
-import info.kronk.feature.auth.data.SignInState
-import info.kronk.feature.auth.ui.AuthViewModel
-import info.kronk.feature.auth.ui.SignInScreen
 
-// Top-level router. Reads the auth session state and mounts:
-//   SignedOut → SignInScreen (from :feature:auth)
-//   SignedIn  → ShellHost    (5-pillar bottom nav + per-tab content)
+// Root Composable. With the WebView shell, the web app itself owns
+// sign-in: if the user's WebView has no session cookie, `/home` (the
+// initial pillar) redirects to Kronk's own /auth/sign_in form. After
+// sign-in the session cookie persists across app restarts, so this
+// stays a thin wrapper.
 //
-// AuthGate stays the outer guard so nav-graph work runs only after
-// sign-in and can trust `session is SignedIn`.
+// The native OAuth flow from Phase 2 (AuthViewModel / AuthStorage /
+// SignInScreen) still compiles but isn't mounted here. It stays around
+// for the future push-notification registration (server needs an OAuth
+// token to associate an FCM/UnifiedPush endpoint with the account).
 
 @Composable
 fun AuthGate() {
-    val vm: AuthViewModel = hiltViewModel()
-    val session by vm.session.collectAsStateWithLifecycle()
-    when (session) {
-        SignInState.SignedOut -> SignInScreen(viewModel = vm)
-        is SignInState.SignedIn -> ShellHost()
-    }
+    ShellHost()
 }
