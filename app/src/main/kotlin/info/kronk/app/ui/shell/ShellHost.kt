@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,6 +23,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import info.kronk.app.R
 import info.kronk.app.ui.webshell.IntentEvents
 import info.kronk.app.ui.webshell.KronkIntent
 import info.kronk.app.ui.webshell.WebState
@@ -288,19 +291,36 @@ fun ShellHost(modifier: Modifier = Modifier) {
             // Error overlay — shown when the WebView reports a
             // main-frame load failure. Kept intentionally opinionated
             // so a blank tab always tells the user (and me) what went
-            // wrong, instead of a dark rectangle.
+            // wrong, instead of a dark rectangle. Tapping reloads the
+            // current tab's WebView.
             val err = currentState.lastError
             if (err != null && !currentState.loading) {
-                Text(
-                    text = err,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.textSecondary,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .background(colors.surfaceElevated)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                )
+                ) {
+                    Text(
+                        text = err,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            currentState.lastError = null
+                            webViews[currentPillar]!!.reload()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.retry),
+                            color = colors.purpleBright,
+                        )
+                    }
+                }
             }
         }
     }

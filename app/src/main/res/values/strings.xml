@@ -26,4 +26,5 @@
     <string name="pillar_hub">Hub</string>
     <string name="pillar_nudges">Nudges</string>
     <string name="pillar_coming_soon">Coming soon.</string>
+    <string name="retry">Retry</string>
 </resources>
