@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.browser)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.unifiedpush.connector)
 
     // Hilt: :app is the composition root, so it applies the plugin
     // and hosts the SingletonComponent via KronkApplication.

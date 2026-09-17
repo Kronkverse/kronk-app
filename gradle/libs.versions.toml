@@ -41,6 +41,7 @@ androidxLifecycle = "2.8.4"
 androidxBrowser = "1.8.0"
 androidxNavigation = "2.7.7"
 androidxSplashScreen = "1.0.1"
+unifiedPush = "2.4.0"
 ksp = "1.9.22-1.0.17"
 
 # Image loading (Coil) — for avatars + media in :feature:home and later.
@@ -77,6 +78,7 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigation" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidxSplashScreen" }
+unifiedpush-connector = { module = "com.github.UnifiedPush:android-connector", version.ref = "unifiedPush" }
 
 # Coil (Compose image loading).
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

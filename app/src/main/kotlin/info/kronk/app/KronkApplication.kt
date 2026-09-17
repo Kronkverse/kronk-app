@@ -3,6 +3,7 @@ package info.kronk.app
 import android.app.Application
 import android.webkit.WebView
 import dagger.hilt.android.HiltAndroidApp
+import info.kronk.app.push.PushRegistrar
 import info.kronk.core.common.KronkHost
 
 // Hilt entry point. Must be registered in AndroidManifest.xml's
@@ -25,5 +26,9 @@ class KronkApplication : Application() {
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
+        // Auto-detect push transport: UnifiedPush distributor if
+        // installed, FCM-via-GSF fallback (wired in push #2).
+        // Idempotent — safe on every launch.
+        PushRegistrar.ensureRegistered(this)
     }
 }

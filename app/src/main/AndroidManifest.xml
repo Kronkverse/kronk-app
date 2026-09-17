@@ -92,6 +92,26 @@
             </intent-filter>
         </activity>
 
+        <!-- UnifiedPush MessagingReceiver. Registered via manifest so
+             the OS can broadcast push events to us even when the
+             process is dead — the whole point of push. Actions
+             below come from the UnifiedPush spec:
+               MESSAGE          — payload from the distributor
+               NEW_ENDPOINT     — endpoint URL to give Kronk
+               REGISTRATION_FAILED — distributor rejected us
+               UNREGISTERED     — distributor cleared us -->
+        <receiver
+            android:name="info.kronk.app.push.KronkMessagingReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
+                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
+            </intent-filter>
+        </receiver>
+
         <!-- FileProvider for camera/mic capture. Writes into the app's
              cache dir (see res/xml/file_paths.xml) and hands the
              WebView a content:// URI it can upload via the existing
