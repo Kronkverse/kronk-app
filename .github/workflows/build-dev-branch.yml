@@ -6,7 +6,7 @@ name: Build Dev Branch
       branches:                                                                                          
         - 'feature/**'                                                                                   
         - 'fix/**'                                                                                       
-        - 'docs/**'                                                                                    
+        - 'docs/**'                                                                                      
                                                                                                          
   permissions:                                                                                           
     contents: read                                                                                       
@@ -14,8 +14,8 @@ name: Build Dev Branch
   jobs:                                                                                                  
     build:                                                                                               
       runs-on: ubuntu-latest                                                                             
-                                                                                                       
-      steps:                                                                                             
+                                                                                                         
+      steps:                                                                                           
         - uses: actions/checkout@v4                                                                      
                                                                                                          
         - name: Get branch slug                                                                          
@@ -32,11 +32,7 @@ name: Build Dev Branch
           run: |                                                                                         
             BRANCH="${{ steps.slug.outputs.branch }}"                                                    
             if [[ "$BRANCH" == feature/2.0-* ]]; then                                                    
-              # Kronk 2.0 rewrite lives in :app. Debug variant is auto-signed                            
-              # with android's debug key (no keystore secret needed) and carries                         
-              # the .next.debug applicationIdSuffix so it side-loads next to the                         
-              # shipping legacy app on testers' devices.                                                 
-              echo "module=app" >> $GITHUB_OUTPUT                                                        
+              echo "module=app" >> $GITHUB_OUTPUT                                                      
               echo "gradle_task=:app:assembleDebug" >> $GITHUB_OUTPUT                                    
               echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_OUTPUT                               
               echo "needs_signing=false" >> $GITHUB_OUTPUT                                               
@@ -73,15 +69,15 @@ name: Build Dev Branch
         - name: Build APK                                                                                
           run: ./gradlew ${{ steps.target.outputs.gradle_task }}                                         
                                                                                                          
-        - name: Sign APK (legacy :mastodon only)                                                         
+        - name: Sign APK (legacy mastodon only)                                                          
           if: steps.target.outputs.needs_signing == 'true'                                               
           env:                                                                                           
             KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}                                          
           run: |                                                                                         
             printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks                    
-            UNSIGNED=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)               
+            UNSIGNED=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)                 
             ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)                
-            APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
+            APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)              
             $ZIPALIGN -v -p 4 "$UNSIGNED" kronk-aligned.apk                                              
             $APKSIGNER sign --ks /tmp/release.jks \                                                      
               --ks-pass pass:"${KEYSTORE_PASSWORD}" \                                                    
@@ -89,7 +85,7 @@ name: Build Dev Branch
               --out kronk-dev.apk \                                                                      
               kronk-aligned.apk                                                                          
                                                                                                          
-        - name: Stage APK (:app debug, already signed with android debug key)                            
+        - name: Stage APK (app debug, already signed with android debug key)                             
           if: steps.target.outputs.needs_signing == 'false'                                              
           run: |                                                                                         
             APK=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)                      
@@ -121,15 +117,14 @@ name: Build Dev Branch
   \",\"buildTime\":\"${BUILD_TIME}\"}' \                                                               
               > /var/www/kronk.info/dev/${SLUG}/version.json"                                            
                                                                                                          
-            # Deploy update script and update builds registry                                            
             scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py                                    
   root@kronk.info:/usr/local/bin/update-kronk-builds.py                                                  
             ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"   
                                                                                                          
             ENTRY=$(printf '{"branch":"%s","slug":"%s","version":"%s","versionCode":%s,"commit":"%s","apk
-  Url":"https://kronk.info/dev/%s/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \        
+  Url":"https://kronk.info/dev/%s/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \          
               "$BRANCH" "$SLUG" "$VERSION" "$VERSION_CODE" "$COMMIT" "$SLUG" "$APK_SIZE" "$BUILD_TIME")  
             ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py      
   upsert '$ENTRY'"                                                                                       
                                                                                                          
-            echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/"
+            echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/" 
