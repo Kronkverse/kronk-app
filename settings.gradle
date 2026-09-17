@@ -13,6 +13,8 @@ include ':mastodon'
 // :core:common       — Kotlin utilities (Result types, dispatchers).
 // :core:model        — Domain types (Account, Status, Reach, Krew, ...);
 //                      Kotlin-only, no Android or Compose deps.
+// :core:network      — Retrofit + kotlinx-serialization; API interfaces
+//                      + wire DTOs + Retrofit factory.
 // :core:designsystem — Compose theme + primitives (KronkTheme, Stage,
 //                      MembraneNav, KornerGlyph, StatusKornerCard, ...).
 // :app               — Kronk 2.0 composition root. Debug builds
@@ -22,5 +24,6 @@ include ':mastodon'
 //                      applicationId at cutover (Phase 7).
 include ':core:common'
 include ':core:model'
+include ':core:network'
 include ':core:designsystem'
 include ':app'
