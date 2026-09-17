@@ -6,6 +6,10 @@
          Framework. Only the GSF process (which holds the
          .permission.SEND permission) can broadcast to us. -->
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+    <!-- Show system-tray notifications for incoming pushes.
+         Requested at first-use on Android 13+; auto-granted on
+         Android 12 and below. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Nudges voice messages + Moments voice recording. Requested at
          first-use, not on install; users who never touch a voice input
          are never prompted. -->

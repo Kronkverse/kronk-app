@@ -88,6 +88,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.browser)
+    // Direct OkHttp for the push-subscription POST (KronkRetrofit is
+    // Hilt-scoped and heavyweight for a single fire-and-forget call).
+    implementation(libs.okhttp)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.unifiedpush.connector)
 

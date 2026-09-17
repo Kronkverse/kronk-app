@@ -16,6 +16,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import info.kronk.app.push.PushRegistration
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Stable
@@ -191,6 +192,18 @@ private class KronkWebViewClient(
         // Push the web's stage up so the Kronk menu FAB (bottom-right
         // fixed) isn't hidden behind the native BottomTabBar.
         view.evaluateJavascript(PUSH_STAGE_ABOVE_NATIVE_BAR_JS, null)
+        // Extract the SPA's access token out of initial-state and
+        // register the push subscription with Kronk. Mastodon injects
+        // the token into `<script id="initial-state">…</script>` on
+        // every signed-in page render; if the user is signed out
+        // (auth/sign_in), the field's absent and the eval returns
+        // null.
+        view.evaluateJavascript(EXTRACT_ACCESS_TOKEN_JS) { raw ->
+            val token = raw?.trim('"', ' ')?.takeIf { it.isNotEmpty() && it != "null" }
+            if (token != null) {
+                PushRegistration.tryRegister(view.context, token)
+            }
+        }
         onHistoryChange()
         onSuccess()
     }
@@ -269,6 +282,23 @@ private const val HIDE_WEB_BOTTOM_BAR_JS = """
 // bottom-band-hider. MutationObserver re-injects if the SPA rerenders
 // <head> on route change and wipes the tag (React can drop DOM head
 // modifications when the top-level route swaps).
+// Reads the SPA's access token out of the Rails-emitted
+// `<script id="initial-state">` blob on every page finish. Returns
+// null when the user isn't signed in (Rails renders the auth pages
+// without an initial-state script). Kronk's SPA reads the same
+// value for its own API calls — piggybacking on it means the app
+// doesn't have to re-run the OAuth authorize/exchange dance.
+private const val EXTRACT_ACCESS_TOKEN_JS = """
+(function() {
+  try {
+    var el = document.getElementById('initial-state');
+    if (!el) return null;
+    var s = JSON.parse(el.textContent);
+    return (s && s.meta && s.meta.access_token) || null;
+  } catch (e) { return null; }
+})();
+"""
+
 private const val PUSH_STAGE_ABOVE_NATIVE_BAR_JS = """
 (function() {
   if (window.__kronkAppShellPaddedInstalled) return;

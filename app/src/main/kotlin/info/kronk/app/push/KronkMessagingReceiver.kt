@@ -40,9 +40,11 @@ class KronkMessagingReceiver : MessagingReceiver() {
 
     override fun onMessage(context: Context, message: ByteArray, instance: String) {
         Log.i(TAG, "onMessage instance=$instance payload=${message.size}B")
-        // TODO(push #3): AES-GCM decrypt via ECDH keys stored at
-        // subscription time.
-        // TODO(push #5): post as system notification with deep-link.
+        runCatching {
+            val keys = PushCrypto.ensureKeys(context)
+            val decrypted = PushCrypto.decrypt(keys, message)
+            PushNotifications.display(context, decrypted)
+        }.onFailure { Log.e(TAG, "onMessage decrypt/display failed", it) }
     }
 
     private companion object {

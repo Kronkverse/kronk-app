@@ -82,13 +82,28 @@ object FcmRegistrar {
     }
 
     // Receives actual push payloads over FCM. Manifest-registered.
-    // Payload is an encrypted Web Push blob per RFC 8291; commit #3
-    // wires the AES-GCM/ECDH decrypt path.
+    // Payload arrives base85-encoded in the `p` extra per the
+    // shipping :mastodon path; decode, then RFC 8291 decrypt.
     class MessageReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != "com.google.android.c2dm.intent.RECEIVE") return
-            Log.i(TAG, "FCM push received; extras=${intent.extras?.keySet()}")
-            // TODO(push #3 + #5): decrypt payload and post to system tray.
+            val extras = intent.extras ?: return
+            // Mastodon's Rails backend delivers the RFC 8188 aes128gcm
+            // payload as the `p` extra (base64url, RFC 8291 §5).
+            // Copied convention from :mastodon PushNotificationReceiver.
+            val bodyStr = extras.getString("p") ?: run {
+                Log.w(TAG, "FCM push: no `p` payload extra")
+                return
+            }
+            val body = android.util.Base64.decode(
+                bodyStr,
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP,
+            )
+            runCatching {
+                val keys = PushCrypto.ensureKeys(context)
+                val decrypted = PushCrypto.decrypt(keys, body)
+                PushNotifications.display(context, decrypted)
+            }.onFailure { Log.e(TAG, "FCM push decrypt/display failed", it) }
         }
     }
 }
