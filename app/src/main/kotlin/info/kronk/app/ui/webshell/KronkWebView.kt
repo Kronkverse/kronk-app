@@ -77,6 +77,15 @@ fun createKronkWebView(
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
     view.settings.mediaPlaybackRequiresUserGesture = false
+    // Respect the page's `<meta name="viewport" content="width=device-width">`
+    // tag so Kronk's container queries (`@container frame (width ≤ 889px)`)
+    // trigger mobile layout on the phone. Default is `false` — the WebView
+    // uses a fixed ~980px "wide" viewport regardless of the meta tag,
+    // which caused Kronk to serve the desktop TopBand HubSwitcher on
+    // mobile devices (rendered as a second nav row above the native
+    // BottomTabBar).
+    view.settings.useWideViewPort = true
+    view.settings.loadWithOverviewMode = true
     // Stamp the WebView's UA so shadow's request logs / analytics can
     // distinguish native-app traffic from a straight browser session
     // — useful for Kronk when reasoning about which surfaces get the
