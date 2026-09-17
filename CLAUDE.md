@@ -36,7 +36,12 @@ Android SDK is pre-installed on the dev server at `/opt/android-sdk/` with `ANDR
 
 ## CI/CD (GitHub Actions)
 
-- **`build-dev-branch.yml`** — Triggers on every push to `feature/**`, `fix/**`, `docs/**`. Builds signed APK, deploys to `kronk.info/dev/<branch-slug>/kronk.apk`. Use this to test your branch before merging.
+- **`build-dev-branch.yml`** — Triggers on every push to `feature/**`, `fix/**`, `docs/**` (and by
+  manual dispatch). Builds `:app:assembleDebug` for the Kronk 2.0 rewrite (`feature/2.0-*` branches,     
+  auto-signed with the android debug key, `.next.debug` applicationIdSuffix so it side-loads next to the
+  shipping app) and the release-signed `:mastodon` APK for everything else. Deploys to                   
+  `kronk.info/dev/<branch-slug>/kronk.apk` and updates the builds index. Use this to test your branch    
+  before merging.
 - **`build-dev.yml`** — Triggers on push to `development`. Builds signed APK, deploys to `kronk.info/dev/kronk.apk`.
 - **`build-release.yml`** — Triggers on push of `v*` tag. Creates GitHub Release, deploys to `kronk.info/kronk.apk`.
 
