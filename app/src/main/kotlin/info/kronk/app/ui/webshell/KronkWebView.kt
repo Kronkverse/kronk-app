@@ -73,6 +73,13 @@ fun createKronkWebView(
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
     view.settings.mediaPlaybackRequiresUserGesture = false
+    // Stamp the WebView's UA so shadow's request logs / analytics can
+    // distinguish native-app traffic from a straight browser session
+    // — useful for Kronk when reasoning about which surfaces get the
+    // most use through the shell vs the browser (and for the eventual
+    // KronkAppShell detection the SPA might grow, e.g. to skip the
+    // Web-Push subscription prompt when native push is bound).
+    view.settings.userAgentString = view.settings.userAgentString + " KronkAppShell/1.0"
     // Content-provider URIs from the native document picker are loaded
     // by the WebView when uploading; the local `file://` scheme stays
     // disabled (its default on API 30+) since we never load it.
