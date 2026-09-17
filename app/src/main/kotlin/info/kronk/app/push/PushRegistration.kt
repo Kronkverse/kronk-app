@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import android.util.Log
 import info.kronk.core.common.KronkHost
+import okhttp3.Request as OkRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -122,4 +123,26 @@ object PushRegistration {
     // Web Push subscription payloads.
     private fun base64UrlNoPad(bytes: ByteArray): String =
         Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+
+    // Called from the WebView bridge when we notice the user has
+    // signed out on the web side (session cookie went missing / SPA
+    // redirects to /auth/sign_in). DELETE the subscription so
+    // Kronk stops trying to push to a dead account, then clear the
+    // local crypto keys so the next signed-in user gets fresh ones.
+    fun unregisterAndClear(context: Context, accessToken: String?) {
+        scope.launch {
+            if (!accessToken.isNullOrEmpty()) {
+                runCatching {
+                    val req = OkRequest.Builder()
+                        .url(KronkHost.origin + "/api/v1/push/subscription")
+                        .header("Authorization", "Bearer $accessToken")
+                        .delete()
+                        .build()
+                    http.newCall(req).execute().close()
+                }.onFailure { t -> Log.w(TAG, "unregister failed", t) }
+            }
+            PushCrypto.clearKeys(context)
+            PushTokenStore.clear(context)
+        }
+    }
 }

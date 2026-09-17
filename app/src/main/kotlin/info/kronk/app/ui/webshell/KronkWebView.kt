@@ -17,6 +17,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import info.kronk.app.push.PushRegistration
+import info.kronk.app.push.SessionTracker
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Stable
@@ -192,17 +193,15 @@ private class KronkWebViewClient(
         // Push the web's stage up so the Kronk menu FAB (bottom-right
         // fixed) isn't hidden behind the native BottomTabBar.
         view.evaluateJavascript(PUSH_STAGE_ABOVE_NATIVE_BAR_JS, null)
-        // Extract the SPA's access token out of initial-state and
-        // register the push subscription with Kronk. Mastodon injects
-        // the token into `<script id="initial-state">…</script>` on
-        // every signed-in page render; if the user is signed out
-        // (auth/sign_in), the field's absent and the eval returns
-        // null.
+        // Extract the SPA's access token out of initial-state.
+        // Mastodon injects it into `<script id="initial-state">…`
+        // on every signed-in page render; sign-out pages carry
+        // no token so this returns null. We track the state
+        // transitions so a fresh sign-in registers push and a
+        // sign-out unregisters + clears the ECDH keys.
         view.evaluateJavascript(EXTRACT_ACCESS_TOKEN_JS) { raw ->
             val token = raw?.trim('"', ' ')?.takeIf { it.isNotEmpty() && it != "null" }
-            if (token != null) {
-                PushRegistration.tryRegister(view.context, token)
-            }
+            SessionTracker.onTokenSeen(view.context, token)
         }
         onHistoryChange()
         onSuccess()

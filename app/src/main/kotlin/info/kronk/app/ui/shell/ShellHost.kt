@@ -3,6 +3,7 @@ package info.kronk.app.ui.shell
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -40,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import info.kronk.app.R
+import info.kronk.app.push.SessionTracker
 import info.kronk.app.ui.webshell.IntentEvents
 import info.kronk.app.ui.webshell.KronkIntent
 import info.kronk.app.ui.webshell.WebState
@@ -238,6 +240,27 @@ fun ShellHost(modifier: Modifier = Modifier) {
     // kill doesn't lose the session.
     LaunchedEffect(pagerState.currentPage) {
         android.webkit.CookieManager.getInstance().flush()
+    }
+
+    // Ask for POST_NOTIFICATIONS the first time we see the user
+    // signed in on Android 13+. Push registration works without
+    // this perm — but the tray silently drops incoming pushes if
+    // it's missing, so ask at a natural moment (right after
+    // sign-in) rather than at first display.
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { /* result ignored — user's choice is the choice */ }
+    LaunchedEffect(Unit) {
+        SessionTracker.signedIn.collect { signedIn ->
+            if (!signedIn) return@collect
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@collect
+            val perm = Manifest.permission.POST_NOTIFICATIONS
+            if (
+                ContextCompat.checkSelfPermission(context, perm) ==
+                PackageManager.PERMISSION_GRANTED
+            ) return@collect
+            notificationLauncher.launch(perm)
+        }
     }
 
     Scaffold(
