@@ -23,8 +23,9 @@ class KronkMessagingReceiver : MessagingReceiver() {
 
     override fun onNewEndpoint(context: Context, endpoint: String, instance: String) {
         Log.i(TAG, "onNewEndpoint instance=$instance endpoint=$endpoint")
-        // TODO(push #4): stash in PushTokenStore + POST to
-        // /api/v1/push/subscriptions with OAuth token.
+        PushTokenStore.saveEndpoint(context, endpoint, PushTokenStore.Transport.UNIFIED_PUSH)
+        // TODO(push #4): POST /api/v1/push/subscriptions with OAuth
+        // token so Kronk starts sending pushes to this endpoint.
     }
 
     override fun onRegistrationFailed(context: Context, instance: String) {

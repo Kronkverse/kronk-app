@@ -40,8 +40,8 @@ object PushRegistrar {
         val distributors = runCatching { UnifiedPush.getDistributors(context) }
             .getOrDefault(emptyList())
         if (distributors.isEmpty()) {
-            Log.i(TAG, "No UnifiedPush distributor installed; FCM fallback pending (push commit #2).")
-            // TODO(push #2): fire FCM-via-GSF `com.google.iid.TOKEN_REQUEST` broadcast.
+            Log.i(TAG, "No UnifiedPush distributor installed; falling through to FCM-via-GSF.")
+            FcmRegistrar.requestToken(context)
             return
         }
         val already = runCatching { UnifiedPush.getSavedDistributor(context) }
