@@ -15,4 +15,15 @@
         we\u2019re choosing hope and we are laying the foundations of a
         better world. Welcome to Kronk.
     </string>
+
+    <!-- Bottom-nav pillar names, mirroring hub_switcher.tsx.
+         Visually hidden on the mobile tab-bar (icons only per
+         Tal 2026-08-28) but used as accessibility labels on tiles
+         and as page titles on the placeholder screens. -->
+    <string name="pillar_me">Me</string>
+    <string name="pillar_home">Home</string>
+    <string name="pillar_awawb">Always was, always will be</string>
+    <string name="pillar_hub">Hub</string>
+    <string name="pillar_nudges">Nudges</string>
+    <string name="pillar_coming_soon">Coming soon.</string>
 </resources>

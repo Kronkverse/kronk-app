@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    home — mirrored from
+    kronk/app/javascript/material-icons/400-24px/home.svg.
+    Wrapped in a group with translateY="960" to reconcile SVG's
+    viewBox="0 -960 960 960" with Android's origin-anchored viewport.
+    fillColor is @android:color/black so a Compose Icon tint at the
+    call site paints it in whatever Kronk colour the pillar wants.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="@android:color/black"
+            android:pathData="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z" />
+    </group>
+</vector>
