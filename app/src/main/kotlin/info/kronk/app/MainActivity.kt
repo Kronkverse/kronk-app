@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import info.kronk.app.ui.AuthGate
 import info.kronk.app.ui.webshell.IntentEvents
@@ -27,6 +28,11 @@ class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // installSplashScreen MUST run before super.onCreate so the
+        // splash surface is bound to this Activity instance and the
+        // rose icon is what the user sees between launcher-tap and
+        // first Compose paint.
+        installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         dispatch(intent)
