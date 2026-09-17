@@ -9,6 +9,7 @@ import dagger.hilt.components.SingletonComponent
 import info.kronk.core.network.KronkRetrofit
 import info.kronk.core.network.api.AccountsApi
 import info.kronk.core.network.api.AppsApi
+import info.kronk.core.network.api.KornersApi
 import info.kronk.core.network.api.OAuthApi
 import info.kronk.core.network.api.TimelinesApi
 import info.kronk.core.network.create
@@ -63,6 +64,10 @@ object AuthModule {
     @Provides
     @Singleton
     fun provideTimelinesApi(retrofit: KronkRetrofit): TimelinesApi = retrofit.create()
+
+    @Provides
+    @Singleton
+    fun provideKornersApi(retrofit: KronkRetrofit): KornersApi = retrofit.create()
 
     @Provides
     @Singleton

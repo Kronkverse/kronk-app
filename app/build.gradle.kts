@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.browser)
 
     // Hilt: :app is the composition root, so it applies the plugin
     // and hosts the SingletonComponent via KronkApplication.

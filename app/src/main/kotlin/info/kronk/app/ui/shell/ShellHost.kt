@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import info.kronk.app.ui.hub.HubScreen
 import info.kronk.core.designsystem.primitive.BottomTabBar
 import info.kronk.core.designsystem.primitive.BottomTabItem
 import info.kronk.feature.home.ui.HomeScreen
@@ -65,7 +66,7 @@ fun ShellHost(modifier: Modifier = Modifier) {
             composable(PillarKey.Me.route) { PlaceholderScreen(PillarKey.Me) }
             composable(PillarKey.Home.route) { HomeScreen() }
             composable(PillarKey.Awawb.route) { PlaceholderScreen(PillarKey.Awawb) }
-            composable(PillarKey.Hub.route) { PlaceholderScreen(PillarKey.Hub) }
+            composable(PillarKey.Hub.route) { HubScreen() }
             composable(PillarKey.Nudges.route) { PlaceholderScreen(PillarKey.Nudges) }
         }
     }
