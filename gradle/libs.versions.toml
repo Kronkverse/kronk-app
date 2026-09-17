@@ -18,10 +18,19 @@
 
 # Kotlin + Compose (aligned with :mastodon's current setup).
 kotlin = "1.9.22"
+kotlinxSerialization = "1.6.3"
 composeCompiler = "1.5.8"
 composeBom = "2024.02.00"
 androidxCoreKtx = "1.13.1"
 androidxActivityCompose = "1.8.2"
+
+# Networking (used by :core:network — for the 2.0 rewrite's own Retrofit
+# stack; :mastodon still uses its hand-rolled MastodonAPIController).
+# Retrofit 2.11.0 ships its own kotlinx-serialization converter under
+# retrofit2-kotlinx-serialization-converter — same artifact name as the
+# JakeWharton one but published by Square as of 2.10.
+okhttp = "4.12.0"
+retrofit = "2.11.0"
 
 [libraries]
 
@@ -34,3 +43,13 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
+
+# Serialization + networking (:core:network).
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+retrofit-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
+
+[plugins]
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
