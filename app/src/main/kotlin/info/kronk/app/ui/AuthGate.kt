@@ -7,10 +7,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import info.kronk.feature.auth.data.SignInState
 import info.kronk.feature.auth.ui.AuthViewModel
 import info.kronk.feature.auth.ui.SignInScreen
+import info.kronk.feature.home.ui.HomeScreen
 
 // Top-level router. Reads the auth session state and mounts:
 //   SignedOut → SignInScreen (from :feature:auth)
-//   SignedIn  → WelcomePane  (placeholder until Phase 2C's Home)
+//   SignedIn  → HomeScreen   (from :feature:home)
 //
 // This composable is currently the whole app's routing. When Phase 3+
 // adds real navigation (nav-graph, back-stack), AuthGate stays the
@@ -22,6 +23,6 @@ fun AuthGate() {
     val session by vm.session.collectAsStateWithLifecycle()
     when (session) {
         SignInState.SignedOut -> SignInScreen(viewModel = vm)
-        is SignInState.SignedIn -> WelcomePane()
+        is SignInState.SignedIn -> HomeScreen()
     }
 }

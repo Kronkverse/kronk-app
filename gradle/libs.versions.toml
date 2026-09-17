@@ -41,6 +41,9 @@ androidxLifecycle = "2.8.4"
 androidxBrowser = "1.8.0"
 ksp = "1.9.22-1.0.17"
 
+# Image loading (Coil) — for avatars + media in :feature:home and later.
+coil = "2.6.0"
+
 [libraries]
 
 # Kotlin + Compose (used by :core:designsystem, :app, and later :feature:*).
@@ -70,6 +73,9 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
+
+# Coil (Compose image loading).
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
