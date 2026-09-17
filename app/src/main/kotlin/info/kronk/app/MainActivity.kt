@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import info.kronk.app.ui.AuthGate
+import info.kronk.app.ui.webshell.AppReadyState
 import info.kronk.app.ui.webshell.IntentEvents
 import info.kronk.core.designsystem.theme.KronkTheme
 import info.kronk.feature.auth.ui.AuthViewModel
@@ -31,8 +32,10 @@ class MainActivity : ComponentActivity() {
         // installSplashScreen MUST run before super.onCreate so the
         // splash surface is bound to this Activity instance and the
         // rose icon is what the user sees between launcher-tap and
-        // first Compose paint.
-        installSplashScreen()
+        // first Compose paint. Hold the splash until the first
+        // WebView finishes loading so there's no "rose -> blank
+        // dark -> content" flash on slow cold-starts.
+        installSplashScreen().setKeepOnScreenCondition { !AppReadyState.isReady }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         dispatch(intent)

@@ -224,6 +224,10 @@ private class KronkWebViewClient(
         }
         onHistoryChange()
         onSuccess()
+        // First tab to finish loading flips the "app ready" latch —
+        // MainActivity's SplashScreen keep-on-screen condition polls
+        // this to know when to hand off from rose emblem to WebView.
+        AppReadyState.markReady()
     }
 
     override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
