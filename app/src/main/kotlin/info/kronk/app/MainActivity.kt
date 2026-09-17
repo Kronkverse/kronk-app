@@ -8,8 +8,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import info.kronk.app.ui.AuthGate
+import info.kronk.app.ui.webshell.IntentEvents
 import info.kronk.core.designsystem.theme.KronkTheme
 import info.kronk.feature.auth.ui.AuthViewModel
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 // Composition root. Sets edge-to-edge, wraps everything in KronkTheme,
 // hands off to AuthGate which routes signed-out → SignInScreen, signed-
@@ -26,7 +29,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        handleAuthIntent(intent)
+        dispatch(intent)
         setContent {
             KronkTheme {
                 AuthGate()
@@ -37,12 +40,26 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleAuthIntent(intent)
+        dispatch(intent)
     }
 
-    private fun handleAuthIntent(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (data.scheme != "kronk-auth" || data.host != "callback") return
-        authViewModel.handleAuthCallback(data)
+    // One entry point for every intent the Activity receives —
+    // OAuth callback (Phase-2 kronk-auth://), Kronk deep-link
+    // (https://kronk.info/*), and Share (ACTION_SEND / SEND_MULTIPLE).
+    // The auth callback is captured explicitly; everything else is
+    // handed to IntentEvents which the Compose ShellHost observes.
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    private fun dispatch(intent: Intent?) {
+        if (intent == null) return
+        val data = intent.data
+        if (data?.scheme == "kronk-auth" && data.host == "callback") {
+            authViewModel.handleAuthCallback(data)
+            return
+        }
+        val kronkIntent = IntentEvents.resolve(intent) ?: return
+        // Emit on the app-scoped coroutine so the Composable side sees
+        // it whether or not it's currently in composition (SharedFlow
+        // with extraBufferCapacity=4 caches until observed).
+        GlobalScope.launch { IntentEvents.events.emit(kronkIntent) }
     }
 }

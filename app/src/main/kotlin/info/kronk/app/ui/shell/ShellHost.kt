@@ -33,8 +33,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import info.kronk.app.ui.webshell.IntentEvents
+import info.kronk.app.ui.webshell.KronkIntent
 import info.kronk.app.ui.webshell.WebState
+import info.kronk.app.ui.webshell.buildFileChooserIntent
 import info.kronk.app.ui.webshell.createKronkWebView
+import info.kronk.app.ui.webshell.parseFileChooserResult
 import info.kronk.core.common.KronkHost
 import info.kronk.core.designsystem.primitive.BottomTabBar
 import info.kronk.core.designsystem.primitive.BottomTabItem
@@ -73,19 +77,23 @@ fun ShellHost(modifier: Modifier = Modifier) {
     // Per-pillar observable state — WebView progress + history + URL.
     val states = remember { pillars.associateWith { WebState() } }
 
-    // File-picker plumbing. When the web calls `onShowFileChooser`, we
-    // stash the callback and launch the system document picker; when
-    // it returns, we ship the URIs back through the callback.
-    // Single-slot: only one picker in flight at a time (WebChromeClient
-    // enforces this via its own filePathCallback contract).
+    // File-picker plumbing. When the web calls `onShowFileChooser` we
+    // build the right intent (camera / camcorder / document picker
+    // depending on the `<input>`'s accept + capture attrs), stash the
+    // callback + output URI, and launch. On return, ship URIs back to
+    // the WebView. Single-slot: only one picker in flight at a time
+    // (WebChromeClient enforces this via its own filePathCallback
+    // contract).
     var pendingFileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         val cb = pendingFileCallback ?: return@rememberLauncherForActivityResult
-        val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
-        cb.onReceiveValue(uris ?: emptyArray())
+        val uris = parseFileChooserResult(pendingCaptureUri, result.resultCode, result.data)
+        cb.onReceiveValue(uris)
         pendingFileCallback = null
+        pendingCaptureUri = null
     }
 
     // Create one WebView per pillar. Kept in `remember` so they survive
@@ -102,14 +110,17 @@ fun ShellHost(modifier: Modifier = Modifier) {
                 toolbarColorArgb = toolbarColorArgb,
                 onShowFileChooser = { callback, params ->
                     pendingFileCallback = callback
+                    val capture = buildFileChooserIntent(context, params)
+                    pendingCaptureUri = capture.outputUri
                     try {
-                        filePickerLauncher.launch(params.createIntent())
+                        filePickerLauncher.launch(capture.chooser)
                         true
                     } catch (t: Throwable) {
-                        // If the launcher can't fire (no picker app,
-                        // etc.), tell the WebView the pick was cancelled
-                        // so the <input> element is released.
+                        // No matching activity (no camera, no document
+                        // picker, etc.) — release the <input> so the
+                        // web page isn't stuck waiting.
                         pendingFileCallback = null
+                        pendingCaptureUri = null
                         callback.onReceiveValue(emptyArray())
                         false
                     }
@@ -125,6 +136,35 @@ fun ShellHost(modifier: Modifier = Modifier) {
         val view = webViews[currentPillar]!!
         if (view.url == null) {
             view.loadUrl(KronkHost.origin + currentPillar.webPath)
+        }
+    }
+
+    // Deep-link + share intents. MainActivity's dispatch() emits into
+    // IntentEvents; we consume here and route to the right pillar.
+    // OpenUrl: switch tab + WebView.loadUrl(target).
+    // Compose (share-into-Kronk): switch to Home, load /publish; the
+    // web feature reads the query params to hydrate its state.
+    LaunchedEffect(Unit) {
+        IntentEvents.events.collect { evt ->
+            when (evt) {
+                is KronkIntent.OpenUrl -> {
+                    scope.launch { pagerState.scrollToPage(evt.pillar.ordinal) }
+                    webViews[evt.pillar]!!.loadUrl(evt.url)
+                }
+                is KronkIntent.Compose -> {
+                    val text = evt.text.orEmpty()
+                    val encoded = android.net.Uri.encode(text)
+                    val url = KronkHost.origin + "/publish" +
+                        (if (encoded.isNotEmpty()) "?text=$encoded" else "")
+                    scope.launch { pagerState.scrollToPage(PillarKey.Home.ordinal) }
+                    webViews[PillarKey.Home]!!.loadUrl(url)
+                    // Attachments arrive via ACTION_SEND EXTRA_STREAM;
+                    // wiring them into Kronk's compose feature requires
+                    // a JS bridge (upload-then-attach). Deferred to
+                    // Week 2 (this landing at least gets the text
+                    // populated so the user isn't stuck).
+                }
+            }
         }
     }
 

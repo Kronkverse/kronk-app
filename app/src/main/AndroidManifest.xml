@@ -3,6 +3,18 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Camera / video capture requests use ACTION_IMAGE_CAPTURE and
+         ACTION_VIDEO_CAPTURE which don't need the CAMERA permission
+         (the camera app owns that). But declaring the feature as
+         optional means the app still installs on tablets without a
+         camera; capture intents just fail gracefully. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
     <application
         android:name=".KronkApplication"
         android:allowBackup="false"
@@ -31,7 +43,62 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="kronk-auth" android:host="callback" />
             </intent-filter>
+
+            <!-- https://kronk.info/* and https://shadow.kronk.info/* —
+                 tapping any Kronk link in email, chat, another app
+                 opens the app on the matching pillar. autoVerify="true"
+                 lets the app appear as the default handler once the
+                 Digital Asset Links `.well-known/assetlinks.json` is
+                 served from the host (Kronkverse infra follow-up);
+                 until then the user picks the app from the resolver
+                 sheet. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="kronk.info" />
+                <data android:host="shadow.kronk.info" />
+            </intent-filter>
+
+            <!-- ACTION_SEND — user shares something from another app
+                 ("Share to Kronk") and lands in the composer. Text,
+                 image, video, audio all supported. The Activity
+                 dispatches to a Kronk-side compose URL with the
+                 shared payload as a query param + attachment stream. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
         </activity>
+
+        <!-- FileProvider for camera/mic capture. Writes into the app's
+             cache dir (see res/xml/file_paths.xml) and hands the
+             WebView a content:// URI it can upload via the existing
+             `<input type="file">` flow. Authority is the app's
+             package + `.captures` — reads from BuildConfig at
+             runtime so debug and release get distinct authorities
+             (`info.kronk.app.next.debug.captures` vs
+             `info.kronk.app.captures`) and can coexist. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.captures"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

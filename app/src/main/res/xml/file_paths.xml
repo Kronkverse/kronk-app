@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider paths for camera + mic capture.
+
+    Native camera / video / audio intents write into files under the
+    app's private cache dir; FileProvider exposes those as content://
+    URIs the WebView can upload to Kronk via the existing
+    <input type="file"> flow. The path stays inside the app sandbox,
+    is cleaned up by Android's cache eviction, and is not visible to
+    other apps or scanned by MediaStore.
+-->
+<paths>
+    <cache-path
+        name="captures"
+        path="captures/" />
+</paths>
