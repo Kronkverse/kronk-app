@@ -1,9 +1,12 @@
 package info.kronk.app.ui.webshell
 
 import android.annotation.SuppressLint
+import android.app.DownloadManager
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
+import android.os.Environment
+import android.webkit.URLUtil
 import android.webkit.CookieManager
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
@@ -108,6 +111,28 @@ fun createKronkWebView(
         // yet, the launcher prompts before the WebView is granted.
         override fun onPermissionRequest(request: PermissionRequest) {
             onPermissionRequest(request)
+        }
+    }
+    // Download links (media exports, data archives, APK updates)
+    // route to the system DownloadManager so the file lands in the
+    // user's Downloads folder and shows in the notification tray.
+    view.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
+        runCatching {
+            val filename = URLUtil.guessFileName(url, contentDisposition, mimetype)
+            val request = DownloadManager.Request(Uri.parse(url))
+                .setTitle(filename)
+                .setDescription("Downloading from Kronk")
+                .setMimeType(mimetype)
+                .addRequestHeader("User-Agent", userAgent)
+                .setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+                )
+                .setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    filename,
+                )
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
         }
     }
     // No initial loadUrl — ShellHost lazy-loads each tab on first
