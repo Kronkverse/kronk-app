@@ -7,7 +7,9 @@ import android.net.Uri
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.browser.customtabs.CustomTabColorSchemeParams
@@ -29,6 +31,11 @@ class WebState {
     var loading by mutableStateOf(false)
     var canGoBack by mutableStateOf(false)
     var currentUrl by mutableStateOf<String?>(null)
+    // Last error surface for a page that failed to load — e.g.
+    // network unreachable, DNS failure, TLS handshake failure, or
+    // an HTTP 5xx on the main-frame request. Cleared on next
+    // successful onPageFinished for the main-frame URL.
+    var lastError by mutableStateOf<String?>(null)
 }
 
 // Non-Composable WebView factory — ShellHost owns the WebView
@@ -78,6 +85,8 @@ fun createKronkWebView(
             state.canGoBack = view.canGoBack()
             state.currentUrl = view.url
         },
+        onError = { message -> state.lastError = message },
+        onSuccess = { state.lastError = null },
     )
     view.webChromeClient = object : WebChromeClient() {
         override fun onProgressChanged(v: WebView?, newProgress: Int) {
@@ -106,6 +115,8 @@ fun createKronkWebView(
 private class KronkWebViewClient(
     private val toolbarColorArgb: Int,
     private val onHistoryChange: () -> Unit,
+    private val onError: (String) -> Unit,
+    private val onSuccess: () -> Unit,
 ) : WebViewClient() {
 
     override fun shouldOverrideUrlLoading(
@@ -135,12 +146,38 @@ private class KronkWebViewClient(
         // the native BottomTabBar. Idempotent via the window flag —
         // safe to call on every SPA route change.
         view.evaluateJavascript(HIDE_WEB_BOTTOM_BAR_JS, null)
+        // Push the web's stage up so the Kronk menu FAB (bottom-right
+        // fixed) isn't hidden behind the native BottomTabBar.
+        view.evaluateJavascript(PUSH_STAGE_ABOVE_NATIVE_BAR_JS, null)
         onHistoryChange()
+        onSuccess()
     }
 
     override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
         super.doUpdateVisitedHistory(view, url, isReload)
         onHistoryChange()
+    }
+
+    // Main-frame load failures — DNS unreachable, TLS handshake, connection reset.
+    override fun onReceivedError(
+        view: WebView,
+        request: WebResourceRequest,
+        error: WebResourceError,
+    ) {
+        super.onReceivedError(view, request, error)
+        if (!request.isForMainFrame) return
+        onError("Couldn't reach ${request.url.host} — ${error.description} (${error.errorCode})")
+    }
+
+    // Main-frame HTTP errors — 4xx/5xx from the server itself.
+    override fun onReceivedHttpError(
+        view: WebView,
+        request: WebResourceRequest,
+        errorResponse: WebResourceResponse,
+    ) {
+        super.onReceivedHttpError(view, request, errorResponse)
+        if (!request.isForMainFrame) return
+        onError("HTTP ${errorResponse.statusCode} on ${request.url.path ?: request.url}")
     }
 
     private fun isSameHost(url: String): Boolean {
@@ -179,5 +216,26 @@ private const val HIDE_WEB_BOTTOM_BAR_JS = """
   };
   inject();
   new MutationObserver(inject).observe(document.documentElement, { childList: true, subtree: true });
+})();
+"""
+
+// Also inject a body padding-bottom so the web's floating Kronk menu
+// (the Ж FAB — position: fixed at bottom-right on mobile, see
+// kronk_menu.tsx) isn't hidden behind the native BottomTabBar. The
+// native bar is ~52dp core height + navigation-bar inset; 88px is a
+// pragmatic conservative value. Uses the same CSP nonce path as the
+// bottom-band-hider.
+private const val PUSH_STAGE_ABOVE_NATIVE_BAR_JS = """
+(function() {
+  if (window.__kronkAppShellPadded) return;
+  window.__kronkAppShellPadded = true;
+  var nonceMeta = document.querySelector('meta[name="style-nonce"]');
+  var nonce = nonceMeta ? nonceMeta.getAttribute('content') : null;
+  var s = document.createElement('style');
+  s.id = 'kronk-app-shell-pad';
+  if (nonce) s.setAttribute('nonce', nonce);
+  s.textContent = 'body { padding-bottom: 88px !important; } ' +
+                  '.kronk-menu { bottom: 96px !important; }';
+  (document.head || document.documentElement).appendChild(s);
 })();
 """

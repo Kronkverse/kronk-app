@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import info.kronk.app.ui.webshell.WebState
 import info.kronk.app.ui.webshell.createKronkWebView
@@ -183,6 +187,23 @@ fun ShellHost(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth(),
+                )
+            }
+            // Error overlay — shown when the WebView reports a
+            // main-frame load failure. Kept intentionally opinionated
+            // so a blank tab always tells the user (and me) what went
+            // wrong, instead of a dark rectangle.
+            val err = currentState.lastError
+            if (err != null && !currentState.loading) {
+                Text(
+                    text = err,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .background(colors.surfaceElevated)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                 )
             }
         }
