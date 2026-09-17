@@ -4,6 +4,9 @@
 /.idea
 .DS_Store
 /build
+# Also exclude module-level build/ outputs (matches every :core:*
+# and future :feature:* module in the 2.0 rewrite).
+**/build/
 /captures
 .externalNativeBuild
 .cxx

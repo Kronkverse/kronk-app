@@ -7,6 +7,13 @@ buildscript {
 	dependencies {
 		classpath "com.android.tools.build:gradle:8.2.2"
 		classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
+		// Kotlin classpath — required for the :core:* modules landing in
+		// the 2.0 rewrite (see docs/rebuild/plan.md). The version tracks
+		// libs.versions.toml's `kotlin` entry; keep them in lockstep.
+		// Not yet consuming the version catalog here because buildscript{}
+		// runs before the catalog is available — a plugins-DSL migration
+		// is a separate refactor.
+		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
 		// NOTE: Do not place your application dependencies here; they belong
 		// in the individual module build.gradle files
 	}

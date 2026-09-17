@@ -8,3 +8,12 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Mastodon"
 include ':mastodon'
+
+// 2.0 rewrite (see docs/rebuild/plan.md).
+// :core:common       — utilities, Result types, dispatchers (Kotlin-only).
+// :core:model        — domain types (Account, Status, Reach, Krew, etc.).
+// :core:designsystem — Compose theme + primitives (KronkTheme, Stage, MembraneNav).
+// Empty scaffolds land first; each fills as the phase reaches it.
+include ':core:common'
+include ':core:model'
+include ':core:designsystem'
