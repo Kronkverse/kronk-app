@@ -47,7 +47,6 @@ class WebState {
 @SuppressLint("SetJavaScriptEnabled")
 fun createKronkWebView(
     context: Context,
-    path: String,
     state: WebState,
     toolbarColorArgb: Int,
     onShowFileChooser: (ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean,
@@ -56,9 +55,9 @@ fun createKronkWebView(
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
     view.settings.mediaPlaybackRequiresUserGesture = false
-    // Loading local files (e.g. captured images) via file:// requires
-    // this to be enabled for the WebView-to-Rails upload flow.
-    view.settings.allowFileAccess = true
+    // Content-provider URIs from the native document picker are loaded
+    // by the WebView when uploading; the local `file://` scheme stays
+    // disabled (its default on API 30+) since we never load it.
     view.settings.allowContentAccess = true
     // Cookies — Kronk's Rails backend uses session cookies for the SPA
     // sign-in; make sure the WebView persists them so the user stays
@@ -86,7 +85,11 @@ fun createKronkWebView(
             fileChooserParams: FileChooserParams,
         ): Boolean = onShowFileChooser(filePathCallback, fileChooserParams)
     }
-    view.loadUrl(KronkHost.origin + path)
+    // No initial loadUrl — ShellHost lazy-loads each tab on first
+    // activation so tabs the user never opens don't spin up
+    // (and, more importantly, so a redirect-to-sign_in on cold start
+    // only lands on the tab the user is looking at; the other tabs
+    // start fresh once the session cookie is set).
     return view
 }
 

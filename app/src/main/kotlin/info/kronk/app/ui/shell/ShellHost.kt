@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import info.kronk.app.ui.webshell.WebState
 import info.kronk.app.ui.webshell.createKronkWebView
+import info.kronk.core.common.KronkHost
 import info.kronk.core.designsystem.primitive.BottomTabBar
 import info.kronk.core.designsystem.primitive.BottomTabItem
 import info.kronk.core.designsystem.theme.KronkTheme
@@ -84,29 +85,42 @@ fun ShellHost(modifier: Modifier = Modifier) {
     }
 
     // Create one WebView per pillar. Kept in `remember` so they survive
-    // recomposition and stay warm across tab swaps.
+    // recomposition and stay warm across tab swaps. URL loading is
+    // deferred to first activation (LaunchedEffect below) so a
+    // redirect-to-sign_in on cold start only lands on the tab the user
+    // is looking at; the other tabs start fresh after the session
+    // cookie is set on Home.
     val webViews = remember {
         pillars.associateWith { pillar ->
             createKronkWebView(
                 context = context,
-                path = pillar.webPath,
                 state = states[pillar]!!,
                 toolbarColorArgb = toolbarColorArgb,
                 onShowFileChooser = { callback, params ->
                     pendingFileCallback = callback
-                    runCatching {
+                    try {
                         filePickerLauncher.launch(params.createIntent())
-                    }.getOrElse {
+                        true
+                    } catch (t: Throwable) {
                         // If the launcher can't fire (no picker app,
                         // etc.), tell the WebView the pick was cancelled
                         // so the <input> element is released.
                         pendingFileCallback = null
                         callback.onReceiveValue(emptyArray())
-                        return@createKronkWebView false
+                        false
                     }
-                    true
                 },
             )
+        }
+    }
+
+    // Lazy load: on first activation of a tab, load its URL. Later
+    // re-visits keep whatever the WebView last navigated to (tab
+    // history persists).
+    LaunchedEffect(pagerState.currentPage) {
+        val view = webViews[currentPillar]!!
+        if (view.url == null) {
+            view.loadUrl(KronkHost.origin + currentPillar.webPath)
         }
     }
 

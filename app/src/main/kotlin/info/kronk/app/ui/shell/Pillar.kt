@@ -18,7 +18,7 @@ enum class PillarKey(
     @DrawableRes val iconRes: Int,
     @StringRes val labelRes: Int,
 ) {
-    Me     ("me",     "/@me",     DesignR.drawable.ic_pillar_taunt,            R.string.pillar_me),
+    Me     ("me",     "/me",      DesignR.drawable.ic_pillar_taunt,            R.string.pillar_me),
     Home   ("home",   "/home",    DesignR.drawable.ic_pillar_home,             R.string.pillar_home),
     Awawb  ("awawb",  "/awawb",   DesignR.drawable.ic_pillar_aboriginal_flag,  R.string.pillar_awawb),
     Hub    ("hub",    "/hub",     DesignR.drawable.ic_pillar_apps,             R.string.pillar_hub),
