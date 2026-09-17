@@ -27,8 +27,15 @@ sealed interface KronkIntent {
 }
 
 object IntentEvents {
+    // `replay = 1` so a cold-start intent (e.g. a notification tap
+    // that launched the process) survives the gap between
+    // MainActivity.onCreate emitting it and the Compose ShellHost
+    // subscribing. Without replay the emission fires with no
+    // subscriber and the deep-link is lost — user taps a Nudge
+    // notification from a killed app, lands on Home instead of the
+    // Nudge thread.
     val events: MutableSharedFlow<KronkIntent> = MutableSharedFlow(
-        replay = 0,
+        replay = 1,
         extraBufferCapacity = 4,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
