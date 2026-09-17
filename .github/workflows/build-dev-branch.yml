@@ -1,130 +1,123 @@
-name: Build Dev Branch                                                                                 
-                                                                                                         
-  on:                                                                                                    
-    workflow_dispatch:                                                                                   
-    push:                                                                                                
-      branches:                                                                                          
-        - 'feature/**'                                                                                   
-        - 'fix/**'                                                                                       
-        - 'docs/**'                                                                                      
-                                                                                                         
-  permissions:                                                                                           
-    contents: read                                                                                       
-                                                                                                         
-  jobs:                                                                                                  
-    build:                                                                                               
-      runs-on: ubuntu-latest                                                                             
-                                                                                                         
-      steps:                                                                                           
-        - uses: actions/checkout@v4                                                                      
-                                                                                                         
-        - name: Get branch slug                                                                          
-          id: slug                                                                                       
-          run: |                                                                                         
-            BRANCH="${{ github.ref_name }}"                                                              
-            SLUG=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed          
-  's/-\+/-/g' | sed 's/^-//;s/-$//')                                                                     
-            echo "slug=$SLUG" >> $GITHUB_OUTPUT                                                        
-            echo "branch=$BRANCH" >> $GITHUB_OUTPUT                                                      
-                                                                                                         
-        - name: Pick build target                                                                        
-          id: target                                                                                     
-          run: |                                                                                         
-            BRANCH="${{ steps.slug.outputs.branch }}"                                                    
-            if [[ "$BRANCH" == feature/2.0-* ]]; then                                                    
-              echo "module=app" >> $GITHUB_OUTPUT                                                      
-              echo "gradle_task=:app:assembleDebug" >> $GITHUB_OUTPUT                                    
-              echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_OUTPUT                               
-              echo "needs_signing=false" >> $GITHUB_OUTPUT                                               
-              VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')    
-              VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | head -1 | sed 's/[^0-9]*//g')     
-            else                                                                                         
-              echo "module=mastodon" >> $GITHUB_OUTPUT                                                   
-              echo "gradle_task=assembleGithubRelease" >> $GITHUB_OUTPUT                                 
-              echo "apk_dir=mastodon/build/outputs/apk/githubRelease" >> $GITHUB_OUTPUT                  
-              echo "needs_signing=true" >> $GITHUB_OUTPUT                                                
-              VERSION=$(grep 'versionName' mastodon/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')   
-              VERSION_CODE=$(grep 'versionCode' mastodon/build.gradle | head -1 | sed 's/[^0-9]*//g')    
-            fi                                                                                           
-            COMMIT_SHA=${GITHUB_SHA::7}                                                                  
-            echo "version=${VERSION}-dev.${COMMIT_SHA}" >> $GITHUB_OUTPUT                                
-            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT                                          
-            echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT                                                  
-                                                                                                         
-        - name: Set up JDK 17                                                                            
-          uses: actions/setup-java@v4                                                                    
-          with:                                                                                          
-            java-version: '17'                                                                           
-            distribution: 'temurin'                                                                      
-                                                                                                         
-        - name: Setup Android SDK                                                                        
-          uses: android-actions/setup-android@v3                                                         
-                                                                                                         
-        - name: Create local.properties                                                                  
-          run: echo "sdk.dir=$ANDROID_HOME" > local.properties                                           
-                                                                                                         
-        - name: Setup Gradle                                                                             
-          uses: gradle/actions/setup-gradle@v3                                                           
-                                                                                                         
-        - name: Build APK                                                                                
-          run: ./gradlew ${{ steps.target.outputs.gradle_task }}                                         
-                                                                                                         
-        - name: Sign APK (legacy mastodon only)                                                          
-          if: steps.target.outputs.needs_signing == 'true'                                               
-          env:                                                                                           
-            KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}                                          
-          run: |                                                                                         
-            printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks                    
-            UNSIGNED=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)                 
-            ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)                
-            APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)              
-            $ZIPALIGN -v -p 4 "$UNSIGNED" kronk-aligned.apk                                              
-            $APKSIGNER sign --ks /tmp/release.jks \                                                      
-              --ks-pass pass:"${KEYSTORE_PASSWORD}" \                                                    
-              --ks-key-alias kronk \                                                                     
-              --out kronk-dev.apk \                                                                      
-              kronk-aligned.apk                                                                          
-                                                                                                         
-        - name: Stage APK (app debug, already signed with android debug key)                             
-          if: steps.target.outputs.needs_signing == 'false'                                              
-          run: |                                                                                         
-            APK=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)                      
-            cp "$APK" kronk-dev.apk                                                                      
-                                                                                                         
-        - name: Deploy                                                                                   
-          env:                                                                                           
-            DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}                                                    
-            SLUG: ${{ steps.slug.outputs.slug }}                                                         
-            BRANCH: ${{ steps.slug.outputs.branch }}                                                     
-            VERSION: ${{ steps.target.outputs.version }}                                               
-            VERSION_CODE: ${{ steps.target.outputs.version_code }}                                       
-            COMMIT: ${{ steps.target.outputs.commit }}                                                   
-          run: |                                                                                         
-            mkdir -p ~/.ssh                                                                              
-            echo "$DEPLOY_KEY" > ~/.ssh/deploy_key                                                       
-            chmod 600 ~/.ssh/deploy_key                                                                  
-            ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null                                  
-                                                                                                         
-            APK_SIZE=$(stat -c%s "kronk-dev.apk")                                                        
-            BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)                                                    
-                                                                                                         
-            ssh -i ~/.ssh/deploy_key root@kronk.info "mkdir -p /var/www/kronk.info/dev/${SLUG}"          
-            scp -i ~/.ssh/deploy_key kronk-dev.apk                                                       
-  root@kronk.info:/var/www/kronk.info/dev/${SLUG}/kronk.apk                                              
-            ssh -i ~/.ssh/deploy_key root@kronk.info \                                                   
-              "echo '{\"version\":\"${VERSION}\",\"versionCode\":${VERSION_CODE},\"commit\":\"${COMMIT}\"
-  ,\"branch\":\"${BRANCH}\",\"apkSize\":${APK_SIZE},\"apkUrl\":\"https://kronk.info/dev/${SLUG}/kronk.apk
-  \",\"buildTime\":\"${BUILD_TIME}\"}' \                                                               
-              > /var/www/kronk.info/dev/${SLUG}/version.json"                                            
-                                                                                                         
-            scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py                                    
-  root@kronk.info:/usr/local/bin/update-kronk-builds.py                                                  
-            ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"   
-                                                                                                         
-            ENTRY=$(printf '{"branch":"%s","slug":"%s","version":"%s","versionCode":%s,"commit":"%s","apk
-  Url":"https://kronk.info/dev/%s/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \          
-              "$BRANCH" "$SLUG" "$VERSION" "$VERSION_CODE" "$COMMIT" "$SLUG" "$APK_SIZE" "$BUILD_TIME")  
-            ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py      
-  upsert '$ENTRY'"                                                                                       
-                                                                                                         
-            echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/" 
+name: Build Dev Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get branch slug
+        id: slug
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SLUG=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+          echo "slug=$SLUG" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Pick build target
+        id: target
+        run: |
+          BRANCH="${{ steps.slug.outputs.branch }}"
+          if [[ "$BRANCH" == feature/2.0-* ]]; then
+            echo "module=app" >> $GITHUB_OUTPUT
+            echo "gradle_task=:app:assembleDebug" >> $GITHUB_OUTPUT
+            echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_OUTPUT
+            echo "needs_signing=false" >> $GITHUB_OUTPUT
+            VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | head -1 | sed 's/[^0-9]*//g')
+          else
+            echo "module=mastodon" >> $GITHUB_OUTPUT
+            echo "gradle_task=assembleGithubRelease" >> $GITHUB_OUTPUT
+            echo "apk_dir=mastodon/build/outputs/apk/githubRelease" >> $GITHUB_OUTPUT
+            echo "needs_signing=true" >> $GITHUB_OUTPUT
+            VERSION=$(grep 'versionName' mastodon/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            VERSION_CODE=$(grep 'versionCode' mastodon/build.gradle | head -1 | sed 's/[^0-9]*//g')
+          fi
+          COMMIT_SHA=${GITHUB_SHA::7}
+          echo "version=${VERSION}-dev.${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build APK
+        run: ./gradlew ${{ steps.target.outputs.gradle_task }}
+
+      - name: Sign APK (legacy mastodon only)
+        if: steps.target.outputs.needs_signing == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
+          UNSIGNED=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)
+          ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
+          $ZIPALIGN -v -p 4 "$UNSIGNED" kronk-aligned.apk
+          $APKSIGNER sign --ks /tmp/release.jks \
+            --ks-pass pass:"${KEYSTORE_PASSWORD}" \
+            --ks-key-alias kronk \
+            --out kronk-dev.apk \
+            kronk-aligned.apk
+
+      - name: Stage APK (app debug, already signed with android debug key)
+        if: steps.target.outputs.needs_signing == 'false'
+        run: |
+          APK=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)
+          cp "$APK" kronk-dev.apk
+
+      - name: Deploy
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SLUG: ${{ steps.slug.outputs.slug }}
+          BRANCH: ${{ steps.slug.outputs.branch }}
+          VERSION: ${{ steps.target.outputs.version }}
+          VERSION_CODE: ${{ steps.target.outputs.version_code }}
+          COMMIT: ${{ steps.target.outputs.commit }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
+
+          APK_SIZE=$(stat -c%s "kronk-dev.apk")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          ssh -i ~/.ssh/deploy_key root@kronk.info "mkdir -p /var/www/kronk.info/dev/${SLUG}"
+          scp -i ~/.ssh/deploy_key kronk-dev.apk root@kronk.info:/var/www/kronk.info/dev/${SLUG}/kronk.apk
+          ssh -i ~/.ssh/deploy_key root@kronk.info \
+            "echo '{\"version\":\"${VERSION}\",\"versionCode\":${VERSION_CODE},\"commit\":\"${COMMIT}\",\"branch\":\"${BRANCH}\",\"apkSize\":${APK_SIZE},\"apkUrl\":\"https://kronk.info/dev/${SLUG}/kronk.apk\",\"buildTime\":\"${BUILD_TIME}\"}' \
+            > /var/www/kronk.info/dev/${SLUG}/version.json"
+
+          scp -i ~/.ssh/deploy_key .github/scripts/update-builds.py root@kronk.info:/usr/local/bin/update-kronk-builds.py
+          ssh -i ~/.ssh/deploy_key root@kronk.info "chmod 755 /usr/local/bin/update-kronk-builds.py"
+
+          ENTRY=$(printf '{"branch":"%s","slug":"%s","version":"%s","versionCode":%s,"commit":"%s","apkUrl":"https://kronk.info/dev/%s/kronk.apk","apkSize":%s,"buildTime":"%s","isStable":false}' \
+            "$BRANCH" "$SLUG" "$VERSION" "$VERSION_CODE" "$COMMIT" "$SLUG" "$APK_SIZE" "$BUILD_TIME")
+          ssh -i ~/.ssh/deploy_key root@kronk.info "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
+
+          echo "Deployed ${BRANCH} (${VERSION}) to https://kronk.info/dev/${SLUG}/"
