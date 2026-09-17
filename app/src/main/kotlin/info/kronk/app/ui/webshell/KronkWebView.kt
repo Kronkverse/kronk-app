@@ -16,6 +16,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import info.kronk.app.audio.KronkJsBridge
 import info.kronk.app.push.PushRegistration
 import info.kronk.app.push.SessionTracker
 import androidx.browser.customtabs.CustomTabColorSchemeParams
@@ -102,6 +103,12 @@ fun createKronkWebView(
         onError = { message -> state.lastError = message },
         onSuccess = { state.lastError = null },
     )
+    // JS ↔ native bridge. Only kronk.info and shadow.kronk.info
+    // pages ever load here (shouldOverrideUrlLoading pops any
+    // other host out to a Custom Tab), so `KronkNative` is safe
+    // to expose. Backing methods carry the @JavascriptInterface
+    // annotation as Android 4.2+ requires.
+    view.addJavascriptInterface(KronkJsBridge(context.applicationContext), "KronkNative")
     view.webChromeClient = object : WebChromeClient() {
         override fun onProgressChanged(v: WebView?, newProgress: Int) {
             state.progress = newProgress
@@ -193,6 +200,9 @@ private class KronkWebViewClient(
         // Push the web's stage up so the Kronk menu FAB (bottom-right
         // fixed) isn't hidden behind the native BottomTabBar.
         view.evaluateJavascript(PUSH_STAGE_ABOVE_NATIVE_BAR_JS, null)
+        // Install the media-play/pause monitor so the native audio
+        // service can start/stop with WebView playback. Idempotent.
+        view.evaluateJavascript(MEDIA_MONITOR_JS, null)
         // Extract the SPA's access token out of initial-state.
         // Mastodon injects it into `<script id="initial-state">…`
         // on every signed-in page render; sign-out pages carry
@@ -281,6 +291,34 @@ private const val HIDE_WEB_BOTTOM_BAR_JS = """
 // bottom-band-hider. MutationObserver re-injects if the SPA rerenders
 // <head> on route change and wipes the tag (React can drop DOM head
 // modifications when the top-level route swaps).
+// Listens on the document for HTMLMediaElement play/pause events
+// and pipes them to the native KronkJsBridge, which increments /
+// decrements a counter that gates the foreground audio service.
+// Delegated event capture (`true`) catches every audio/video
+// element on the page regardless of how the SPA mounts them.
+// Idempotent via the window flag so SPA route changes don't stack
+// listeners.
+private const val MEDIA_MONITOR_JS = """
+(function() {
+  if (window.__kronkMediaMonitor) return;
+  window.__kronkMediaMonitor = true;
+  if (typeof KronkNative === 'undefined') return;
+  var isMedia = function(t) { return t instanceof HTMLMediaElement; };
+  document.addEventListener('play', function(e) {
+    if (isMedia(e.target)) KronkNative.onMediaPlay();
+  }, true);
+  document.addEventListener('pause', function(e) {
+    if (isMedia(e.target)) KronkNative.onMediaPause();
+  }, true);
+  document.addEventListener('ended', function(e) {
+    if (isMedia(e.target)) KronkNative.onMediaPause();
+  }, true);
+  window.addEventListener('pagehide', function() {
+    KronkNative.resetMediaCount();
+  });
+})();
+"""
+
 // Reads the SPA's access token out of the Rails-emitted
 // `<script id="initial-state">` blob on every page finish. Returns
 // null when the user isn't signed in (Rails renders the auth pages

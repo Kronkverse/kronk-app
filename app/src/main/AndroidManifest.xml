@@ -10,6 +10,12 @@
          Requested at first-use on Android 13+; auto-granted on
          Android 12 and below. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Foreground service to keep the process alive while the
+         WebView is playing audio (Booth DJ sets, Moments voice,
+         Huddle voice, Cinema playback). Without this Android
+         kills the app on backgrounding and audio stops. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Nudges voice messages + Moments voice recording. Requested at
          first-use, not on install; users who never touch a voice input
          are never prompted. -->
@@ -99,6 +105,15 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
+
+        <!-- Background audio sentinel — keeps the app process alive
+             while the WebView is playing media. Started via
+             KronkJsBridge when the SPA's audio/video elements fire
+             their `play` event; stopped when all of them pause. -->
+        <service
+            android:name="info.kronk.app.audio.KronkAudioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- FCM-via-GSF: receives the token after
              FcmRegistrar.requestToken and stashes it in
