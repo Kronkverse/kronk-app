@@ -13,7 +13,10 @@ include ':mastodon'
 // :core:common       — utilities, Result types, dispatchers (Kotlin-only).
 // :core:model        — domain types (Account, Status, Reach, Krew, etc.).
 // :core:designsystem — Compose theme + primitives (KronkTheme, Stage, MembraneNav).
-// Empty scaffolds land first; each fills as the phase reaches it.
+// :app               — Kronk 2.0 composition root; installs alongside the
+//                      legacy :mastodon app with applicationId
+//                      "info.kronk.app.next" during the transition.
 include ':core:common'
 include ':core:model'
 include ':core:designsystem'
+include ':app'

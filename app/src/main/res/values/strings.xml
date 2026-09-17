@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        App label deliberately reads "Kronk 2.0" during the Phase-1..6
+        transition so users can tell the new Compose app apart from
+        the legacy one when both are installed. Reverts to "Kronk" at
+        cutover (Phase 7).
+    -->
+    <string name="app_name">Kronk 2.0</string>
+    <string name="welcome_title">Welcome Home</string>
+    <string name="welcome_body">
+        We\u2019re glad you\u2019ve found your way here, things are getting
+        a little weird out there and we reckon the best way to navigate
+        it is together. The people who care are starting to gather,
+        we\u2019re choosing hope and we are laying the foundations of a
+        better world. Welcome to Kronk.
+    </string>
+</resources>
