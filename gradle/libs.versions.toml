@@ -1,0 +1,36 @@
+# Kronk Android app — Gradle version catalog.
+#
+# Central pin for dependency versions. When you bump a version, do it
+# here — every module reads from `libs.<alias>` so the same version
+# reaches every consumer.
+#
+# Scope for now: the new modules landing in the 2.0 rewrite
+# (:core:common, :core:model, :core:designsystem, :app). The existing
+# :mastodon module continues to declare its deps inline; migrating
+# those into this catalog is a separate PR when the rewrite has more
+# real consumers.
+#
+# Compose Compiler + BOM versions are aligned with what :mastodon
+# already uses (compiler 1.5.8, BOM 2024.02.00) so we ship one set of
+# Compose artifacts across the whole app.
+
+[versions]
+
+# Kotlin + Compose (aligned with :mastodon's current setup).
+kotlin = "1.9.22"
+composeCompiler = "1.5.8"
+composeBom = "2024.02.00"
+androidxCoreKtx = "1.13.1"
+androidxActivityCompose = "1.8.2"
+
+[libraries]
+
+# Kotlin + Compose (used by :core:designsystem, :app, and later :feature:*).
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCoreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3" }

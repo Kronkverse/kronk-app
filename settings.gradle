@@ -8,3 +8,19 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Mastodon"
 include ':mastodon'
+
+// 2.0 rewrite (see docs/rebuild/plan.md).
+// :core:common       — Kotlin utilities (Result types, dispatchers).
+// :core:model        — Domain types (Account, Status, Reach, Krew, ...);
+//                      Kotlin-only, no Android or Compose deps.
+// :core:designsystem — Compose theme + primitives (KronkTheme, Stage,
+//                      MembraneNav, KornerGlyph, StatusKornerCard, ...).
+// :app               — Kronk 2.0 composition root. Debug builds
+//                      side-load with applicationIdSuffix ".next" so
+//                      they don't collide with the shipping app during
+//                      development; release builds carry the shipping
+//                      applicationId at cutover (Phase 7).
+include ':core:common'
+include ':core:model'
+include ':core:designsystem'
+include ':app'

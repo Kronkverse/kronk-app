@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Splash-only colour. Matches KronkColorsDark.surfacePrimary in
+        :core:designsystem's theme/Color.kt. Kept as a raw resource
+        because Android's window-background needs a resource, not a
+        Compose value. Update both together if the token changes.
+    -->
+    <color name="surface_primary_dark">#FF191B22</color>
+</resources>
