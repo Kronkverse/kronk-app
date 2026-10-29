@@ -32,18 +32,20 @@ jobs:
           BRANCH="${{ steps.slug.outputs.branch }}"
           if [[ "$BRANCH" == feature/2.0-* ]]; then
             echo "module=app" >> $GITHUB_OUTPUT
+            echo "dir=." >> $GITHUB_OUTPUT
             echo "gradle_task=:app:assembleDebug" >> $GITHUB_OUTPUT
             echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_OUTPUT
             echo "needs_signing=false" >> $GITHUB_OUTPUT
             VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
             VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | head -1 | sed 's/[^0-9]*//g')
           else
-            echo "module=mastodon" >> $GITHUB_OUTPUT
-            echo "gradle_task=assembleGithubRelease" >> $GITHUB_OUTPUT
-            echo "apk_dir=mastodon/build/outputs/apk/githubRelease" >> $GITHUB_OUTPUT
+            echo "module=twa" >> $GITHUB_OUTPUT
+            echo "dir=twa/shadow" >> $GITHUB_OUTPUT
+            echo "gradle_task=assembleRelease" >> $GITHUB_OUTPUT
+            echo "apk_dir=twa/shadow/app/build/outputs/apk/release" >> $GITHUB_OUTPUT
             echo "needs_signing=true" >> $GITHUB_OUTPUT
-            VERSION=$(grep 'versionName' mastodon/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
-            VERSION_CODE=$(grep 'versionCode' mastodon/build.gradle | head -1 | sed 's/[^0-9]*//g')
+            VERSION=$(grep 'versionName' twa/shadow/app/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            VERSION_CODE=$(grep 'versionCode' twa/shadow/app/build.gradle | head -1 | sed 's/[^0-9]*//g')
           fi
           COMMIT_SHA=${GITHUB_SHA::7}
           echo "version=${VERSION}-dev.${COMMIT_SHA}" >> $GITHUB_OUTPUT
@@ -62,27 +64,28 @@ jobs:
           packages: platform-tools
 
       - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > ${{ steps.target.outputs.dir }}/local.properties
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK
+        working-directory: ${{ steps.target.outputs.dir }}
         run: ./gradlew ${{ steps.target.outputs.gradle_task }}
 
-      - name: Sign APK (legacy mastodon only)
+      - name: Sign APK (shadow TWA)
         if: steps.target.outputs.needs_signing == 'true'
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.SHADOW_KEYSTORE_PASSWORD }}
         run: |
-          printf %s "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
+          printf %s "${{ secrets.SHADOW_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
           UNSIGNED=$(find ${{ steps.target.outputs.apk_dir }} -name "*.apk" | head -1)
           ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -1)
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
           $ZIPALIGN -v -p 4 "$UNSIGNED" kronk-aligned.apk
           $APKSIGNER sign --ks /tmp/release.jks \
             --ks-pass pass:"${KEYSTORE_PASSWORD}" \
-            --ks-key-alias kronk \
+            --ks-key-alias shadow \
             --out kronk-dev.apk \
             kronk-aligned.apk
 
