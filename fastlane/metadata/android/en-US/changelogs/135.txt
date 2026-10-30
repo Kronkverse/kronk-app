@@ -1,3 +1,0 @@
-- You can now accept or reject follow requests from the notifications
-- System notifications will now be dismissed when you open the notifications screen in the app
-- Various small fixes and improvements
