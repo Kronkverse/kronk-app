@@ -5,8 +5,9 @@ name: Build APK
 #
 #   flavor  live   → info.kronk.app, opens kronk.info, release key (KEYSTORE_*)
 #           shadow → info.kronk.app.shadow, opens shadow.kronk.info, SHADOW_KEYSTORE_*
-#   dir     where under /var/www/kronk.info the APK and its version.json go
-#           ('' is the site root: production, which the legacy app's updater reads)
+#   dir     where under /var/www/kronk.info the APK and its version.json go;
+#           'production' means the site root, which the legacy app's updater
+#           reads, and is refused unless this is a live-flavor release
 
 on:
   workflow_call:
@@ -16,7 +17,7 @@ on:
         required: true
       dir:
         type: string
-        default: ''
+        required: true
       slug:
         type: string
         required: true
@@ -101,15 +102,17 @@ jobs:
           $APKSIGNER verify --print-certs kronk.apk
           rm /tmp/sign.jks
 
-      - name: GitHub release
+      - name: Release key is on kronk.info
         if: inputs.release
+        # Without it the released app opens with a browser address bar, on
+        # every phone the legacy updater moves. Ship the web release first.
         run: |
-          cp kronk.apk kronk-${{ steps.version.outputs.version }}.apk
-          gh release create "$GITHUB_REF_NAME" kronk-${{ steps.version.outputs.version }}.apk \
-            --title "Kronk ${{ steps.version.outputs.version }}" \
-            --notes "Version ${{ steps.version.outputs.version }} (code ${{ steps.version.outputs.code }})"
-        env:
-          GH_TOKEN: ${{ github.token }}
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
+          FP=$($APKSIGNER verify --print-certs kronk.apk | sed -n 's/.*SHA-256 digest: //p' | head -1 | tr a-f A-F | sed 's/../&:/g; s/:$//')
+          if ! curl -fsS https://kronk.info/.well-known/assetlinks.json | grep -q "$FP"; then
+            echo "::error::kronk.info/.well-known/assetlinks.json does not list $FP. Release the web side first."
+            exit 1
+          fi
 
       - name: Deploy to kronk.info
         env:
@@ -125,6 +128,13 @@ jobs:
           ssh-keyscan -H kronk.info >> ~/.ssh/known_hosts 2>/dev/null
           SSH="ssh -i $HOME/.ssh/deploy_key root@kronk.info"
 
+          if [ "$DIR" = production ]; then
+            if [ "${{ inputs.release }}" != true ] || [ "${{ inputs.flavor }}" != live ]; then
+              echo "::error::Only a live-flavor release deploys to production"
+              exit 1
+            fi
+            DIR=
+          fi
           WEB=/var/www/kronk.info${DIR:+/$DIR}
           URL=https://kronk.info${DIR:+/$DIR}/kronk.apk
           SIZE=$(stat -c%s kronk.apk)
@@ -142,3 +152,15 @@ jobs:
           $SSH "python3 /usr/local/bin/update-kronk-builds.py upsert '$ENTRY'"
 
           echo "Deployed $VERSION to $URL"
+
+      - name: GitHub release
+        if: inputs.release
+        run: |
+          APK=kronk-${{ steps.version.outputs.version }}.apk
+          cp kronk.apk $APK
+          gh release upload "$GITHUB_REF_NAME" $APK --clobber 2>/dev/null ||
+            gh release create "$GITHUB_REF_NAME" $APK \
+              --title "Kronk ${{ steps.version.outputs.version }}" \
+              --notes "Version ${{ steps.version.outputs.version }} (code ${{ steps.version.outputs.code }})"
+        env:
+          GH_TOKEN: ${{ github.token }}

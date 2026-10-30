@@ -51,7 +51,12 @@ called by the others) publishes to kronk.info:
 
 **A tag is a production release.** `kronk.info/version.json` is read every
 6 hours by the legacy app, which then offers its users the update, so a tag
-moves every installed phone. Only Tal tags.
+moves every installed phone. Only Tal tags, and only a commit on `main`.
+
+**Order at release:** the web release carrying the release key in
+`assetlinks.json` must be live on kronk.info first. The release build checks
+and stops if it isn't; otherwise every migrated phone would open with an
+address bar.
 
 Pushing a workflow change needs the `workflow` scope on your GitHub login
 (`gh auth refresh -h github.com -s workflow`).

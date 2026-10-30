@@ -4,7 +4,9 @@ name: Build and Release
 # makes a GitHub release and puts it at kronk.info/kronk.apk with
 # kronk.info/version.json. The legacy Mastodon-based app reads that
 # version.json every 6 hours and offers the update, so this is what moves
-# every installed phone. The tag must match appVersionName in app/build.gradle.
+# every installed phone. The tag must match appVersionName in app/build.gradle,
+# and the build stops unless kronk.info's assetlinks.json already lists the
+# release key. Tag only a commit on main.
 
 on:
   push:
@@ -22,6 +24,7 @@ jobs:
       contents: write
     with:
       flavor: live
+      dir: production
       slug: production
       channel: production
       stable: true
