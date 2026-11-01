@@ -1,2 +1,0 @@
-- You can now see which post you're replying to
-- Bug fixes and minor improvements

@@ -23,7 +23,7 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           SLUG: ${{ steps.slug.outputs.slug }}
         run: |
-          if [ -z "$SLUG" ] || [ "$SLUG" = "." ] || [ "$SLUG" = ".." ] || [ "$SLUG" = "dev" ]; then
+          if [ -z "$SLUG" ] || [ "$SLUG" = "." ] || [ "$SLUG" = ".." ] || [ "$SLUG" = "dev" ] || [ "$SLUG" = "live" ]; then
             echo "Skipping — slug '$SLUG' is not a valid branch build directory"
             exit 0
           fi
