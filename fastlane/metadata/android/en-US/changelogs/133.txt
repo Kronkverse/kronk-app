@@ -1,3 +1,0 @@
-- Fixed custom emojis not loading under some configurations
-- Fixed some minor crashes
-- The app now sends org.joinmastodon.android as referrer to websites opened from the app
