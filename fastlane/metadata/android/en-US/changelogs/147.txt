@@ -1,2 +1,0 @@
-- You can now quote other people’s posts (if they permit it) when connected to a server that supports it
-- Other minor fixes and improvements

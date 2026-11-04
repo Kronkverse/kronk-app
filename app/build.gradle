@@ -1,0 +1,104 @@
+/*
+ * Kronk for Android: a Trusted Web Activity that opens Kronk full-screen in
+ * the phone's browser engine. All of Kronk lives on the web; this shell only
+ * names the app, picks the host and carries the icons. Generated once by
+ * Bubblewrap 1.27 (Apache-2.0, Copyright 2019 Google Inc.) and owned here
+ * since; don't regenerate it over these changes.
+ *
+ * Two flavors:
+ *   live    info.kronk.app         → https://kronk.info         (release key)
+ *   shadow  info.kronk.app.shadow  → https://shadow.kronk.info  (shadow key)
+ * Both keys must be listed in the site's /.well-known/assetlinks.json, or the
+ * app opens with a browser URL bar.
+ */
+
+plugins {
+    id 'com.android.application'
+}
+
+// The app's own version. Not Kronk's version: the app changes rarely, so it is
+// named by year.month. versionCode must stay above the legacy Mastodon-based
+// app's last code (21401), or old installs won't take the update.
+def appVersionName = '2026.11'
+def appVersionCode = 20261100
+
+def colors = '#191B22'
+
+def flavorValues = { flavor, host, label ->
+    // ?source=app tells the site it's inside the app; app= says which build.
+    def launchUrl = "https://${host}/?source=app&app=${appVersionCode}"
+    flavor.resValue 'string', 'appName', label
+    flavor.resValue 'string', 'launcherName', label
+    flavor.resValue 'string', 'hostName', host
+    flavor.resValue 'string', 'launchUrl', launchUrl
+    flavor.resValue 'string', 'webManifestUrl', "https://${host}/manifest.json"
+    flavor.resValue 'string', 'shareTarget',
+        "{\\\"action\\\":\\\"https://${host}/share\\\",\\\"method\\\":\\\"GET\\\",\\\"enctype\\\":\\\"application/x-www-form-urlencoded\\\",\\\"params\\\":{\\\"title\\\":\\\"title\\\",\\\"text\\\":\\\"text\\\",\\\"url\\\":\\\"url\\\"}}"
+    flavor.resValue 'string', 'assetStatements',
+        "[{\\\"relation\\\":[\\\"delegate_permission/common.handle_all_urls\\\"],\\\"target\\\":{\\\"namespace\\\":\\\"web\\\",\\\"site\\\":\\\"https://${host}\\\"}}]"
+}
+
+android {
+    compileSdkVersion 36
+    namespace 'info.kronk.app'
+
+    defaultConfig {
+        applicationId 'info.kronk.app'
+        minSdkVersion 24
+        targetSdkVersion 36
+        versionCode appVersionCode
+        versionName appVersionName
+
+        resValue 'color', 'colorPrimary', colors
+        resValue 'color', 'colorPrimaryDark', colors
+        resValue 'color', 'navigationColor', colors
+        resValue 'color', 'navigationColorDark', colors
+        resValue 'color', 'navigationDividerColor', colors
+        resValue 'color', 'navigationDividerColorDark', colors
+        resValue 'color', 'backgroundColor', colors
+
+        // Push from the site arrives as the app's own notifications.
+        resValue 'bool', 'enableNotification', 'true'
+        resValue 'integer', 'splashScreenFadeOutDuration', '300'
+        resValue 'string', 'generatorApp', 'bubblewrap-cli'
+        // Where the phone's browser can't run a TWA, open a browser tab
+        // (address bar showing, push still works) rather than a WebView
+        // (no push).
+        resValue 'string', 'fallbackType', 'customtabs'
+        resValue 'bool', 'enableSiteSettingsShortcut', 'true'
+        resValue 'string', 'orientation', 'default'
+    }
+
+    flavorDimensions = ['site']
+    productFlavors {
+        live {
+            dimension 'site'
+            flavorValues(it, 'kronk.info', 'Kronk')
+            resValue 'string', 'providerAuthority', 'info.kronk.app.fileprovider'
+        }
+        shadow {
+            dimension 'site'
+            applicationIdSuffix '.shadow'
+            versionNameSuffix '-shadow'
+            flavorValues(it, 'shadow.kronk.info', 'Kronk Shadow')
+            resValue 'string', 'providerAuthority', 'info.kronk.app.shadow.fileprovider'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lintOptions {
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4'
+}

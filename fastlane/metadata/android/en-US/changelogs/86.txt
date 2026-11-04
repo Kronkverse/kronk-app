@@ -1,3 +1,0 @@
-- You can now easily share and scan QR codes to quickly find each other
-- We've updated the look of the tab bar to better match current platform guidelines
-- Various minor usability improvements
